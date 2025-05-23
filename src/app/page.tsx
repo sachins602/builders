@@ -1,9 +1,10 @@
+import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import { LatestPost } from "~/app/_components/post";
 import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
-import WholeMap from "./_components/map";
+import MapWrapper from "./_components/mapwrapper";
 
 export default async function Home() {
   const hello = await api.post.hello({ text: "from tRPC" });
@@ -38,7 +39,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <WholeMap />
+          <MapWrapper />
 
           {session?.user && <LatestPost />}
         </div>
