@@ -7,11 +7,27 @@ import {
   Marker,
   Pin,
 } from "@vis.gl/react-google-maps";
+import { useState } from "react";
 import { env } from "~/env";
+import { api } from "~/trpc/react";
 
 export default function WholeMap() {
+  const [url, setUrl] = useState<string | null>(null);
+  const image = api.post.findImage.useMutation({
+    onSuccess: (data) => {
+      console.log(typeof data);
+      if (data instanceof Error) {
+        console.error("Error fetching image", data);
+        return;
+      }
+      console.log("Image data", data.url);
+      setUrl(data.url);
+    },
+  });
+
   return (
     <div className="flex flex-col items-center justify-center gap-4">
+      {url && <img src={url} alt="Street View" className="h-24 w-24" />}
       <h1 className="text-2xl text-white">Map</h1>
       <div className="h-[500px] w-full">
         <APIProvider
@@ -25,6 +41,10 @@ export default function WholeMap() {
             gestureHandling={"greedy"}
             onClick={(e) => {
               console.log("Map clicked", e.detail);
+              image.mutate({
+                lat: e.detail.latLng?.lat ?? 0,
+                lng: e.detail.latLng?.lng ?? 0,
+              });
             }}
             disableDefaultUI
           ></Map>
