@@ -29,13 +29,14 @@ export const postRouter = createTRPCRouter({
       });
     }),
 
-  findImage: protectedProcedure
+  saveStreetViewImage: protectedProcedure
     .input(z.object({ lat: z.number(), lng: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const { lat, lng } = input;
+      const imageName = String(lat + lng);
 
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=151.78&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=3208&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
         // "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc9APxkj0xClmrU3PpMZglHQkx446nQPG6lA&s",
       );
       if (!response.ok) {
@@ -58,7 +59,7 @@ export const postRouter = createTRPCRouter({
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      const filePath = `./public/streetviewimages/aas.${fileType}`;
+      const filePath = `./public/streetviewimages/${imageName}.${fileType}`;
 
       // Write the file
       fs.writeFile(filePath, arrayBuffer, (err) => {
@@ -72,14 +73,22 @@ export const postRouter = createTRPCRouter({
       // write the file path to the database and return the file path
       const image = await ctx.db.images.create({
         data: {
-          name: "dda",
-          url: `streetviewimages/aas.${fileType}`,
+          name: imageName,
+          url: `streetviewimages/${imageName}.${fileType}`,
           createdBy: { connect: { id: ctx.session.user.id } },
         },
       });
 
       return image;
     }),
+
+  getLastImage: protectedProcedure.query(async ({ ctx }) => {
+    const image = await ctx.db.images.findFirst({
+      orderBy: { createdAt: "desc" },
+      where: { createdBy: { id: ctx.session.user.id } },
+    });
+    return image ?? null;
+  }),
 
   getLatest: protectedProcedure.query(async ({ ctx }) => {
     const post = await ctx.db.post.findFirst({

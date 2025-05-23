@@ -13,7 +13,7 @@ import { api } from "~/trpc/react";
 
 export default function WholeMap() {
   const [url, setUrl] = useState<string | null>(null);
-  const image = api.post.findImage.useMutation({
+  const image = api.post.saveStreetViewImage.useMutation({
     onSuccess: (data) => {
       console.log(typeof data);
       if (data instanceof Error) {
