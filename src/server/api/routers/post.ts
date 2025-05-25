@@ -30,13 +30,13 @@ export const postRouter = createTRPCRouter({
     }),
 
   saveStreetViewImage: protectedProcedure
-    .input(z.object({ lat: z.number(), lng: z.number() }))
+    .input(z.object({ lat: z.number(), lng: z.number(), heading: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const { lat, lng } = input;
+      const { lat, lng, heading } = input;
       const imageName = String(lat + lng);
 
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=0&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=${heading}&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
         // "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc9APxkj0xClmrU3PpMZglHQkx446nQPG6lA&s",
       );
       if (!response.ok) {

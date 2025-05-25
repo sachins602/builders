@@ -13,6 +13,9 @@ import { api } from "~/trpc/react";
 
 export default function WholeMap() {
   const [url, setUrl] = useState<string | null>(null);
+  const [position, setPosition] = useState<google.maps.LatLngLiteral | null>(
+    null,
+  );
   const image = api.post.saveStreetViewImage.useMutation({
     onSuccess: (data) => {
       console.log(typeof data);
@@ -41,13 +44,59 @@ export default function WholeMap() {
             gestureHandling={"greedy"}
             onClick={(e) => {
               console.log("Map clicked", e.detail);
-              image.mutate({
+              setPosition({
                 lat: e.detail.latLng?.lat ?? 0,
                 lng: e.detail.latLng?.lng ?? 0,
               });
+
+              // image.mutate({
+              //   lat: e.detail.latLng?.lat ?? 0,
+              //   lng: e.detail.latLng?.lng ?? 0,
+              // });
             }}
             disableDefaultUI
-          ></Map>
+          >
+            {position && (
+              <InfoWindow
+                position={{ lat: position.lat, lng: position.lng }}
+                maxWidth={200}
+              >
+                <div className="flex flex-col gap-2">
+                  <p className="text-black">Choose an angle</p>
+                  <button
+                    onClick={() => console.log("clicked 1")}
+                    className="rounded-md border-2 border-white bg-gray-800 p-2"
+                  >
+                    0 degrees
+                  </button>
+                  <button
+                    onClick={() => console.log("clicked 2")}
+                    className="rounded-md border-2 border-white bg-gray-800 p-2"
+                  >
+                    90 degrees
+                  </button>
+                  <button
+                    onClick={() => {
+                      image.mutate({
+                        lat: position.lat ?? 0,
+                        lng: position.lng ?? 0,
+                        heading: 180,
+                      });
+                    }}
+                    className="rounded-md border-2 border-white bg-gray-800 p-2"
+                  >
+                    180 degrees
+                  </button>
+                  <button
+                    onClick={() => console.log("clicked 4")}
+                    className="rounded-md border-2 border-white bg-gray-800 p-2"
+                  >
+                    270 degrees
+                  </button>
+                </div>
+              </InfoWindow>
+            )}
+          </Map>
         </APIProvider>
       </div>
     </div>
