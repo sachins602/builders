@@ -36,7 +36,7 @@ export const postRouter = createTRPCRouter({
       const imageName = String(lat + lng);
 
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=3208&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=0&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
         // "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc9APxkj0xClmrU3PpMZglHQkx446nQPG6lA&s",
       );
       if (!response.ok) {
