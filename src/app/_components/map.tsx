@@ -10,6 +10,12 @@ import {
 import { useState } from "react";
 import { env } from "~/env";
 import { api } from "~/trpc/react";
+import {
+  CircleArrowDown,
+  CircleArrowLeft,
+  CircleArrowRight,
+  CircleArrowUp,
+} from "lucide-react";
 
 export default function WholeMap() {
   const [url, setUrl] = useState<string | null>(null);
@@ -61,38 +67,46 @@ export default function WholeMap() {
                 position={{ lat: position.lat, lng: position.lng }}
                 maxWidth={200}
               >
-                <div className="flex flex-col gap-2">
-                  <p className="text-black">Choose an angle</p>
-                  <button
-                    onClick={() => console.log("clicked 1")}
-                    className="rounded-md border-2 border-white bg-gray-800 p-2"
-                  >
-                    0 degrees
-                  </button>
-                  <button
-                    onClick={() => console.log("clicked 2")}
-                    className="rounded-md border-2 border-white bg-gray-800 p-2"
-                  >
-                    90 degrees
-                  </button>
-                  <button
-                    onClick={() => {
-                      image.mutate({
-                        lat: position.lat ?? 0,
-                        lng: position.lng ?? 0,
-                        heading: 180,
-                      });
-                    }}
-                    className="rounded-md border-2 border-white bg-gray-800 p-2"
-                  >
-                    180 degrees
-                  </button>
-                  <button
-                    onClick={() => console.log("clicked 4")}
-                    className="rounded-md border-2 border-white bg-gray-800 p-2"
-                  >
-                    270 degrees
-                  </button>
+                <div className="flex flex-col bg-gray-800">
+                  <p>Choose an angle</p>
+                  <div className="text-cente grid grid-cols-3 grid-rows-3 items-center justify-center justify-items-center gap-1 p-1">
+                    <div className="h-6 w-6" />
+                    <button
+                      className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
+                      onClick={() => console.log("clicked 1")}
+                    >
+                      <CircleArrowUp />
+                    </button>
+                    <div className="h-6 w-6" />
+                    <button
+                      className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
+                      onClick={() => console.log("clicked 2")}
+                    >
+                      <CircleArrowLeft />
+                    </button>
+                    <div className="h-6 w-6" />
+                    <button
+                      className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
+                      onClick={() => {
+                        image.mutate({
+                          lat: position.lat ?? 0,
+                          lng: position.lng ?? 0,
+                          heading: 180,
+                        });
+                        // redirect to the create page
+                        window.location.href = "/create";
+                      }}
+                    >
+                      <CircleArrowRight />
+                    </button>
+                    <div className="h-6 w-6" />
+                    <button
+                      className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
+                      onClick={() => console.log("clicked 4")}
+                    >
+                      <CircleArrowDown />
+                    </button>
+                  </div>
                 </div>
               </InfoWindow>
             )}
