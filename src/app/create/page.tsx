@@ -11,8 +11,7 @@ export default async function Create() {
   return (
     <HydrateClient>
       <div className="flex flex-col gap-4 bg-gray-700 text-white">
-        <h1 className="text-2xl">Create</h1>
-        <div className="h-[300px] w-full">output</div>
+        <div className="flex min-h-52 w-full">output</div>
         <ProompInput />
       </div>
     </HydrateClient>

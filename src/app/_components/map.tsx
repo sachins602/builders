@@ -10,6 +10,41 @@ import {
   CircleArrowUp,
 } from "lucide-react";
 
+const MapTypeId = {
+  HYBRID: "hybrid",
+  ROADMAP: "roadmap",
+  SATELLITE: "satellite",
+  TERRAIN: "terrain",
+};
+export type MapConfig = {
+  id: string;
+  label: string;
+  mapId?: string;
+  mapTypeId?: string;
+  styles?: google.maps.MapTypeStyle[];
+};
+
+const MAP_CONFIGS: MapConfig[] = [
+  {
+    id: "light",
+    label: "Light",
+    mapId: "49ae42fed52588c3",
+    mapTypeId: MapTypeId.ROADMAP,
+  },
+  {
+    id: "dark",
+    label: "Dark",
+    mapId: "739af084373f96fe",
+    mapTypeId: MapTypeId.ROADMAP,
+  },
+  {
+    id: "hybrid2",
+    label: 'Hybrid ("light" mapId)',
+    mapId: "49ae42fed52588c3",
+    mapTypeId: MapTypeId.HYBRID,
+  },
+];
+
 export default function WholeMap() {
   const [position, setPosition] = useState<google.maps.LatLngLiteral | null>(
     null,
@@ -37,6 +72,7 @@ export default function WholeMap() {
             defaultZoom={12}
             defaultCenter={{ lat: 43.6784979, lng: -79.3452789 }}
             gestureHandling={"greedy"}
+            mapTypeId={MapTypeId.HYBRID}
             onClick={(e) => {
               console.log("Map clicked", e.detail);
               setPosition({
