@@ -1,12 +1,5 @@
 "use client";
-import {
-  AdvancedMarker,
-  APIProvider,
-  InfoWindow,
-  Map,
-  Marker,
-  Pin,
-} from "@vis.gl/react-google-maps";
+import { APIProvider, InfoWindow, Map } from "@vis.gl/react-google-maps";
 import { useState } from "react";
 import { env } from "~/env";
 import { api } from "~/trpc/react";
@@ -54,11 +47,6 @@ export default function WholeMap() {
                 lat: e.detail.latLng?.lat ?? 0,
                 lng: e.detail.latLng?.lng ?? 0,
               });
-
-              // image.mutate({
-              //   lat: e.detail.latLng?.lat ?? 0,
-              //   lng: e.detail.latLng?.lng ?? 0,
-              // });
             }}
             disableDefaultUI
           >
@@ -88,13 +76,22 @@ export default function WholeMap() {
                     <button
                       className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
                       onClick={() => {
-                        image.mutate({
-                          lat: position.lat ?? 0,
-                          lng: position.lng ?? 0,
-                          heading: 180,
-                        });
-                        // redirect to the create page
-                        window.location.href = "/create";
+                        image.mutate(
+                          {
+                            lat: position.lat ?? 0,
+                            lng: position.lng ?? 0,
+                            heading: 90,
+                          },
+                          {
+                            onSuccess: (data) => {
+                              console.log("Image saved successfully", data);
+                              window.location.href = "/create";
+                            },
+                            onError: (error) => {
+                              console.error("Error saving image", error);
+                            },
+                          },
+                        );
                       }}
                     >
                       <CircleArrowRight />
