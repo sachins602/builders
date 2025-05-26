@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 
 export default function WholeMap() {
-  const [url, setUrl] = useState<string | null>(null);
   const [position, setPosition] = useState<google.maps.LatLngLiteral | null>(
     null,
   );
@@ -22,14 +21,11 @@ export default function WholeMap() {
         console.error("Error fetching image", data);
         return;
       }
-      console.log("Image data", data.url);
-      setUrl(data.url);
     },
   });
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      {url && <img src={url} alt="Street View" className="h-24 w-24" />}
+    <div className="flex flex-col items-center justify-center text-white">
       <h1 className="text-2xl text-white">Map</h1>
       <div className="h-[500px] w-full">
         <APIProvider
@@ -55,7 +51,7 @@ export default function WholeMap() {
                 position={{ lat: position.lat, lng: position.lng }}
                 maxWidth={200}
               >
-                <div className="flex flex-col bg-gray-800">
+                <div className="flex flex-col bg-gray-800 text-white">
                   <p>Choose an angle</p>
                   <div className="text-cente grid grid-cols-3 grid-rows-3 items-center justify-center justify-items-center gap-1 p-1">
                     <div className="h-6 w-6" />
