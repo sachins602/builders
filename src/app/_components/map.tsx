@@ -93,14 +93,48 @@ export default function WholeMap() {
                     <div className="h-6 w-6" />
                     <button
                       className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
-                      onClick={() => console.log("clicked 1")}
+                      onClick={() =>
+                        image.mutate(
+                          {
+                            lat: position.lat ?? 0,
+                            lng: position.lng ?? 0,
+                            heading: 0,
+                          },
+                          {
+                            onSuccess: (data) => {
+                              console.log("Image saved successfully", data);
+                              window.location.href = "/create";
+                            },
+                            onError: (error) => {
+                              console.error("Error saving image", error);
+                            },
+                          },
+                        )
+                      }
                     >
                       <CircleArrowUp />
                     </button>
                     <div className="h-6 w-6" />
                     <button
                       className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
-                      onClick={() => console.log("clicked 2")}
+                      onClick={() =>
+                        image.mutate(
+                          {
+                            lat: position.lat ?? 0,
+                            lng: position.lng ?? 0,
+                            heading: 270,
+                          },
+                          {
+                            onSuccess: (data) => {
+                              console.log("Image saved successfully", data);
+                              window.location.href = "/create";
+                            },
+                            onError: (error) => {
+                              console.error("Error saving image", error);
+                            },
+                          },
+                        )
+                      }
                     >
                       <CircleArrowLeft />
                     </button>
@@ -131,7 +165,24 @@ export default function WholeMap() {
                     <div className="h-6 w-6" />
                     <button
                       className="h-6 w-6 hover:scale-110 hover:bg-gray-600"
-                      onClick={() => console.log("clicked 4")}
+                      onClick={() =>
+                        image.mutate(
+                          {
+                            lat: position.lat ?? 0,
+                            lng: position.lng ?? 0,
+                            heading: 180,
+                          },
+                          {
+                            onSuccess: (data) => {
+                              console.log("Image saved successfully", data);
+                              window.location.href = "/create";
+                            },
+                            onError: (error) => {
+                              console.error("Error saving image", error);
+                            },
+                          },
+                        )
+                      }
                     >
                       <CircleArrowDown />
                     </button>
