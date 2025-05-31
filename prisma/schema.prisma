@@ -64,6 +64,7 @@ model User {
     sessions      Session[]
     posts         Post[]
     images        Images[]
+    Response Response[]
 }
 
 model VerificationToken {
@@ -83,6 +84,23 @@ model Images {
 
     createdBy   User   @relation(fields: [createdById], references: [id])
     createdById String
-
     @@index([name])
+    
+    Response Response[]
+}
+
+model Response {
+    id        Int      @id @default(autoincrement())
+    proompt      String
+    url       String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    createdBy   User   @relation(fields: [createdById], references: [id])
+    
+    createdByImageId String
+    createdById String
+
+    @@index([proompt])
+    Images Images[]
 }

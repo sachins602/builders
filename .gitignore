@@ -20,6 +20,7 @@ next-env.d.ts
 
 # public/streetviewimages
 /public/streetviewimages
+/public/generatedimages
 
 # production
 /build
