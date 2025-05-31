@@ -90,6 +90,14 @@ export const postRouter = createTRPCRouter({
     return image ?? null;
   }),
 
+  getResponseHistory: protectedProcedure.query(async ({ ctx }) => {
+    const responses = await ctx.db.response.findMany({
+      orderBy: { createdAt: "desc" },
+      where: { createdBy: { id: ctx.session.user.id } },
+    });
+    return responses;
+  }),
+
   getLatest: protectedProcedure.query(async ({ ctx }) => {
     const post = await ctx.db.post.findFirst({
       orderBy: { createdAt: "desc" },
