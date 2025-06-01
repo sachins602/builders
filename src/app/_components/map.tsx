@@ -51,7 +51,6 @@ export default function WholeMap() {
   );
   const image = api.response.saveStreetViewImage.useMutation({
     onSuccess: (data) => {
-      console.log(typeof data);
       if (data instanceof Error) {
         console.error("Error fetching image", data);
         return;
@@ -74,7 +73,6 @@ export default function WholeMap() {
             gestureHandling={"greedy"}
             mapTypeId={MapTypeId.HYBRID}
             onClick={(e) => {
-              console.log("Map clicked", e.detail);
               setPosition({
                 lat: e.detail.latLng?.lat ?? 0,
                 lng: e.detail.latLng?.lng ?? 0,
@@ -102,7 +100,6 @@ export default function WholeMap() {
                           },
                           {
                             onSuccess: (data) => {
-                              console.log("Image saved successfully", data);
                               window.location.href = "/create";
                             },
                             onError: (error) => {
@@ -126,7 +123,6 @@ export default function WholeMap() {
                           },
                           {
                             onSuccess: (data) => {
-                              console.log("Image saved successfully", data);
                               window.location.href = "/create";
                             },
                             onError: (error) => {
@@ -150,7 +146,6 @@ export default function WholeMap() {
                           },
                           {
                             onSuccess: (data) => {
-                              console.log("Image saved successfully", data);
                               window.location.href = "/create";
                             },
                             onError: (error) => {
@@ -174,7 +169,6 @@ export default function WholeMap() {
                           },
                           {
                             onSuccess: (data) => {
-                              console.log("Image saved successfully", data);
                               window.location.href = "/create";
                             },
                             onError: (error) => {

@@ -31,7 +31,6 @@ export const openaiRouter = createTRPCRouter({
 
       // Get the full path to the image
       const imagePath = path.join(process.cwd(), "public", input.imageUrl);
-      console.log("input image path", imagePath);
 
       // Check if the file exists
       if (!fs.existsSync(imagePath)) {
@@ -64,7 +63,6 @@ export const openaiRouter = createTRPCRouter({
 
       // Check if b64_json exists before writing to file
       const imageData = response.data[0]?.b64_json;
-      console.log("imageData", imageData);
       if (!imageData) {
         throw new Error("No image data received from OpenAI");
       }

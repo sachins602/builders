@@ -9,13 +9,11 @@ export function ProompInput() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Query for the last image (street view)
-  const { data: lastImage } = api.post.getLastImage.useQuery();
+  const { data: lastImage } = api.response.getLastImage.useQuery();
 
   // Mutation for generating AI image
   const generateImage = api.openai.generateImage.useMutation({
     onSuccess: (data) => {
-      console.log("data", data);
-      // convert base64 to image
       if (!data.url) {
         console.error("No image URL returned from API");
       }
@@ -23,15 +21,14 @@ export function ProompInput() {
       setIsGenerating(false);
     },
     onError: (error) => {
-      console.error("Error generating image:", error);
       setIsGenerating(false);
-      alert("Failed to generate image. Please try again.");
+      console.error("Failed to generate image. Please try again.", error);
     },
   });
 
   const handleGenerateImage = () => {
     if (!prompt.trim()) {
-      alert("Please enter a prompt");
+      console.error("Please enter a prompt");
       return;
     }
 
