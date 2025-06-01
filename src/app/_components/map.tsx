@@ -49,7 +49,7 @@ export default function WholeMap() {
   const [position, setPosition] = useState<google.maps.LatLngLiteral | null>(
     null,
   );
-  const image = api.post.saveStreetViewImage.useMutation({
+  const image = api.response.saveStreetViewImage.useMutation({
     onSuccess: (data) => {
       console.log(typeof data);
       if (data instanceof Error) {

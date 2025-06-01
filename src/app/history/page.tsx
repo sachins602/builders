@@ -3,9 +3,9 @@ import { api } from "~/trpc/server";
 
 export default async function History() {
     const session = await auth();
-    const responseHistory = await api.post.getResponseHistory();
+    const responseHistory = await api.response.getResponseHistory();
       if (session?.user) {
-        void api.post.getResponseHistory.prefetch();
+        void api.response.getResponseHistory.prefetch();
       }
     if (!session?.user) {
       return (
