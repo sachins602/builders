@@ -1,5 +1,4 @@
 import { auth } from "~/server/auth";
-import { api } from "~/trpc/server";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import { Button } from "./ui/button";
@@ -7,9 +6,6 @@ import { Button } from "./ui/button";
 export default async function Header() {
   const session = await auth();
 
-  if (session?.user) {
-    void api.post.getLatest.prefetch();
-  }
 
   return (
     <header className="flex h-24 w-full items-center justify-between px-2 text-white">

@@ -14,18 +14,6 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
-
-    @@index([name])
-}
-
 // Necessary for Next auth
 model Account {
     id                       String  @id @default(cuid())
@@ -62,8 +50,8 @@ model User {
     image         String?
     accounts      Account[]
     sessions      Session[]
-    posts         Post[]
     images        Images[]
+    Response Response[]
 }
 
 model VerificationToken {
@@ -83,6 +71,33 @@ model Images {
 
     createdBy   User   @relation(fields: [createdById], references: [id])
     createdById String
-
     @@index([name])
+    
+    Response Response[]
+}
+
+model Response {
+    id        Int      @id @default(autoincrement())
+    proompt      String
+    url       String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    createdBy   User   @relation(fields: [createdById], references: [id])
+    createdById String
+    
+    // Reference to the original image (if this is the first response in a chain)
+    sourceImage   Images?   @relation(fields: [sourceImageId], references: [id])
+    sourceImageId Int?
+    
+    // Reference to the previous response (if this is a follow-up response)
+    previousResponse   Response?   @relation(name: "ResponseChain", fields: [previousResponseId], references: [id])
+    previousResponseId Int?
+    
+    // Responses that were generated from this response
+    nextResponses Response[] @relation(name: "ResponseChain")
+    
+    @@index([proompt])
+    @@index([previousResponseId])
+    @@index([sourceImageId])
 }
