@@ -84,10 +84,20 @@ model Response {
     updatedAt DateTime @updatedAt
 
     createdBy   User   @relation(fields: [createdById], references: [id])
-    
-    createdByImageId String
     createdById String
-
+    
+    // Reference to the original image (if this is the first response in a chain)
+    sourceImage   Images?   @relation(fields: [sourceImageId], references: [id])
+    sourceImageId Int?
+    
+    // Reference to the previous response (if this is a follow-up response)
+    previousResponse   Response?   @relation(name: "ResponseChain", fields: [previousResponseId], references: [id])
+    previousResponseId Int?
+    
+    // Responses that were generated from this response
+    nextResponses Response[] @relation(name: "ResponseChain")
+    
     @@index([proompt])
-    Images Images[]
+    @@index([previousResponseId])
+    @@index([sourceImageId])
 }
