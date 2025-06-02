@@ -19,16 +19,15 @@ export default async function Create() {
 
   return (
     <HydrateClient>
-      <div className="container mx-auto py-8">
-        <div className="mb-6 rounded-lg bg-gray-700 p-6 text-white shadow-lg">
-          <h1 className="mb-4 text-2xl font-bold">AI Image Generator</h1>
-          <p className="mb-6 text-gray-300">
-            Generate AI images using OpenAI&apos;s GPT-image-1 model. You can
-            use your street view images as reference or create entirely new
-            images with detailed prompts.
-          </p>
-          <ProompInput />
-        </div>
+      <div className="flex flex-col bg-gray-900 text-white">
+
+        {/* Main content with sidebar */}
+        <main className="flex flex-1">
+          
+            {/* Chat interface with sidebar */}
+            <ProompInput />
+        
+        </main>
       </div>
     </HydrateClient>
   );
