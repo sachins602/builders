@@ -9,6 +9,9 @@ import {
   CircleArrowRight,
   CircleArrowUp,
 } from "lucide-react";
+import { POLYGONS } from "./encoded-polygon-data";
+import { Polygon } from "./polygon";
+import { Polyline } from "./polyline";
 
 const MapTypeId = {
   HYBRID: "hybrid",
@@ -80,6 +83,12 @@ export default function WholeMap() {
             }}
             disableDefaultUI
           >
+            <Polygon strokeWeight={1.5} encodedPaths={POLYGONS} />
+        <Polyline
+          strokeWeight={10}
+          strokeColor={'#ff22cc88'}
+          encodedPath={POLYGONS[11]}
+        />
             {position && (
               <InfoWindow
                 position={{ lat: position.lat, lng: position.lng }}
