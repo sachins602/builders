@@ -1,9 +1,20 @@
 import { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { FeatureCollection } from 'geojson'; // Use FeatureCollection for more specific typing
+import type { FeatureCollection } from 'geojson';
 import TorontoGeoJSON from 'public/toronto_crs84.json';
 import { api } from '~/trpc/react';
+import ImagePopup from './imagepopup'; // Import the default export
+
+// Fix for default Leaflet icon path issue with bundlers
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+
 
 // Type guard to check if the data is a valid FeatureCollection
 // Using 'unknown' is safer than 'any' as it forces type checking.
@@ -38,34 +49,11 @@ function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
     click(e) {
       console.log('User clicked at:', e.latlng);
       const { lat, lng } = e.latlng;
-      const offset = 0.00015; // Small offset to create a square polygon
-      const polygonCoordinates = [
-        [
-          [lng - offset, lat - offset],
-          [lng + offset, lat - offset],
-          [lng + offset, lat + offset],
-          [lng - offset, lat + offset],
-          [lng - offset, lat - offset], // Close the polygon
-        ],
-      ];
-
-      const newPolygon: FeatureCollection = {
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'Polygon',
-              coordinates: polygonCoordinates,
-            },
-          },
-        ],
-      };
-      onMapClick(newPolygon);
+     
+   if (!lat || !lng) return console.error("Error fetching image", "No latitude or longitude");
       image.mutate({
-        lat: e.latlng.lat,
-        lng: e.latlng.lng,
+        lat: lat,
+        lng: lng,
         heading: 0,
       },
       {
@@ -82,10 +70,11 @@ function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
 }
 
 export default function MapTest() {
-  const [clickedPolygons, setClickedPolygons] = useState<FeatureCollection[]>([]);
   // Let TypeScript infer the type of TorontoGeoJSON.
   // If 'resolveJsonModule' is not true in tsconfig.json, this will likely be 'any'.
   const importedGeoJsonData = TorontoGeoJSON;
+
+
 
 
   if (isFeatureCollection(importedGeoJsonData)) {
@@ -108,14 +97,8 @@ export default function MapTest() {
             </Marker>
             {/* 'importedGeoJsonData' is now safely typed as FeatureCollection here */}
             <GeoJSON data={importedGeoJsonData} style={() => ({ color: 'blue', weight: 3, opacity: 0.5, fillOpacity: 0 })} />
-            <MapClickHandler onMapClick={(newPolygon) => setClickedPolygons(prevPolygons => [...prevPolygons, newPolygon])} />
-            {clickedPolygons.map((polygon, index) => (
-              <GeoJSON 
-                key={`polygon-${index}`} // Add a unique key for each polygon
-                data={polygon} 
-                style={() => ({ color: 'red', weight: 2, fillOpacity: 0.2 })} 
-              />
-            ))}
+            <MapClickHandler onMapClick={() => { /* Placeholder, as original onMapClick for polygons was removed by user */ }} />
+                  <ImagePopup />           
           </MapContainer>
         </div>
       </div>

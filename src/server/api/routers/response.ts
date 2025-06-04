@@ -65,6 +65,21 @@ export const responseRouter = createTRPCRouter({
       return image;
     }),
 
+
+  getImages: protectedProcedure.query(async ({ ctx }) => {
+  return ctx.db.images.findMany({
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        lat: true,
+        lng: true,
+      },
+      orderBy: { createdAt: "desc" }, // Optional: order by creation date
+    });
+    
+  }),
+
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
     const image = await ctx.db.images.findFirst({
       orderBy: { createdAt: "desc" },
