@@ -108,7 +108,7 @@ export default function WholeMap() {
                             heading: 0,
                           },
                           {
-                            onSuccess: (data) => {
+                            onSuccess: () => {
                               window.location.href = "/create";
                             },
                             onError: (error) => {
@@ -131,7 +131,7 @@ export default function WholeMap() {
                             heading: 270,
                           },
                           {
-                            onSuccess: (data) => {
+                            onSuccess: () => {
                               window.location.href = "/create";
                             },
                             onError: (error) => {
@@ -154,7 +154,7 @@ export default function WholeMap() {
                             heading: 90,
                           },
                           {
-                            onSuccess: (data) => {
+                            onSuccess: () => {
                               window.location.href = "/create";
                             },
                             onError: (error) => {
@@ -177,7 +177,7 @@ export default function WholeMap() {
                             heading: 180,
                           },
                           {
-                            onSuccess: (data) => {
+                            onSuccess: () => {
                               window.location.href = "/create";
                             },
                             onError: (error) => {
