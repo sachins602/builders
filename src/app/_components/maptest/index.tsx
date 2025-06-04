@@ -38,7 +38,7 @@ function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
     click(e) {
       console.log('User clicked at:', e.latlng);
       const { lat, lng } = e.latlng;
-      const offset = 0.0005; // Small offset to create a square polygon
+      const offset = 0.00015; // Small offset to create a square polygon
       const polygonCoordinates = [
         [
           [lng - offset, lat - offset],
