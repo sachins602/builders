@@ -25,14 +25,14 @@ interface MapClickHandlerProps {
 }
 
 function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
-    // const image = api.response.saveStreetViewImage.useMutation({
-    //   onSuccess: (data) => {
-    //     if (data instanceof Error) {
-    //       console.error("Error fetching image", data);
-    //       return;
-    //     }
-    //   },
-    // });
+    const image = api.response.saveStreetViewImage.useMutation({
+      onSuccess: (data) => {
+        if (data instanceof Error) {
+          console.error("Error fetching image", data);
+          return;
+        }
+      },
+    });
   
  useMapEvents({
     click(e) {
@@ -63,19 +63,19 @@ function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
         ],
       };
       onMapClick(newPolygon);
-      // image.mutate({
-      //   lat: e.latlng.lat,
-      //   lng: e.latlng.lng,
-      //   heading: 0,
-      // },
-      // {
-      //   onSuccess: (data) => {
-      //     window.location.href = "/create";
-      //   },
-      //   onError: (error) => {
-      //     console.error("Error saving image", error);
-      //   },
-      // });
+      image.mutate({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+        heading: 0,
+      },
+      {
+        onSuccess: (data) => {
+          window.location.href = "/create";
+        },
+        onError: (error) => {
+          console.error("Error saving image", error);
+        },
+      });
     },
   });
   return null; // This component does not render anything itself
