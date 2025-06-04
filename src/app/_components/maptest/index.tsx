@@ -1,19 +1,9 @@
-import { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { FeatureCollection } from 'geojson';
 import TorontoGeoJSON from 'public/toronto_crs84.json';
 import { api } from '~/trpc/react';
 import ImagePopup from './imagepopup'; // Import the default export
-
-// Fix for default Leaflet icon path issue with bundlers
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
 
 
 // Type guard to check if the data is a valid FeatureCollection
@@ -31,11 +21,7 @@ function isFeatureCollection(data: unknown): data is FeatureCollection {
   );
 }
 
-interface MapClickHandlerProps {
-  onMapClick: (polygon: FeatureCollection) => void;
-}
-
-function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
+function MapClickHandler() {
     const image = api.response.saveStreetViewImage.useMutation({
       onSuccess: (data) => {
         if (data instanceof Error) {
@@ -57,7 +43,7 @@ function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
         heading: 0,
       },
       {
-        onSuccess: (data) => {
+        onSuccess: () => {
           window.location.href = "/create";
         },
         onError: (error) => {
@@ -97,7 +83,7 @@ export default function MapTest() {
             </Marker>
             {/* 'importedGeoJsonData' is now safely typed as FeatureCollection here */}
             <GeoJSON data={importedGeoJsonData} style={() => ({ color: 'blue', weight: 3, opacity: 0.5, fillOpacity: 0 })} />
-            <MapClickHandler onMapClick={() => { /* Placeholder, as original onMapClick for polygons was removed by user */ }} />
+            <MapClickHandler />
                   <ImagePopup />           
           </MapContainer>
         </div>
