@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css';
 import type { FeatureCollection } from 'geojson'; // Use FeatureCollection for more specific typing
@@ -19,38 +20,69 @@ function isFeatureCollection(data: unknown): data is FeatureCollection {
   );
 }
 
-function MapClickHandler() {
-    const image = api.response.saveStreetViewImage.useMutation({
-      onSuccess: (data) => {
-        if (data instanceof Error) {
-          console.error("Error fetching image", data);
-          return;
-        }
-      },
-    });
+interface MapClickHandlerProps {
+  onMapClick: (polygon: FeatureCollection) => void;
+}
+
+function MapClickHandler({ onMapClick }: MapClickHandlerProps) {
+    // const image = api.response.saveStreetViewImage.useMutation({
+    //   onSuccess: (data) => {
+    //     if (data instanceof Error) {
+    //       console.error("Error fetching image", data);
+    //       return;
+    //     }
+    //   },
+    // });
   
  useMapEvents({
     click(e) {
       console.log('User clicked at:', e.latlng);
-      image.mutate({
-        lat: e.latlng.lat,
-        lng: e.latlng.lng,
-        heading: 0,
-      },
-      {
-        onSuccess: (data) => {
-          window.location.href = "/create";
-        },
-        onError: (error) => {
-          console.error("Error saving image", error);
-        },
-      });
+      const { lat, lng } = e.latlng;
+      const offset = 0.0005; // Small offset to create a square polygon
+      const polygonCoordinates = [
+        [
+          [lng - offset, lat - offset],
+          [lng + offset, lat - offset],
+          [lng + offset, lat + offset],
+          [lng - offset, lat + offset],
+          [lng - offset, lat - offset], // Close the polygon
+        ],
+      ];
+
+      const newPolygon: FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'Polygon',
+              coordinates: polygonCoordinates,
+            },
+          },
+        ],
+      };
+      onMapClick(newPolygon);
+      // image.mutate({
+      //   lat: e.latlng.lat,
+      //   lng: e.latlng.lng,
+      //   heading: 0,
+      // },
+      // {
+      //   onSuccess: (data) => {
+      //     window.location.href = "/create";
+      //   },
+      //   onError: (error) => {
+      //     console.error("Error saving image", error);
+      //   },
+      // });
     },
   });
   return null; // This component does not render anything itself
 }
 
 export default function MapTest() {
+  const [clickedPolygons, setClickedPolygons] = useState<FeatureCollection[]>([]);
   // Let TypeScript infer the type of TorontoGeoJSON.
   // If 'resolveJsonModule' is not true in tsconfig.json, this will likely be 'any'.
   const importedGeoJsonData = TorontoGeoJSON;
@@ -75,8 +107,15 @@ export default function MapTest() {
               </Popup>
             </Marker>
             {/* 'importedGeoJsonData' is now safely typed as FeatureCollection here */}
-            <GeoJSON data={importedGeoJsonData} style={() => ({ color: 'blue', weight: 2, opacity: 0.5, fillOpacity: 0.2 })} />
-            <MapClickHandler  />
+            <GeoJSON data={importedGeoJsonData} style={() => ({ color: 'blue', weight: 3, opacity: 0.5, fillOpacity: 0 })} />
+            <MapClickHandler onMapClick={(newPolygon) => setClickedPolygons(prevPolygons => [...prevPolygons, newPolygon])} />
+            {clickedPolygons.map((polygon, index) => (
+              <GeoJSON 
+                key={`polygon-${index}`} // Add a unique key for each polygon
+                data={polygon} 
+                style={() => ({ color: 'red', weight: 2, fillOpacity: 0.2 })} 
+              />
+            ))}
           </MapContainer>
         </div>
       </div>
