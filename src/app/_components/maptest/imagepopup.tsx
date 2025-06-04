@@ -1,5 +1,5 @@
 
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api } from '~/trpc/react';
 
@@ -22,15 +22,7 @@ interface ValidatedImageData extends ImageDataFromApi {
 export default function ImagePopup() {
   const imagesQuery = api.response.getImages.useQuery();
 
-  if (imagesQuery.isLoading) {
-    return <p>Loading images...</p>;
-  }
 
-  if (imagesQuery.error) {
-    return <p>Error loading images: {imagesQuery.error.message}</p>;
-  }
-
-  // Type assertion for the data from the query
   const typedImages = imagesQuery.data as ImageDataFromApi[] | undefined;
 
   // Filter and type guard to ensure lat, lng, and url are present and correctly typed.
@@ -47,20 +39,19 @@ export default function ImagePopup() {
     return <p>No images to display.</p>;
   }
 
-  console.log("Displaying filtered images:", filteredAndValidatedImages);
-
   return filteredAndValidatedImages.map((image) => {
     // Now, image.lat and image.lng are correctly typed as 'number'
     // and image.url is 'string' due to the ValidatedImageData type and filter.
     return (
       <Marker key={image.id} position={[image.lat, image.lng]}>
-        <Popup>
+        <Tooltip permanent={true} direction="top" offset={[0, -10]}>
           <img
             src={`/${image.url}`}
             alt={image.name ?? 'Street View Image'}
+            style={{ maxWidth: '100px', maxHeight: '80px', display: 'block', margin: 'auto' }} // Added styling for image size and centering
           />
-          {image.name && <p style={{ textAlign: 'center', margin: '5px 0 0' }}>{image.name}</p>}
-        </Popup>
+          {image.name && <p style={{ textAlign: 'center' }}>{image.name}</p>}
+        </Tooltip>
       </Marker>
     );
   });
