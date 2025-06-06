@@ -1,13 +1,9 @@
 import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
-import MapWrapper from "./_components/mapwrapper";
+import MapWrapper from "./_components/map/mapwrapper";
 
 export default async function Home() {
-  const session = await auth();
 
-  if (session?.user) {
-    void api.response.getLatest.prefetch();
-  }
 
   return (
     <HydrateClient>

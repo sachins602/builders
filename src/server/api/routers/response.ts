@@ -54,6 +54,8 @@ export const responseRouter = createTRPCRouter({
       // write the file path to the database and return the file path
       const image = await ctx.db.images.create({
         data: {
+          lat: lat,
+          lng: lng,
           name: imageName,
           url: `streetviewimages/${imageName}.${fileType}`,
           createdBy: { connect: { id: ctx.session.user.id } },
@@ -62,6 +64,21 @@ export const responseRouter = createTRPCRouter({
 
       return image;
     }),
+
+
+  getImages: protectedProcedure.query(async ({ ctx }) => {
+  return ctx.db.images.findMany({
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        lat: true,
+        lng: true,
+      },
+      orderBy: { createdAt: "desc" }, // Optional: order by creation date
+    });
+    
+  }),
 
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
     const image = await ctx.db.images.findFirst({
