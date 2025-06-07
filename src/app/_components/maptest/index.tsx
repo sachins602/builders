@@ -8,7 +8,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FeatureCollection } from "geojson";
-import TorontoGeoJSON from "public/toronto_crs84.json";
+import TorontoGeoJSON from "public/torontonhood.json";
 import { api } from "~/trpc/react";
 import ImagePopup from "./imagepopup"; // Import the default export
 
