@@ -9,6 +9,9 @@ import TorontoNhoodJson from "public/torontonhood.json";
 import type { CSSProperties } from "react";
 
 import { geoCentroid } from "d3-geo";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Search } from "lucide-react";
 
 type Geo = {
   type?: string;
@@ -41,9 +44,9 @@ const pressedStyle: CSSProperties = {
 };
 export default function MapTestsComponent() {
   return (
-    <div className="w-fit mx-auto rounded-lg bg-slate-800 shadow-xl md:h-[450px] md:min-w-[700px] lg:h-[550px] lg:min-w-[1000px]">
+    <div className="w-fit mx-auto rounded-lg bg-slate-800 shadow-xl md:min-w-[700px] lg:min-w-[1000px]">
       <ComposableMap
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "500px" }}
         projectionConfig={{
           center: [2.134452502762784, 62.9378024270368],
           scale: 500,
@@ -89,6 +92,12 @@ export default function MapTestsComponent() {
           </Geographies>
         </ZoomableGroup>
       </ComposableMap>
+      <div className="flex w-full max-w-sm place-self-center gap-2">
+      <Input type="text" placeholder="Address" />
+      <Button variant="secondary" size="icon" className="size-8">
+      <Search />
+      </Button>
+    </div>
     </div>
   );
 }
