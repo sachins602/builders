@@ -3,11 +3,53 @@ import path, { resolve } from "path";
 import { z } from "zod";
 import { env } from "~/env";
 
+
+
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+
+
+interface GoogleGeocodingResponse {
+  results: GeoCodeResponse[];
+  status: string;
+  error_message?: string;
+}
+
+interface GeoCodeResponse {
+  address_components?: AddressComponent[];
+  formatted_address?:  string;
+  geometry?:           Geometry;
+  place_id?:           string;
+  types?:              string[];
+}
+
+interface AddressComponent {
+  long_name?:  string;
+  short_name?: string;
+  types?:      string[];
+}
+
+interface Geometry {
+  bounds?:        Bounds;
+  location?:      Location;
+  location_type?: string;
+  viewport?:      Bounds;
+}
+
+interface Bounds {
+  northeast?: Location;
+  southwest?: Location;
+}
+
+interface Location {
+  lat?: number;
+  lng?: number;
+}
+
+
 
 export const responseRouter = createTRPCRouter({
 
@@ -97,33 +139,38 @@ export const responseRouter = createTRPCRouter({
     return responses;
   }),
 
-  getPlacesDetails: publicProcedure.query( async () =>{
-    // curl -X POST -d '{
-    //   "textQuery" : "Spicy Vegetarian Food in Sydney, Australia"
-    // }' \
-    // -H 'Content-Type: application/json' -H 'X-Goog-Api-Key: API_KEY' \
-    // -H 'X-Goog-FieldMask: places.displayName,places.formattedAddress,places.priceLevel' \
-    // 'https://places.googleapis.com/v1/places:searchText'
-    const response = await fetch(
-      `https://places.googleapis.com/v1/places:searchText`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": env.NEXT_PUBLIC_GOOGLE_API_KEY,
-          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.priceLevel",
-        },
-        body: JSON.stringify({
-          textQuery: "toronto",
-        }),
-      }
-    );
-    if (!response.ok) {
-      return new Error(`Google API responded with ${response.status}`);
-    }
-    console.log(response);
-    return response;
-  }),
+  getPlacesDetails: publicProcedure
+    .input(z.object({ address: z.string() }))
+    .mutation(async ({ input }) => {
+    
+
+      const { address } = input;
+      console.log(address);
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        address,
+      )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`;
+
+    
+   
+        const response = await (await fetch(url)).json() as GoogleGeocodingResponse;
+        console.log(response);
+
+        if (response.status !== "OK") {
+          throw new Error(response.error_message);
+        }
+
+
+
+        
+        const formattedGeoCodeData = {
+          lat: response?.results[0]?.geometry?.location?.lat,
+          lng: response?.results[0]?.geometry?.location?.lng,
+          formattedAddress: response?.results[0]?.formatted_address,
+        }
+
+        return formattedGeoCodeData; 
+      
+    }),
 
 
   getSecretMessage: protectedProcedure.query(() => {

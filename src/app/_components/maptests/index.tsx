@@ -10,8 +10,6 @@ import {
   TileLayer,
   Marker as LeafletMarker,
   Popup,
-  GeoJSON,
-  useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TorontoNhoodJson from "public/torontonhood.json";
@@ -107,6 +105,31 @@ export default function MapTestsComponent() {
     0,
     0,
   ]);
+  const places = api.response.getPlacesDetails.useMutation()
+
+  const handleMapClick = (address: string) => {
+    setScreenNumber(1);
+    console.log(address);
+    places.mutate({address: address},{
+      onSuccess: (data) => {
+        if (data instanceof Error) {
+          console.error("Error fetching image", data);
+          return;
+        }
+        if (!data.lat || !data.lng) {
+          console.error("Error fetching image", "No latitude or longitude");
+          return;
+        }
+        console.log(data);
+        setSelectedPostion([data.lat, data.lng])
+        setScreenNumber(1);
+      },
+      onError: (error) => {
+        console.error("Error fetching image", error);
+      },
+    })
+    
+  };
   return (
     <div className="flex h-full w-full">
       {screenNumber === 0 ?(
@@ -124,10 +147,7 @@ export default function MapTestsComponent() {
                 <>
                   {geographies.map((geo: Geo, i) => (
                     <Geography
-                      onClick={() => {
-                        console.log(geo.properties?.name);
-                        // setScreenNumber(1);
-                      }}
+                      onClick={() => handleMapClick(geo.properties?.name ?? "")}
                       key={i}
                       height="100%"
                       width="100%"
