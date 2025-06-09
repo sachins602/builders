@@ -6,6 +6,7 @@ import { env } from "~/env";
 import {
   createTRPCRouter,
   protectedProcedure,
+  publicProcedure,
 } from "~/server/api/trpc";
 
 export const responseRouter = createTRPCRouter({
@@ -94,6 +95,34 @@ export const responseRouter = createTRPCRouter({
       where: { createdBy: { id: ctx.session.user.id } },
     });
     return responses;
+  }),
+
+  getPlacesDetails: publicProcedure.query( async () =>{
+    // curl -X POST -d '{
+    //   "textQuery" : "Spicy Vegetarian Food in Sydney, Australia"
+    // }' \
+    // -H 'Content-Type: application/json' -H 'X-Goog-Api-Key: API_KEY' \
+    // -H 'X-Goog-FieldMask: places.displayName,places.formattedAddress,places.priceLevel' \
+    // 'https://places.googleapis.com/v1/places:searchText'
+    const response = await fetch(
+      `https://places.googleapis.com/v1/places:searchText`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": env.NEXT_PUBLIC_GOOGLE_API_KEY,
+          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.priceLevel",
+        },
+        body: JSON.stringify({
+          textQuery: "toronto",
+        }),
+      }
+    );
+    if (!response.ok) {
+      return new Error(`Google API responded with ${response.status}`);
+    }
+    console.log(response);
+    return response;
   }),
 
 

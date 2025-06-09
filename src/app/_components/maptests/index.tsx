@@ -41,15 +41,24 @@ type Properties = {
 };
 
 const defaultStyle: CSSProperties = {
-  fill: "#D6D6DA",
+  fill: "#ECEFF1",
+  stroke: "#607D8B",
+  strokeWidth: 0.75,
+  outline: "none",
 };
 
 const hoverStyle: CSSProperties = {
-  fill: "#F53",
+  fill: "#CFD8DC",
+  stroke: "#546E7A",
+  strokeWidth: 1,
+  outline: "none",
 };
 
 const pressedStyle: CSSProperties = {
-  fill: "##00FF00",
+  fill: "#B0BEC5", // Corrected hex value (removed extra '#')
+  stroke: "#455A64",
+  strokeWidth: 1,
+  outline: "none",
 };
 
 // function MapClickHandler() {
@@ -137,9 +146,10 @@ export default function MapTestsComponent() {
                       <g key={geo.rsmKey}>
                         <SimpleMarker coordinates={centroid}>
                           <text
-                            className="text-black"
-                            fontSize={1}
+                            fontSize={3} // Increased font size
                             textAnchor="middle"
+                            fill="#263238" // Added fill color for better readability
+                            style={{ pointerEvents: "none" }} // Prevent text from capturing mouse events
                           >
                             {geo.properties?.name}
                           </text>

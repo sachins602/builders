@@ -22,6 +22,10 @@ next-env.d.ts
 /public/streetviewimages
 /public/generatedimages
 /public/torontoeverthing.json
+/public/torontonhood.json
+/public/toronto.json
+/public/torontonhood2.json
+/public/torontonhood.json
 
 # production
 /build
