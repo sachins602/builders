@@ -1,8 +1,8 @@
 export default function Footer() {
   return (
-    <footer className="flex h-16 w-full items-center justify-center text-white">
-      <div className="text-sm">
-        &copy; {new Date().getFullYear()} My Application. All rights reserved.
+    <footer className="h-8 w-full text-black flex justify-end items-center p-2">
+      <div className="text-[10px]">
+        &copy; {new Date().getFullYear()} BT @ Conestoga College. All rights reserved.
       </div>
     </footer>
   );
