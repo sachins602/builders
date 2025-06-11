@@ -10,10 +10,10 @@ import {
   Polygon,
 } from "react-leaflet";
 import type { FeatureCollection } from "geojson";
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 // Import toronto boundary data
-import {torontoBoundary} from "./torontoBoundary";
+import { torontoBoundary } from "./torontoBoundary";
 
 // Project and local imports
 import TorontoGeoJSON from "public/toronto_crs84.json";
@@ -22,24 +22,23 @@ import ImagePopup from "./imagepopup"; // Import the default export
 import { env } from "~/env";
 
 // Used to definte the City of Toronto boundary
-const outerBounds: [number, number][][] = [[
-  [90, -180],
-  [90, 180],
-  [-90, 180],
-  [-90, -180],
-]];
-
-/*const torontoBoundary: [number, number][] = [
-  [43.8555, -79.6393],
-  [43.8555, -79.1169],
-  [43.5810, -79.1169],
-  [43.5810, -79.6393],
-];*/
-
-const maskPolygon: [number, number][][] = [
-  ...outerBounds,
-  torontoBoundary,
+const outerBounds: [number, number][][] = [
+  [
+    [90, -180],
+    [90, 180],
+    [-90, 180],
+    [-90, -180],
+  ],
 ];
+
+// const torontoBoundary: [number, number][] = [
+//   [43.8555, -79.6393],
+//   [43.8555, -79.1169],
+//   [43.581, -79.1169],
+//   [43.581, -79.6393],
+// ];
+
+const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
 // Type guard to check if the data is a valid FeatureCollection
 // Using 'unknown' is safer than 'any' as it forces type checking.
@@ -96,6 +95,7 @@ function MapClickHandler() {
 export default function MapTest() {
   // Let TypeScript infer the type of TorontoGeoJSON.
   // If 'resolveJsonModule' is not true in tsconfig.json, this will likely be 'any'.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const importedGeoJsonData = TorontoGeoJSON;
 
   // State to hold the mask data
@@ -105,58 +105,54 @@ export default function MapTest() {
     // If the type guard passes, TypeScript knows importedGeoJsonData is FeatureCollection here.
     // No need to cast 'importedGeoJsonData' to FeatureCollection again, it's inferred.
     return (
+      <MapContainer
+        center={[43.7192, -79.3832]}
+        zoom={10}
+        scrollWheelZoom={true}
+        style={{ height: "100%", width: "100%", minHeight: "275px" }}
+      >
+        <TileLayer
+          url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
+          attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        />
 
-          <MapContainer
-            center={[43.7192, -79.3832]}
-            zoom={10}
-            scrollWheelZoom={true}
-            style={{ height: "100%", width: "100%", minHeight: "275px" }}
-          >
+        <Marker position={[51.505, -0.09]}>
+          <Popup>
+            A pretty CSS3 popup. <br /> Easily customizable.
+          </Popup>
+        </Marker>
 
-            <TileLayer
-               url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
-              attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
+        {/* 'importedGeoJsonData' is now safely typed as FeatureCollection here */}
+        <GeoJSON
+          data={importedGeoJsonData}
+          style={() => ({
+            color: "black",
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0,
+            hover: {
+              color: "blue",
+              weight: 3,
+              fillOpacity: 0.5,
+            },
+          })}
+        />
 
-            <Marker position={[51.505, -0.09]}>
-              <Popup>
-                A pretty CSS3 popup. <br /> Easily customizable.
-              </Popup>
-            </Marker>
+        {/* Add the mask polygon */}
 
-            {/* 'importedGeoJsonData' is now safely typed as FeatureCollection here */}
-            <GeoJSON
-              data={importedGeoJsonData}
-              style={() => ({
-                color: "black",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0,
-                hover:{
-                  color: "blue",
-                  weight: 3,
-                  fillOpacity: 0.5,
-                }
-              })}
-            />
-
-            {/* Add the mask polygon */}
-
-              <Polygon
-                positions={maskPolygon}
-                pathOptions={{
-                  color: "black",
-                  weight: 2,
-                  fillColor: "white",
-                  opacity: 1,
-                  fillOpacity: 1,
-                }}
-              />
-            <MapClickHandler />
-            <ImagePopup />
-            
-          </MapContainer>
-
+        <Polygon
+          positions={maskPolygon}
+          pathOptions={{
+            color: "black",
+            weight: 2,
+            fillColor: "white",
+            opacity: 1,
+            fillOpacity: 1,
+          }}
+        />
+        <MapClickHandler />
+        <ImagePopup />
+      </MapContainer>
     );
   } else {
     console.error(
