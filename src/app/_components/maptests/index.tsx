@@ -145,7 +145,7 @@ export default function MapTestsComponent() {
     
   };
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-full w-full flex-col space-y-2">
       {screenNumber === 0 ?(
         <div className="mx-auto w-fit rounded-lg bg-slate-800 shadow-xl md:min-w-[700px] lg:min-w-[1000px]">
           <ComposableMap
@@ -196,15 +196,9 @@ export default function MapTestsComponent() {
             </Geographies>
           </ZoomableGroup>
         </ComposableMap>
-        <div className="flex w-full max-w-sm gap-2 place-self-center">
-          <Input type="text" placeholder="Address" />
-          <Button variant="secondary" size="icon" className="size-8">
-            <Search />
-          </Button>
-        </div>
       </div>
       ):(
-      <div className="h-[500px] w-full">
+      <div className="h-[560px] w-full">
         <MapContainer
         
           center={selectedPosition}
@@ -225,6 +219,12 @@ export default function MapTestsComponent() {
         </MapContainer>
       </div>
       )}
+       <div className="flex w-full max-w-sm gap-2 place-self-center">
+          <Input type="text" placeholder="Address" />
+          <Button variant="secondary" size="icon" className="size-8">
+            <Search />
+          </Button>
+        </div>
     </div>
   );
 }
