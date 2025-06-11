@@ -3,31 +3,55 @@ import path, { resolve } from "path";
 import { z } from "zod";
 import { env } from "~/env";
 
+
+
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
 
-export const postRouter = createTRPCRouter({
-  hello: publicProcedure
-    .input(z.object({ text: z.string() }))
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input.text}`,
-      };
-    }),
 
-  create: protectedProcedure
-    .input(z.object({ name: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.post.create({
-        data: {
-          name: input.name,
-          createdBy: { connect: { id: ctx.session.user.id } },
-        },
-      });
-    }),
+interface GoogleGeocodingResponse {
+  results: GeoCodeResponse[];
+  status: string;
+  error_message?: string;
+}
+
+interface GeoCodeResponse {
+  address_components?: AddressComponent[];
+  formatted_address?:  string;
+  geometry?:           Geometry;
+  place_id?:           string;
+  types?:              string[];
+}
+
+interface AddressComponent {
+  long_name?:  string;
+  short_name?: string;
+  types?:      string[];
+}
+
+interface Geometry {
+  bounds?:        Bounds;
+  location?:      Location;
+  location_type?: string;
+  viewport?:      Bounds;
+}
+
+interface Bounds {
+  northeast?: Location;
+  southwest?: Location;
+}
+
+interface Location {
+  lat?: number;
+  lng?: number;
+}
+
+
+
+export const responseRouter = createTRPCRouter({
 
   saveStreetViewImage: protectedProcedure
     .input(z.object({ lat: z.number(), lng: z.number(), heading: z.number() }))
@@ -73,6 +97,8 @@ export const postRouter = createTRPCRouter({
       // write the file path to the database and return the file path
       const image = await ctx.db.images.create({
         data: {
+          lat: lat,
+          lng: lng,
           name: imageName,
           url: `streetviewimages/${imageName}.${fileType}`,
           createdBy: { connect: { id: ctx.session.user.id } },
@@ -82,6 +108,21 @@ export const postRouter = createTRPCRouter({
       return image;
     }),
 
+
+  getImages: protectedProcedure.query(async ({ ctx }) => {
+  return ctx.db.images.findMany({
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        lat: true,
+        lng: true,
+      },
+      orderBy: { createdAt: "desc" }, // Optional: order by creation date
+    });
+    
+  }),
+
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
     const image = await ctx.db.images.findFirst({
       orderBy: { createdAt: "desc" },
@@ -90,14 +131,47 @@ export const postRouter = createTRPCRouter({
     return image ?? null;
   }),
 
-  getLatest: protectedProcedure.query(async ({ ctx }) => {
-    const post = await ctx.db.post.findFirst({
+  getResponseHistory: protectedProcedure.query(async ({ ctx }) => {
+    const responses = await ctx.db.response.findMany({
       orderBy: { createdAt: "desc" },
       where: { createdBy: { id: ctx.session.user.id } },
     });
-
-    return post ?? null;
+    return responses;
   }),
+
+  getPlacesDetails: publicProcedure
+    .input(z.object({ address: z.string() }))
+    .mutation(async ({ input }) => {
+    
+
+      const { address } = input;
+      console.log(address);
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        `${address}, Toronto`,
+      )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`;
+
+    
+   
+        const response = await (await fetch(url)).json() as GoogleGeocodingResponse;
+        console.log(response);
+
+        if (response.status !== "OK") {
+          throw new Error(response.error_message);
+        }
+
+
+
+        
+        const formattedGeoCodeData = {
+          lat: response?.results[0]?.geometry?.location?.lat,
+          lng: response?.results[0]?.geometry?.location?.lng,
+          formattedAddress: response?.results[0]?.formatted_address,
+        }
+
+        return formattedGeoCodeData; 
+      
+    }),
+
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";

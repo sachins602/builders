@@ -20,6 +20,7 @@ next-env.d.ts
 
 # public/streetviewimages
 /public/streetviewimages
+/public/generatedimages
 
 # production
 /build
@@ -47,3 +48,9 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# geojson
+*.geojson
+
+# toronto geojson
+src/geojson/toronto.json
