@@ -8,13 +8,11 @@ import {
 import {
   MapContainer,
   TileLayer,
-  Marker as LeafletMarker,
-  Popup,
   useMap,
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import TorontoNhoodJson from "public/torontonhood.json";
+import TorontoGeoJson from "public/toronto.json";
 import { useState, type CSSProperties, useEffect } from "react";
 
 
@@ -156,7 +154,7 @@ export default function MapComponent() {
           }}
         >
           <ZoomableGroup minZoom={0.4} maxZoom={20}>
-            <Geographies geography={TorontoNhoodJson}>
+            <Geographies geography={TorontoGeoJson}>
               {({ geographies }) => (
                 <>
                   {geographies.map((geo: Geo, i) => (
