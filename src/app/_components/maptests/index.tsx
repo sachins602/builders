@@ -10,10 +10,15 @@ import {
   TileLayer,
   Marker as LeafletMarker,
   Popup,
+  useMap,
+  useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TorontoNhoodJson from "public/torontonhood.json";
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, useEffect } from "react";
+
+
+
 import { api } from "~/trpc/react";
 import { geoCentroid } from "d3-geo";
 import { Input } from "../ui/input";
@@ -53,63 +58,71 @@ const hoverStyle: CSSProperties = {
 };
 
 const pressedStyle: CSSProperties = {
-  fill: "#B0BEC5", // Corrected hex value (removed extra '#')
+  fill: "#B0BEC5",
   stroke: "#455A64",
   strokeWidth: 1,
   outline: "none",
 };
 
-// function MapClickHandler() {
-//   const image = api.response.saveStreetViewImage.useMutation({
-//     onSuccess: (data) => {
-//       if (data instanceof Error) {
-//         console.error("Error fetching image", data);
-//         return;
-//       }
-//     },
-//   });
+// Component to programmatically update map view
+function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+}
 
-//   useMapEvents({
-//     click(e) {
-//       console.log("User clicked at:", e.latlng);
-//       const { lat, lng } = e.latlng;
+function MapClickHandler() {
+  const image = api.response.saveStreetViewImage.useMutation({
+    onSuccess: (data) => {
+      if (data instanceof Error) {
+        console.error("Error fetching image", data);
+        return;
+      }
+    },
+  });
 
-//       if (!lat || !lng)
-//         return console.error(
-//           "Error fetching image",
-//           "No latitude or longitude",
-//         );
-//       image.mutate(
-//         {
-//           lat: lat,
-//           lng: lng,
-//           heading: 0,
-//         },
-//         {
-//           onSuccess: () => {
-//             window.location.href = "/create";
-//           },
-//           onError: (error) => {
-//             console.error("Error saving image", error);
-//           },
-//         },
-//       );
-//     },
-//   });
-//   return null; // This component does not render anything itself
-// }
+  useMapEvents({
+    click(e) {
+      console.log("User clicked at:", e.latlng);
+      const { lat, lng } = e.latlng;
+
+      if (!lat || !lng)
+        return console.error(
+          "Error fetching image",
+          "No latitude or longitude",
+        );
+      image.mutate(
+        {
+          lat: lat,
+          lng: lng,
+          heading: 0,
+        },
+        {
+          onSuccess: () => {
+            window.location.href = "/create";
+          },
+          onError: (error) => {
+            console.error("Error saving image", error);
+          },
+        },
+      );
+    },
+  });
+  return null; // This component does not render anything itself
+}
 
 export default function MapTestsComponent() {
   const [screenNumber, setScreenNumber] = useState<number>(0);
+  // Set a more sensible initial position than [0,0]
   const [selectedPosition, setSelectedPostion] = useState<[number, number]>([
-    0,
-    0,
+    43.6532,
+    -79.3832,
   ]);
   const places = api.response.getPlacesDetails.useMutation()
 
   const handleMapClick = (address: string) => {
-    setScreenNumber(1);
-    console.log(address);
     places.mutate({address: address},{
       onSuccess: (data) => {
         if (data instanceof Error) {
@@ -121,7 +134,8 @@ export default function MapTestsComponent() {
           return;
         }
         console.log(data);
-        setSelectedPostion([data.lat, data.lng])
+        // Set position first, then switch screens to ensure map initializes with correct center
+        setSelectedPostion([data.lat, data.lng]);
         setScreenNumber(1);
       },
       onError: (error) => {
@@ -202,13 +216,11 @@ export default function MapTestsComponent() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <LeafletMarker position={[51.505, -0.09]}>
-            <Popup>
-              A pretty CSS3 popup. <br /> Easily customizable.
-            </Popup>
-          </LeafletMarker>
+          
 
-          {/* <MapClickHandler /> */}
+          <MapUpdater center={selectedPosition} zoom={13} />
+
+          <MapClickHandler />
           {/* <ImagePopup /> */}
         </MapContainer>
       </div>
