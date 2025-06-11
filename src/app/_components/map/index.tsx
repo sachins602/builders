@@ -113,7 +113,7 @@ function MapClickHandler() {
   return null; // This component does not render anything itself
 }
 
-export default function MapTestsComponent() {
+export default function MapComponent() {
   const [screenNumber, setScreenNumber] = useState<number>(0);
   // Set a more sensible initial position than [0,0]
   const [selectedPosition, setSelectedPostion] = useState<[number, number]>([
