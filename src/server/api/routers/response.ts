@@ -145,7 +145,6 @@ export const responseRouter = createTRPCRouter({
     
 
       const { address } = input;
-      console.log(address);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
         `${address}, Toronto`,
       )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`;
@@ -153,8 +152,6 @@ export const responseRouter = createTRPCRouter({
     
    
         const response = await (await fetch(url)).json() as GoogleGeocodingResponse;
-        console.log(response);
-
         if (response.status !== "OK") {
           throw new Error(response.error_message);
         }

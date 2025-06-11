@@ -64,9 +64,7 @@ export default function MapComponent() {
 
     useMapEvents({
       click(e) {
-        console.log("User clicked at:", e.latlng);
         const { lat, lng } = e.latlng;
-        console.log(e);
         if (mapPositon.zoomLevel < 18) {
           setMapPostion({
             center: [lat, lng],
@@ -94,10 +92,7 @@ export default function MapComponent() {
         //     },
         //   },
         // );
-      },
-      mouseover(e) {
-        console.log("User hovered at:", e.latlng);
-      },
+      }
     });
     return null; // This component does not render anything itself
   }
