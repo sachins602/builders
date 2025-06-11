@@ -1,11 +1,4 @@
 import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Marker as SimpleMarker,
-  ZoomableGroup,
-} from "react-simple-maps";
-import {
   MapContainer,
   Polygon,
   TileLayer,
@@ -14,56 +7,15 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import TorontoGeoJson from "public/toronto.json";
 import TorontoTopoJSON from "public/toronto_crs84.json";
-import { useState, type CSSProperties, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 import { api } from "~/trpc/react";
-import { geoCentroid } from "d3-geo";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search } from "lucide-react";
 import { torontoBoundary } from "../maptest2/torontoBoundary";
 import { env } from "~/env";
-
-type Geo = {
-  type?: string;
-  geometry?: Geometry;
-  rsmKey?: string;
-  svgPath?: string;
-  properties?: Properties;
-};
-
-type Geometry = {
-  type?: string;
-  coordinates?: Array<Array<number[]>>;
-};
-
-type Properties = {
-  name?: string;
-  id?: number;
-};
-
-const defaultStyle: CSSProperties = {
-  fill: "#ECEFF1",
-  stroke: "#607D8B",
-  strokeWidth: 0.75,
-  outline: "none",
-};
-
-const hoverStyle: CSSProperties = {
-  fill: "#CFD8DC",
-  stroke: "#546E7A",
-  strokeWidth: 1,
-  outline: "none",
-};
-
-const pressedStyle: CSSProperties = {
-  fill: "#B0BEC5",
-  stroke: "#455A64",
-  strokeWidth: 1,
-  outline: "none",
-};
 
 const outerBounds: [number, number][][] = [
   [
