@@ -2,15 +2,13 @@ import {
   MapContainer,
   Polygon,
   TileLayer,
-  useMap,
   GeoJSON,
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TorontoTopoJSON from "public/toronto_crs84.json";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-import { api } from "~/trpc/react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search } from "lucide-react";
@@ -28,20 +26,6 @@ const outerBounds: [number, number][][] = [
 
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
-// Component to programmatically update map view
-function MapUpdater({
-  center,
-  zoom,
-}: {
-  center: [number, number];
-  zoom: number;
-}) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
-  return null;
-}
 
 export default function MapComponent() {
   const [mapPositon, setMapPostion] = useState<{
@@ -51,58 +35,32 @@ export default function MapComponent() {
     center: [43.7, -79.42],
     zoomLevel: 11,
   });
-  const image = api.response.saveStreetViewImage.useMutation({
-    onSuccess: (data) => {
-      if (data instanceof Error) {
-        console.error("Error fetching image", data);
-        return;
-      }
-    },
-  });
 
-  function MapClickHandler() {
 
-    useMapEvents({
+  function MapEvents() {
+    const map = useMapEvents({
       click(e) {
-        const { lat, lng } = e.latlng;
-        if (mapPositon.zoomLevel < 18) {
-          setMapPostion({
-            center: [lat, lng],
-            zoomLevel: mapPositon.zoomLevel + 1,
-          });
+        if (map.getZoom() < 18) {
+          map.flyTo(e.latlng, map.getZoom() + 1);
         }
-
-        // if (!lat || !lng)
-        //   return console.error(
-        //     "Error fetching image",
-        //     "No latitude or longitude",
-        //   );
-        // image.mutate(
-        //   {
-        //     lat: lat,
-        //     lng: lng,
-        //     heading: 0,
-        //   },
-        //   {
-        //     onSuccess: () => {
-        //       window.location.href = "/create";
-        //     },
-        //     onError: (error) => {
-        //       console.error("Error saving image", error);
-        //     },
-        //   },
-        // );
-      }
+      },
+      moveend() {
+        setMapPostion({
+          center: [map.getCenter().lat, map.getCenter().lng],
+          zoomLevel: map.getZoom(),
+        });
+      },
     });
-    return null; // This component does not render anything itself
+    return null;
   }
 
   return (
     <div className="flex h-full w-full flex-col space-y-2">
       <div className="h-[560px] w-full">
         <MapContainer
-          center={[43.7, -79.42]} // Toronto coordinates
+          center={mapPositon.center} // Toronto coordinates
           zoom={mapPositon.zoomLevel}
+          
           scrollWheelZoom={true}
           style={{ height: "500px", width: "100%" }}
         >
@@ -111,7 +69,6 @@ export default function MapComponent() {
             attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
 
-          {/* <MapUpdater center={} zoom={13} /> */}
           <GeoJSON
             data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
             style={() => ({
@@ -140,8 +97,7 @@ export default function MapComponent() {
             }}
           />
 
-          <MapClickHandler />
-          <MapUpdater center={mapPositon.center} zoom={mapPositon.zoomLevel} />
+          <MapEvents />
           {/* <ImagePopup /> */}
         </MapContainer>
       </div>
