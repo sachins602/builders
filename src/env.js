@@ -29,6 +29,7 @@ export const env = createEnv({
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string(),
     NEXT_PUBLIC_GOOGLE_API_KEY: z.string(),
+    NEXT_PUBLIC_MAPTILER_KEY: z.string(),
   },
 
   /**
@@ -44,6 +45,7 @@ export const env = createEnv({
     DATABASE_URL_AZURE: process.env.DATABASE_URL_AZURE,
     NODE_ENV: process.env.NODE_ENV,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    NEXT_PUBLIC_MAPTILER_KEY: process.env.NEXT_PUBLIC_MAPTILER_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

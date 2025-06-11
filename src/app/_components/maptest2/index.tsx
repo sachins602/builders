@@ -19,9 +19,7 @@ import {torontoBoundary} from "./torontoBoundary";
 import TorontoGeoJSON from "public/toronto_crs84.json";
 import { api } from "~/trpc/react";
 import ImagePopup from "./imagepopup"; // Import the default export
-
-// API Key for MapTiler
-const mapTilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
+import { env } from "~/env";
 
 // Used to definte the City of Toronto boundary
 const outerBounds: [number, number][][] = [[
@@ -116,7 +114,7 @@ export default function MapTest() {
           >
 
             <TileLayer
-               url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${mapTilerKey}`}
+               url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
               attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               />
 
