@@ -1,37 +1,33 @@
-import { auth } from "~/server/auth";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+// External libraries
 import Link from "next/link";
-import { Button } from "./ui/button";
+import Image from "next/image";
+
+// Internal modules
+import { auth } from "~/server/auth";
+
+// UI components
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import NavMenu from "./navMenu";
+import UserIcon from "./userIcon";
+
 
 export default async function Header() {
-  const session = await auth();
 
 
   return (
-    <header className="flex h-24 w-full items-center justify-between px-2 text-white">
-      <div className="text-lg font-bold">The Missing Middle</div>
-      <nav className="flex flex-col items-center">
-        {session?.user.image && (
-          <div className="place-items-center">
-            <Avatar>
-              <AvatarImage src={session.user.image} />
-              <AvatarFallback>img</AvatarFallback>
-            </Avatar>
-            <span> {session.user?.name}</span>
-          </div>
-        )}
-        <Link href={session ? "/api/auth/signout" : "/api/auth/signin"}>
-          {session ? (
-            <Button variant="destructive" size="sm">
-              Sign out
-            </Button>
-          ) : (
-            <Button className="bg-green-400" variant="default" size="sm">
-              Sign in
-            </Button>
-          )}
-        </Link>
-      </nav>
+    <header className="flex flex-row items-center justify-between text-black p-1">
+      <div className="flex flex-row items-center justify-between w-26">
+        {/*Navigation Menu*/}
+        {NavMenu()}
+
+        {/*User Icon*/}
+        {UserIcon()}
+      </div>
+
+      {/*Logo*/}
+      <div>
+        <Image src="/omm-logo.png" alt="Our Missing Middle Logo" width="50" height="50" className="h-10 w-10"/>
+      </div>
     </header>
   );
 }

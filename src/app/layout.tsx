@@ -22,10 +22,19 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geist.variable}`}>
-      <body className="bg-gray-800">
+      <body className="bg-white min-h-screen flex flex-col text-black text-center">
         <TRPCReactProvider>
+
+          {/* Header component */}
           <Header />
-          {children}
+
+          {/* Main content area */}
+          <div className="container px-12 py-2 mx-auto">{children}</div>
+
+          {/* Spacer to push footer to the bottom */}
+          <div className="flex-1" />
+
+          {/* Footer component */}
           <Footer />
         </TRPCReactProvider>
       </body>
