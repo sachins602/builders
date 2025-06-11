@@ -7,21 +7,24 @@ import {
 } from "react-simple-maps";
 import {
   MapContainer,
+  Polygon,
   TileLayer,
   useMap,
+  GeoJSON,
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TorontoGeoJson from "public/toronto.json";
+import TorontoTopoJSON from "public/toronto_crs84.json";
 import { useState, type CSSProperties, useEffect } from "react";
-
-
 
 import { api } from "~/trpc/react";
 import { geoCentroid } from "d3-geo";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search } from "lucide-react";
+import { torontoBoundary } from "../maptest2/torontoBoundary";
+import { env } from "~/env";
 
 type Geo = {
   type?: string;
@@ -62,8 +65,25 @@ const pressedStyle: CSSProperties = {
   outline: "none",
 };
 
+const outerBounds: [number, number][][] = [
+  [
+    [90, -180],
+    [90, 180],
+    [-90, 180],
+    [-90, -180],
+  ],
+];
+
+const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
+
 // Component to programmatically update map view
-function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
+function MapUpdater({
+  center,
+  zoom,
+}: {
+  center: [number, number];
+  zoom: number;
+}) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom);
@@ -115,114 +135,142 @@ export default function MapComponent() {
   const [screenNumber, setScreenNumber] = useState<number>(0);
   // Set a more sensible initial position than [0,0]
   const [selectedPosition, setSelectedPostion] = useState<[number, number]>([
-    43.6532,
-    -79.3832,
+    43.6532, -79.3832,
   ]);
-  const places = api.response.getPlacesDetails.useMutation()
+  const places = api.response.getPlacesDetails.useMutation();
 
   const handleMapClick = (address: string) => {
-    places.mutate({address: address},{
-      onSuccess: (data) => {
-        if (data instanceof Error) {
-          console.error("Error fetching image", data);
-          return;
-        }
-        if (!data.lat || !data.lng) {
-          console.error("Error fetching image", "No latitude or longitude");
-          return;
-        }
-        console.log(data);
-        // Set position first, then switch screens to ensure map initializes with correct center
-        setSelectedPostion([data.lat, data.lng]);
-        setScreenNumber(1);
+    places.mutate(
+      { address: address },
+      {
+        onSuccess: (data) => {
+          if (data instanceof Error) {
+            console.error("Error fetching image", data);
+            return;
+          }
+          if (!data.lat || !data.lng) {
+            console.error("Error fetching image", "No latitude or longitude");
+            return;
+          }
+          console.log(data);
+          // Set position first, then switch screens to ensure map initializes with correct center
+          setSelectedPostion([data.lat, data.lng]);
+          setScreenNumber(1);
+        },
+        onError: (error) => {
+          console.error("Error fetching image", error);
+        },
       },
-      onError: (error) => {
-        console.error("Error fetching image", error);
-      },
-    })
-    
+    );
   };
   return (
     <div className="flex h-full w-full flex-col space-y-2">
-      {screenNumber === 0 ?(
+      {screenNumber === 0 ? (
         <div className="mx-auto w-fit rounded-lg bg-slate-800 shadow-xl md:min-w-[700px] lg:min-w-[1000px]">
           <ComposableMap
             style={{ width: "100%", height: "500px" }}
             projectionConfig={{
               center: [2.134452502762784, 62.9378024270368],
-            scale: 500,
-          }}
-        >
-          <ZoomableGroup minZoom={0.4} maxZoom={20}>
-            <Geographies geography={TorontoGeoJson}>
-              {({ geographies }) => (
-                <>
-                  {geographies.map((geo: Geo, i) => (
-                    <Geography
-                      onClick={() => handleMapClick(geo.properties?.name ?? "")}
-                      key={i}
-                      height="100%"
-                      width="100%"
-                      geography={geo}
-                      style={{
-                        default: defaultStyle,
-                        hover: hoverStyle,
-                        pressed: pressedStyle,
-                      }}
-                    ></Geography>
-                  ))}
-                  {geographies.map((geo: Geo) => {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-                    const centroid = geoCentroid(geo as any);
-                    return (
-                      <g key={geo.rsmKey}>
-                        <SimpleMarker coordinates={centroid}>
-                          <text
-                            fontSize={3} // Increased font size
-                            textAnchor="middle"
-                            fill="#263238" // Added fill color for better readability
-                            style={{ pointerEvents: "none" }} // Prevent text from capturing mouse events
-                          >
-                            {geo.properties?.name}
-                          </text>
-                        </SimpleMarker>
-                      </g>
-                    );
-                  })}
-                </>
-              )}
-            </Geographies>
-          </ZoomableGroup>
-        </ComposableMap>
-      </div>
-      ):(
-      <div className="h-[560px] w-full">
-        <MapContainer
-        
-          center={selectedPosition}
-          zoom={10}
-          scrollWheelZoom={true}
-          style={{ height: "500px", width: "100%" }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
-
-          <MapUpdater center={selectedPosition} zoom={13} />
-
-          <MapClickHandler />
-          {/* <ImagePopup /> */}
-        </MapContainer>
-      </div>
-      )}
-       <div className="flex w-full max-w-sm gap-2 place-self-center">
-          <Input type="text" placeholder="Address" />
-          <Button variant="secondary" size="icon" className="size-8">
-            <Search />
-          </Button>
+              scale: 500,
+            }}
+          >
+            <ZoomableGroup minZoom={0.4} maxZoom={20}>
+              <Geographies geography={TorontoGeoJson}>
+                {({ geographies }) => (
+                  <>
+                    {geographies.map((geo: Geo, i) => (
+                      <Geography
+                        onClick={() =>
+                          handleMapClick(geo.properties?.name ?? "")
+                        }
+                        key={i}
+                        height="100%"
+                        width="100%"
+                        geography={geo}
+                        style={{
+                          default: defaultStyle,
+                          hover: hoverStyle,
+                          pressed: pressedStyle,
+                        }}
+                      ></Geography>
+                    ))}
+                    {geographies.map((geo: Geo) => {
+                      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+                      const centroid = geoCentroid(geo as any);
+                      return (
+                        <g key={geo.rsmKey}>
+                          <SimpleMarker coordinates={centroid}>
+                            <text
+                              fontSize={3} // Increased font size
+                              textAnchor="middle"
+                              fill="#263238" // Added fill color for better readability
+                              style={{ pointerEvents: "none" }} // Prevent text from capturing mouse events
+                            >
+                              {geo.properties?.name}
+                            </text>
+                          </SimpleMarker>
+                        </g>
+                      );
+                    })}
+                  </>
+                )}
+              </Geographies>
+            </ZoomableGroup>
+          </ComposableMap>
         </div>
+      ) : (
+        <div className="h-[560px] w-full">
+          <MapContainer
+            center={selectedPosition}
+            zoom={10}
+            scrollWheelZoom={true}
+            style={{ height: "500px", width: "100%" }}
+          >
+            <TileLayer
+              url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
+              attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+
+            <MapUpdater center={selectedPosition} zoom={13} />
+            <GeoJSON
+              data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
+              style={() => ({
+                color: "black",
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0,
+                hover: {
+                  color: "blue",
+                  weight: 3,
+                  fillOpacity: 0.5,
+                },
+              })}
+            />
+
+            {/* Add the mask polygon */}
+
+            <Polygon
+              positions={maskPolygon}
+              pathOptions={{
+                color: "black",
+                weight: 2,
+                fillColor: "white",
+                opacity: 1,
+                fillOpacity: 1,
+              }}
+            />
+
+            <MapClickHandler />
+            {/* <ImagePopup /> */}
+          </MapContainer>
+        </div>
+      )}
+      <div className="flex w-full max-w-sm gap-2 place-self-center">
+        <Input type="text" placeholder="Address" />
+        <Button variant="secondary" size="icon" className="size-8">
+          <Search />
+        </Button>
+      </div>
     </div>
   );
 }
