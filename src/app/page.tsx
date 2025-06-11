@@ -1,10 +1,7 @@
-import { auth } from "~/server/auth";
-import { api, HydrateClient } from "~/trpc/server";
+import { HydrateClient } from "~/trpc/server";
 import MapWrapper from "./_components/map/mapwrapper";
 
 export default async function Home() {
-
-
   return (
     <HydrateClient>
       <main className="flex h-full flex-col">
