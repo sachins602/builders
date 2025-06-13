@@ -15,6 +15,7 @@ import { Button } from "../ui/button";
 import { Search, Hammer, Edit } from "lucide-react";
 import { torontoBoundary } from "../maptest2/torontoBoundary";
 import { env } from "~/env";
+import { Skeleton } from "../ui/skeleton";
 
 const outerBounds: [number, number][][] = [
   [
@@ -100,17 +101,18 @@ export default function MapComponent() {
               
             >
               <div className="flex w-64 flex-col gap-2">
-                <img
+                {/* <img
                   className="h-48 w-60"
                   src="/omm-logo.png"
                   alt="there will be a image here"
-                />
+                /> */}
+                <Skeleton className="h-48 w-64 rounded-xl" />
                 <div className="mx-auto flex flex-row gap-2">
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-center">
                     <Hammer className="h-10 w-12" />
-                    <button onClick={() => console.log("Build")}>Build</button>
+                    <p>Build</p>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-center">
                     <Edit className="h-10 w-12" />
                     <p>Edit</p>
                   </div>
@@ -118,7 +120,8 @@ export default function MapComponent() {
                 <div>
                   <p>Previous Builds Nearby</p>
                   <div className="flex flex-ro gap-4 ">
-                    {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton className="h-16 w-14 rounded-xl" />
+                    {Array.from({ length: 3 }).map((_, index) => (
                       <div
                         key={index}
                         className="p-1 w-14 h-16  bg-gray-400 hover:bg-gray-200 rounded-md shadow-2xl"

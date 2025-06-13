@@ -108,6 +108,60 @@ export const responseRouter = createTRPCRouter({
       return image;
     }),
 
+    
+    saveStreetViewImageAddress: protectedProcedure
+    .input(z.object({ address: z.string()}))
+    .mutation(async ({ ctx, input }) => {
+      const { address } = input;
+      const imageName = ctx.session.user.id + address;
+
+//  https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=4113+Hartford+Dr+Garland+TX;
+
+const response = await fetch(`https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${address}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`)
+      if (!response.ok) {
+        return new Error(`Google API responded with ${response.status}`);
+      }
+
+      // Get the image data as an array buffer
+      const imageBuffer = await response.arrayBuffer();
+
+      if (!imageBuffer) {
+        return new Error("Failed to fetch image data");
+      }
+
+      const arrayBuffer = new Uint8Array(imageBuffer);
+
+      // save the image to the local filesystem at /public/streetviewimages and save the path to the database
+      const fileType = "jpg";
+      // Ensure the directory exists
+      const dir = path.dirname(`./public/streetviewimages`);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const filePath = `./public/streetviewimages/${imageName}.${fileType}`;
+
+      // Write the file
+      fs.writeFile(filePath, arrayBuffer, (err) => {
+        if (err) {
+          console.error("Error writing file:", err);
+        } else {
+          resolve();
+        }
+      });
+
+      // write the file path to the database and return the file path
+      const image = await ctx.db.images.create({
+        data: {
+          address: address,
+          name: imageName,
+          url: `streetviewimages/${imageName}.${fileType}`,
+          createdBy: { connect: { id: ctx.session.user.id } },
+        },
+      });
+
+      return image;
+    }),
+
 
   getImages: protectedProcedure.query(async ({ ctx }) => {
   return ctx.db.images.findMany({
