@@ -1,69 +1,21 @@
 import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Marker as SimpleMarker,
-  ZoomableGroup,
-} from "react-simple-maps";
-import {
   MapContainer,
   Polygon,
   TileLayer,
-  useMap,
   GeoJSON,
   useMapEvents,
+  Popup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import TorontoGeoJson from "public/toronto.json";
 import TorontoTopoJSON from "public/toronto_crs84.json";
-import { useState, type CSSProperties, useEffect } from "react";
+import { useState } from "react";
 
-import { api } from "~/trpc/react";
-import { geoCentroid } from "d3-geo";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Search } from "lucide-react";
+import { Search, Hammer, Edit } from "lucide-react";
 import { torontoBoundary } from "../maptest2/torontoBoundary";
 import { env } from "~/env";
-
-type Geo = {
-  type?: string;
-  geometry?: Geometry;
-  rsmKey?: string;
-  svgPath?: string;
-  properties?: Properties;
-};
-
-type Geometry = {
-  type?: string;
-  coordinates?: Array<Array<number[]>>;
-};
-
-type Properties = {
-  name?: string;
-  id?: number;
-};
-
-const defaultStyle: CSSProperties = {
-  fill: "#ECEFF1",
-  stroke: "#607D8B",
-  strokeWidth: 0.75,
-  outline: "none",
-};
-
-const hoverStyle: CSSProperties = {
-  fill: "#CFD8DC",
-  stroke: "#546E7A",
-  strokeWidth: 1,
-  outline: "none",
-};
-
-const pressedStyle: CSSProperties = {
-  fill: "#B0BEC5",
-  stroke: "#455A64",
-  strokeWidth: 1,
-  outline: "none",
-};
+import { Skeleton } from "../ui/skeleton";
 
 const outerBounds: [number, number][][] = [
   [
@@ -76,194 +28,123 @@ const outerBounds: [number, number][][] = [
 
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
-// Component to programmatically update map view
-function MapUpdater({
-  center,
-  zoom,
-}: {
-  center: [number, number];
-  zoom: number;
-}) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
-  return null;
-}
-
-function MapClickHandler() {
-  const image = api.response.saveStreetViewImage.useMutation({
-    onSuccess: (data) => {
-      if (data instanceof Error) {
-        console.error("Error fetching image", data);
-        return;
-      }
-    },
-  });
-
-  useMapEvents({
-    click(e) {
-      console.log("User clicked at:", e.latlng);
-      const { lat, lng } = e.latlng;
-
-      if (!lat || !lng)
-        return console.error(
-          "Error fetching image",
-          "No latitude or longitude",
-        );
-      image.mutate(
-        {
-          lat: lat,
-          lng: lng,
-          heading: 0,
-        },
-        {
-          onSuccess: () => {
-            window.location.href = "/create";
-          },
-          onError: (error) => {
-            console.error("Error saving image", error);
-          },
-        },
-      );
-    },
-  });
-  return null; // This component does not render anything itself
-}
-
 export default function MapComponent() {
-  const [screenNumber, setScreenNumber] = useState<number>(0);
-  // Set a more sensible initial position than [0,0]
-  const [selectedPosition, setSelectedPostion] = useState<[number, number]>([
-    43.6532, -79.3832,
-  ]);
-  const places = api.response.getPlacesDetails.useMutation();
+  const [currentZoom, setCurrentZoom] = useState(11);
+  const [clickedPosition, setClickedPosition] = useState<[number, number] | null>(
+    null,
+  );
 
-  const handleMapClick = (address: string) => {
-    places.mutate(
-      { address: address },
-      {
-        onSuccess: (data) => {
-          if (data instanceof Error) {
-            console.error("Error fetching image", data);
-            return;
-          }
-          if (!data.lat || !data.lng) {
-            console.error("Error fetching image", "No latitude or longitude");
-            return;
-          }
-          console.log(data);
-          // Set position first, then switch screens to ensure map initializes with correct center
-          setSelectedPostion([data.lat, data.lng]);
-          setScreenNumber(1);
-        },
-        onError: (error) => {
-          console.error("Error fetching image", error);
-        },
+  function MapEvents() {
+    const map = useMapEvents({
+      click(e) {
+        if (map.getZoom() < 18) {
+          map.flyTo(e.latlng, map.getZoom() + 1);
+        } else {
+          setClickedPosition([e.latlng.lat, e.latlng.lng]);
+        }
       },
-    );
-  };
+      moveend() {
+        setCurrentZoom(map.getZoom());
+        if (map.getZoom() < 18) {
+          setClickedPosition(null);
+        }
+      },
+    });
+    return null;
+  }
+
   return (
     <div className="flex h-full w-full flex-col space-y-2">
-      {screenNumber === 0 ? (
-        <div className="mx-auto w-fit rounded-lg bg-slate-800 shadow-xl md:min-w-[700px] lg:min-w-[1000px]">
-          <ComposableMap
-            style={{ width: "100%", height: "500px" }}
-            projectionConfig={{
-              center: [2.134452502762784, 62.9378024270368],
-              scale: 500,
+      <div className="h-[560px] w-full">
+        <MapContainer
+          center={[43.7, -79.42]} // Toronto coordinates
+          zoom={11}
+          scrollWheelZoom={true}
+          style={{ height: "500px", width: "100%" }}
+        >
+          <TileLayer
+            url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
+            attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          />
+
+          <GeoJSON
+            data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
+            style={() => ({
+              color: "black",
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0,
+              hover: {
+                color: "blue",
+                weight: 3,
+                fillOpacity: 0.5,
+              },
+            })}
+          />
+
+          <Polygon
+            positions={maskPolygon}
+            pathOptions={{
+              color: "black",
+              weight: 2,
+              fillColor: "white",
+              opacity: 1,
+              fillOpacity: 1,
             }}
-          >
-            <ZoomableGroup minZoom={0.4} maxZoom={20}>
-              <Geographies geography={TorontoGeoJson}>
-                {({ geographies }) => (
-                  <>
-                    {geographies.map((geo: Geo, i) => (
-                      <Geography
-                        onClick={() =>
-                          handleMapClick(geo.properties?.name ?? "")
-                        }
-                        key={i}
-                        height="100%"
-                        width="100%"
-                        geography={geo}
-                        style={{
-                          default: defaultStyle,
-                          hover: hoverStyle,
-                          pressed: pressedStyle,
-                        }}
-                      ></Geography>
+          />
+
+          <MapEvents />
+
+          {clickedPosition && (
+            <Popup
+              position={clickedPosition}
+              
+            >
+              <div className="flex w-64 flex-col gap-2">
+                {/* <img
+                  className="h-48 w-60"
+                  src="/omm-logo.png"
+                  alt="there will be a image here"
+                /> */}
+                <Skeleton className="h-48 w-64 rounded-xl" />
+                <div className="mx-auto flex flex-row gap-2">
+                  <div className="flex flex-col items-center">
+                    <Hammer className="h-10 w-12" />
+                    <p>Build</p>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <Edit className="h-10 w-12" />
+                    <p>Edit</p>
+                  </div>
+                </div>
+                <div>
+                  <p>Previous Builds Nearby</p>
+                  <div className="flex flex-ro gap-4 ">
+                  <Skeleton className="h-16 w-14 rounded-xl" />
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="p-1 w-14 h-16  bg-gray-400 hover:bg-gray-200 rounded-md shadow-2xl"
+                      >
+                        <img
+                          className="h-10 w-12"
+                          src="/omm-logo.png"
+                          alt="there will be a image here"
+                        />
+                        <p>{index + 1}</p>
+                      </div>
                     ))}
-                    {geographies.map((geo: Geo) => {
-                      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-                      const centroid = geoCentroid(geo as any);
-                      return (
-                        <g key={geo.rsmKey}>
-                          <SimpleMarker coordinates={centroid}>
-                            <text
-                              fontSize={3} // Increased font size
-                              textAnchor="middle"
-                              fill="#263238" // Added fill color for better readability
-                              style={{ pointerEvents: "none" }} // Prevent text from capturing mouse events
-                            >
-                              {geo.properties?.name}
-                            </text>
-                          </SimpleMarker>
-                        </g>
-                      );
-                    })}
-                  </>
-                )}
-              </Geographies>
-            </ZoomableGroup>
-          </ComposableMap>
-        </div>
+                  </div>
+                </div>
+              </div>
+            </Popup>
+          )}
+        </MapContainer>
+      </div>
+      {currentZoom < 18 ? (
+        <p>Zoom in more to be able to select a location</p>
       ) : (
-        <div className="h-[560px] w-full">
-          <MapContainer
-            center={selectedPosition}
-            zoom={10}
-            scrollWheelZoom={true}
-            style={{ height: "500px", width: "100%" }}
-          >
-            <TileLayer
-              url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
-              attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
-
-            <MapUpdater center={selectedPosition} zoom={13} />
-            <GeoJSON
-              data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
-              style={() => ({
-                color: "black",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0,
-                hover: {
-                  color: "blue",
-                  weight: 3,
-                  fillOpacity: 0.5,
-                },
-              })}
-            />
-
-            {/* Add the mask polygon */}
-
-            <Polygon
-              positions={maskPolygon}
-              pathOptions={{
-                color: "black",
-                weight: 2,
-                fillColor: "white",
-                opacity: 1,
-                fillOpacity: 1,
-              }}
-            />
-
-            <MapClickHandler />
-            {/* <ImagePopup /> */}
-          </MapContainer>
-        </div>
+        <p>Select a location to get a street view image</p>
       )}
       <div className="flex w-full max-w-sm gap-2 place-self-center">
         <Input type="text" placeholder="Address" />
