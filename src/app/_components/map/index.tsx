@@ -31,15 +31,23 @@ const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
 export default function MapComponent() {
   const [currentZoom, setCurrentZoom] = useState(11);
-  const [clickedPosition, setClickedPosition] = useState<[number, number] | null>(
-    null,
-  );
+  const [clickedPosition, setClickedPosition] = useState<
+    [number, number] | null
+  >(null);
   const image = api.response.saveStreetViewImageAddress.useMutation({
     onError: (error) => {
       console.error("Error fetching image:", error);
       // Consider adding a toast notification here for better user feedback
     },
   });
+
+  const nearbyImages = api.response.getNearbyImages.useMutation({
+    onError: (error) => {
+      console.error("Error fetching image:", error);
+      // Consider adding a toast notification here for better user feedback
+    },
+  });
+
 
   function MapEvents() {
     const map = useMapEvents({
@@ -49,6 +57,10 @@ export default function MapComponent() {
         } else {
           setClickedPosition([e.latlng.lat, e.latlng.lng]);
           image.mutate({
+            lat: e.latlng.lat,
+            lng: e.latlng.lng,
+          })
+          nearbyImages.mutate({
             lat: e.latlng.lat,
             lng: e.latlng.lng,
           })
@@ -107,13 +119,9 @@ export default function MapComponent() {
           <MapEvents />
 
           {clickedPosition && (
-            <Popup
-              position={clickedPosition}
-              
-            >
+            <Popup position={clickedPosition}>
               <div className="flex w-64 flex-col gap-2">
-            
-              {image.isPending ? (
+                {image.isPending ? (
                 <Skeleton className="h-48 w-64 rounded-xl" />
               ) : image.isSuccess && image.data ? (
                 <img
@@ -125,32 +133,35 @@ export default function MapComponent() {
                 <p>Failed to load image</p>
               )}
                 <div className="mx-auto flex flex-row gap-2">
-                  <div className="flex flex-col items-center">
+                  <Button variant="secondary">
                     <Hammer className="h-10 w-12" />
-                    <p>Build</p>
-                  </div>
-                  <div className="flex flex-col items-center">
+                    Build
+                  </Button>
+                  <Button variant="secondary">
                     <Edit className="h-10 w-12" />
-                    <p>Edit</p>
-                  </div>
+                    Edit
+                  </Button>
                 </div>
                 <div>
                   <p>Previous Builds Nearby</p>
-                  <div className="flex flex-ro gap-4 ">
-                  <Skeleton className="h-16 w-14 rounded-xl" />
-                    {Array.from({ length: 3 }).map((_, index) => (
+                  <div className="flex-row flex gap-4">
+                    {nearbyImages.isPending ? (
+                      <Skeleton className="h-16 w-14 rounded-xl" />
+                    ) : nearbyImages.isSuccess && nearbyImages.data ? 
+                    (nearbyImages.data.map((image) => (
                       <div
-                        key={index}
-                        className="p-1 w-14 h-16  bg-gray-400 hover:bg-gray-200 rounded-md shadow-2xl"
+                        key={image.id}
+                        className="h-16 w-14 rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
                       >
                         <img
                           className="h-10 w-12"
-                          src="/omm-logo.png"
+                          src={`/${image.url}`}
                           alt="there will be a image here"
                         />
-                        <p>{index + 1}</p>
+                        <p className="overflow-hidden whitespace-nowrap ">{image.address}</p>
                       </div>
-                    ))}
+                    )))
+                    : <p>No nearby images</p>}
                   </div>
                 </div>
               </div>

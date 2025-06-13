@@ -219,14 +219,16 @@ export const responseRouter = createTRPCRouter({
       const images = await ctx.db.images.findMany({
         where: {
           lat: {
-            gte: lat - 0.001,
-            lte: lat + 0.001,
+            gte: lat - 0.1,
+            lte: lat + 0.1,
           },
           lng: {
-            gte: lng - 0.001,
-            lte: lng + 0.001,
+            gte: lng - 0.1,
+            lte: lng + 0.1,
           },
         },
+        orderBy: { createdAt: "desc" },
+        take: 4,
       });
       return images;
     }),
