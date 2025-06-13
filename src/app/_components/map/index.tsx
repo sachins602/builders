@@ -158,7 +158,9 @@ export default function MapComponent() {
                           src={`/${image.url}`}
                           alt="there will be a image here"
                         />
-                        <p className="overflow-hidden whitespace-nowrap ">{image.address}</p>
+                        <div className="relative flex overflow-x-hidden">
+                          <p className="animate-marquee whitespace-nowrap">{image.address}</p>
+                        </div>
                       </div>
                     )))
                     : <p>No nearby images</p>}
