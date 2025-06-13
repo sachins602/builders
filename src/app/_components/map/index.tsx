@@ -16,6 +16,7 @@ import { Search, Hammer, Edit } from "lucide-react";
 import { torontoBoundary } from "../maptest2/torontoBoundary";
 import { env } from "~/env";
 import { Skeleton } from "../ui/skeleton";
+import { api } from "~/trpc/react";
 
 const outerBounds: [number, number][][] = [
   [
@@ -33,6 +34,12 @@ export default function MapComponent() {
   const [clickedPosition, setClickedPosition] = useState<[number, number] | null>(
     null,
   );
+  const image = api.response.saveStreetViewImageAddress.useMutation({
+    onError: (error) => {
+      console.error("Error fetching image:", error);
+      // Consider adding a toast notification here for better user feedback
+    },
+  });
 
   function MapEvents() {
     const map = useMapEvents({
@@ -41,6 +48,10 @@ export default function MapComponent() {
           map.flyTo(e.latlng, map.getZoom() + 1);
         } else {
           setClickedPosition([e.latlng.lat, e.latlng.lng]);
+          image.mutate({
+            lat: e.latlng.lat,
+            lng: e.latlng.lng,
+          })
         }
       },
       moveend() {
@@ -101,12 +112,18 @@ export default function MapComponent() {
               
             >
               <div className="flex w-64 flex-col gap-2">
-                {/* <img
-                  className="h-48 w-60"
-                  src="/omm-logo.png"
-                  alt="there will be a image here"
-                /> */}
+            
+              {image.isPending ? (
                 <Skeleton className="h-48 w-64 rounded-xl" />
+              ) : image.isSuccess && image.data ? (
+                <img
+                  className="h-48 w-64"
+                  src={`/${image.data.url}`}
+                  alt="Street view"
+                />
+              ) : (
+                <p>Failed to load image</p>
+              )}
                 <div className="mx-auto flex flex-row gap-2">
                   <div className="flex flex-col items-center">
                     <Hammer className="h-10 w-12" />
