@@ -14,6 +14,7 @@ import { Button } from "../ui/button";
 import { Search } from "lucide-react";
 import { torontoBoundary } from "../maptest2/torontoBoundary";
 import { env } from "~/env";
+import ClickPopup from "./clickpopup";
 
 const outerBounds: [number, number][][] = [
   [
@@ -35,13 +36,17 @@ export default function MapComponent() {
     center: [43.7, -79.42],
     zoomLevel: 11,
   });
-
+  const [clickedPosition, setClickedPosition] = useState<[number, number] | null>(
+    null,
+  );
 
   function MapEvents() {
     const map = useMapEvents({
       click(e) {
         if (map.getZoom() < 18) {
           map.flyTo(e.latlng, map.getZoom() + 1);
+        } else {
+          setClickedPosition([e.latlng.lat, e.latlng.lng]);
         }
       },
       moveend() {
@@ -49,6 +54,9 @@ export default function MapComponent() {
           center: [map.getCenter().lat, map.getCenter().lng],
           zoomLevel: map.getZoom(),
         });
+        if (map.getZoom() < 18) {
+          setClickedPosition(null);
+        }
       },
     });
     return null;
@@ -98,6 +106,7 @@ export default function MapComponent() {
           />
 
           <MapEvents />
+          <ClickPopup position={clickedPosition} />
           {/* <ImagePopup /> */}
         </MapContainer>
       </div>
