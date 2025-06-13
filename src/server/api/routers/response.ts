@@ -20,23 +20,23 @@ interface GoogleGeocodingResponse {
 
 interface GeoCodeResponse {
   address_components?: AddressComponent[];
-  formatted_address?:  string;
-  geometry?:           Geometry;
-  place_id?:           string;
-  types?:              string[];
+  formatted_address?: string;
+  geometry?: Geometry;
+  place_id?: string;
+  types?: string[];
 }
 
 interface AddressComponent {
-  long_name?:  string;
+  long_name?: string;
   short_name?: string;
-  types?:      string[];
+  types?: string[];
 }
 
 interface Geometry {
-  bounds?:        Bounds;
-  location?:      Location;
+  bounds?: Bounds;
+  location?: Location;
   location_type?: string;
-  viewport?:      Bounds;
+  viewport?: Bounds;
 }
 
 interface Bounds {
@@ -108,16 +108,26 @@ export const responseRouter = createTRPCRouter({
       return image;
     }),
 
-    
-    saveStreetViewImageAddress: protectedProcedure
-    .input(z.object({ address: z.string()}))
+
+  saveStreetViewImageAddress: protectedProcedure
+    .input(z.object({ address: z.string().optional(), lat: z.number().optional(), lng: z.number().optional() }))
     .mutation(async ({ ctx, input }) => {
-      const { address } = input;
-      const imageName = ctx.session.user.id + address;
+      const { address, lat, lng } = input;
+      const imageName = ctx.session.user.id + lat + lng;
 
-//  https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=4113+Hartford+Dr+Garland+TX;
 
-const response = await fetch(`https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${address}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`)
+      const addressResponse = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`);
+      if (!addressResponse.ok) {
+        return new Error(`Google API responded with ${addressResponse.status}`);
+      }
+      const addressData = await addressResponse.json() as GoogleGeocodingResponse;
+      if (!addressData.results[0]) {
+        return new Error("No address data received from Google");
+      }
+      const formattedAddress = addressData.results[0].formatted_address;
+
+
+      const response = await fetch(`https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${formattedAddress}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`)
       if (!response.ok) {
         return new Error(`Google API responded with ${response.status}`);
       }
@@ -164,7 +174,7 @@ const response = await fetch(`https://maps.googleapis.com/maps/api/streetview?pa
 
 
   getImages: protectedProcedure.query(async ({ ctx }) => {
-  return ctx.db.images.findMany({
+    return ctx.db.images.findMany({
       select: {
         id: true,
         name: true,
@@ -174,7 +184,7 @@ const response = await fetch(`https://maps.googleapis.com/maps/api/streetview?pa
       },
       orderBy: { createdAt: "desc" }, // Optional: order by creation date
     });
-    
+
   }),
 
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
@@ -196,31 +206,31 @@ const response = await fetch(`https://maps.googleapis.com/maps/api/streetview?pa
   getPlacesDetails: publicProcedure
     .input(z.object({ address: z.string() }))
     .mutation(async ({ input }) => {
-    
+
 
       const { address } = input;
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
         `${address}, Toronto`,
       )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`;
 
-    
-   
-        const response = await (await fetch(url)).json() as GoogleGeocodingResponse;
-        if (response.status !== "OK") {
-          throw new Error(response.error_message);
-        }
+
+
+      const response = await (await fetch(url)).json() as GoogleGeocodingResponse;
+      if (response.status !== "OK") {
+        throw new Error(response.error_message);
+      }
 
 
 
-        
-        const formattedGeoCodeData = {
-          lat: response?.results[0]?.geometry?.location?.lat,
-          lng: response?.results[0]?.geometry?.location?.lng,
-          formattedAddress: response?.results[0]?.formatted_address,
-        }
 
-        return formattedGeoCodeData; 
-      
+      const formattedGeoCodeData = {
+        lat: response?.results[0]?.geometry?.location?.lat,
+        lng: response?.results[0]?.geometry?.location?.lng,
+        formattedAddress: response?.results[0]?.formatted_address,
+      }
+
+      return formattedGeoCodeData;
+
     }),
 
 
