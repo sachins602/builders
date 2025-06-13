@@ -4,6 +4,7 @@ import {
   TileLayer,
   GeoJSON,
   useMapEvents,
+  Popup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TorontoTopoJSON from "public/toronto_crs84.json";
@@ -11,10 +12,9 @@ import { useState } from "react";
 
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Search } from "lucide-react";
+import { Search, Hammer, Edit } from "lucide-react";
 import { torontoBoundary } from "../maptest2/torontoBoundary";
 import { env } from "~/env";
-import ClickPopup from "./clickpopup";
 
 const outerBounds: [number, number][][] = [
   [
@@ -27,15 +27,8 @@ const outerBounds: [number, number][][] = [
 
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
-
 export default function MapComponent() {
-  const [mapPositon, setMapPostion] = useState<{
-    center: [number, number];
-    zoomLevel: number;
-  }>({
-    center: [43.7, -79.42],
-    zoomLevel: 11,
-  });
+  const [currentZoom, setCurrentZoom] = useState(11);
   const [clickedPosition, setClickedPosition] = useState<[number, number] | null>(
     null,
   );
@@ -50,10 +43,7 @@ export default function MapComponent() {
         }
       },
       moveend() {
-        setMapPostion({
-          center: [map.getCenter().lat, map.getCenter().lng],
-          zoomLevel: map.getZoom(),
-        });
+        setCurrentZoom(map.getZoom());
         if (map.getZoom() < 18) {
           setClickedPosition(null);
         }
@@ -66,9 +56,8 @@ export default function MapComponent() {
     <div className="flex h-full w-full flex-col space-y-2">
       <div className="h-[560px] w-full">
         <MapContainer
-          center={mapPositon.center} // Toronto coordinates
-          zoom={mapPositon.zoomLevel}
-          
+          center={[43.7, -79.42]} // Toronto coordinates
+          zoom={11}
           scrollWheelZoom={true}
           style={{ height: "500px", width: "100%" }}
         >
@@ -92,8 +81,6 @@ export default function MapComponent() {
             })}
           />
 
-          {/* Add the mask polygon */}
-
           <Polygon
             positions={maskPolygon}
             pathOptions={{
@@ -106,11 +93,52 @@ export default function MapComponent() {
           />
 
           <MapEvents />
-          <ClickPopup position={clickedPosition} />
-          {/* <ImagePopup /> */}
+
+          {clickedPosition && (
+            <Popup
+              position={clickedPosition}
+              
+            >
+              <div className="flex w-64 flex-col gap-2">
+                <img
+                  className="h-48 w-60"
+                  src="/omm-logo.png"
+                  alt="there will be a image here"
+                />
+                <div className="mx-auto flex flex-row gap-2">
+                  <div className="flex flex-col">
+                    <Hammer className="h-10 w-12" />
+                    <button onClick={() => console.log("Build")}>Build</button>
+                  </div>
+                  <div className="flex flex-col">
+                    <Edit className="h-10 w-12" />
+                    <p>Edit</p>
+                  </div>
+                </div>
+                <div>
+                  <p>Previous Builds Nearby</p>
+                  <div className="flex flex-ro gap-4 ">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="p-1 w-14 h-16  bg-gray-400 hover:bg-gray-200 rounded-md shadow-2xl"
+                      >
+                        <img
+                          className="h-10 w-12"
+                          src="/omm-logo.png"
+                          alt="there will be a image here"
+                        />
+                        <p>{index + 1}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Popup>
+          )}
         </MapContainer>
       </div>
-      {mapPositon.zoomLevel < 18 ? (
+      {currentZoom < 18 ? (
         <p>Zoom in more to be able to select a location</p>
       ) : (
         <p>Select a location to get a street view image</p>
