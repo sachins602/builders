@@ -79,7 +79,7 @@ export function ProompInput() {
       // Traverse forwards from the originally selected response
       // (to include children of the selected node if it wasn't the latest in its own branch)
       let lastInChain = selected as ResponseWithImage;
-      // eslint-disable-next-line no-constant-condition
+    
       while (true) {
         const nextInBranch = responseHistory.find(r => r.previousResponseId === lastInChain.id);
         if (nextInBranch && !chain.find(c => c.id === nextInBranch.id)) { // Check if not already in chain
@@ -116,7 +116,7 @@ export function ProompInput() {
   const handleSelectResponse = (responseId: number) => {
     setSelectedResponseId(responseId);
     const selected = responseHistory?.find(r => r.id === responseId);
-    setGeneratedImage(selected?.url || null);
+    setGeneratedImage(selected?.url ?? null);
   };
 
   const handleResetSelection = () => {
