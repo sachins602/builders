@@ -179,6 +179,24 @@ export const responseRouter = createTRPCRouter({
     return responses;
   }),
 
+  getResponseById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const response = await ctx.db.response.findUnique({
+        where: { id: input.id },
+      });
+      return response;
+    }),
+
+    getResponseByImageId: protectedProcedure
+    .input(z.object({ imageId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const response = await ctx.db.response.findFirst({
+        where: { sourceImageId: input.imageId },
+      });
+      return response;
+    }),
+
   getPlacesDetails: publicProcedure
     .input(z.object({ address: z.string() }))
     .mutation(async ({ input }) => {

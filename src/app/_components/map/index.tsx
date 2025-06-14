@@ -133,7 +133,9 @@ export default function MapComponent() {
                 <p>Failed to load image</p>
               )}
                 <div className="mx-auto flex flex-row gap-2">
-                  <Button variant="secondary">
+                  <Button onClick={() => {
+                    window.location.href = "/create";
+                  }} variant="secondary">
                     <Hammer className="h-10 w-12" />
                     Build
                   </Button>
@@ -152,6 +154,9 @@ export default function MapComponent() {
                       <div
                         key={image.id}
                         className="h-16 w-14 rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
+                        onClick={() => {
+                          window.location.href = `/create/${image.id}`;
+                        }}
                       >
                         <img
                           className="h-10 w-12"
