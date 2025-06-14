@@ -1,228 +1,192 @@
 import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Marker as SimpleMarker,
-  ZoomableGroup,
-} from "react-simple-maps";
-import {
   MapContainer,
+  Polygon,
   TileLayer,
-  useMap,
+  GeoJSON,
   useMapEvents,
+  Popup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import TorontoGeoJson from "public/toronto.json";
-import { useState, type CSSProperties, useEffect } from "react";
+import TorontoTopoJSON from "public/toronto_crs84.json";
+import { useState } from "react";
 
-
-
-import { api } from "~/trpc/react";
-import { geoCentroid } from "d3-geo";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Search } from "lucide-react";
+import { Search, Hammer, Edit } from "lucide-react";
+import { torontoBoundary } from "../maptest2/torontoBoundary";
+import { env } from "~/env";
+import { Skeleton } from "../ui/skeleton";
+import { api } from "~/trpc/react";
 
-type Geo = {
-  type?: string;
-  geometry?: Geometry;
-  rsmKey?: string;
-  svgPath?: string;
-  properties?: Properties;
-};
+const outerBounds: [number, number][][] = [
+  [
+    [90, -180],
+    [90, 180],
+    [-90, 180],
+    [-90, -180],
+  ],
+];
 
-type Geometry = {
-  type?: string;
-  coordinates?: Array<Array<number[]>>;
-};
-
-type Properties = {
-  name?: string;
-  id?: number;
-};
-
-const defaultStyle: CSSProperties = {
-  fill: "#ECEFF1",
-  stroke: "#607D8B",
-  strokeWidth: 0.75,
-  outline: "none",
-};
-
-const hoverStyle: CSSProperties = {
-  fill: "#CFD8DC",
-  stroke: "#546E7A",
-  strokeWidth: 1,
-  outline: "none",
-};
-
-const pressedStyle: CSSProperties = {
-  fill: "#B0BEC5",
-  stroke: "#455A64",
-  strokeWidth: 1,
-  outline: "none",
-};
-
-// Component to programmatically update map view
-function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
-  return null;
-}
-
-function MapClickHandler() {
-  const image = api.response.saveStreetViewImage.useMutation({
-    onSuccess: (data) => {
-      if (data instanceof Error) {
-        console.error("Error fetching image", data);
-        return;
-      }
-    },
-  });
-
-  useMapEvents({
-    click(e) {
-      console.log("User clicked at:", e.latlng);
-      const { lat, lng } = e.latlng;
-
-      if (!lat || !lng)
-        return console.error(
-          "Error fetching image",
-          "No latitude or longitude",
-        );
-      image.mutate(
-        {
-          lat: lat,
-          lng: lng,
-          heading: 0,
-        },
-        {
-          onSuccess: () => {
-            window.location.href = "/create";
-          },
-          onError: (error) => {
-            console.error("Error saving image", error);
-          },
-        },
-      );
-    },
-  });
-  return null; // This component does not render anything itself
-}
+const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
 export default function MapComponent() {
-  const [screenNumber, setScreenNumber] = useState<number>(0);
-  // Set a more sensible initial position than [0,0]
-  const [selectedPosition, setSelectedPostion] = useState<[number, number]>([
-    43.6532,
-    -79.3832,
-  ]);
-  const places = api.response.getPlacesDetails.useMutation()
+  const [currentZoom, setCurrentZoom] = useState(11);
+  const [clickedPosition, setClickedPosition] = useState<
+    [number, number] | null
+  >(null);
+  const image = api.response.saveStreetViewImageAddress.useMutation({
+    onError: (error) => {
+      console.error("Error fetching image:", error);
+      // Consider adding a toast notification here for better user feedback
+    },
+  });
 
-  const handleMapClick = (address: string) => {
-    places.mutate({address: address},{
-      onSuccess: (data) => {
-        if (data instanceof Error) {
-          console.error("Error fetching image", data);
-          return;
+  const nearbyImages = api.response.getNearbyImages.useMutation({
+    onError: (error) => {
+      console.error("Error fetching image:", error);
+      // Consider adding a toast notification here for better user feedback
+    },
+  });
+
+
+  function MapEvents() {
+    const map = useMapEvents({
+      click(e) {
+        if (map.getZoom() < 18) {
+          map.flyTo(e.latlng, map.getZoom() + 1);
+        } else {
+          setClickedPosition([e.latlng.lat, e.latlng.lng]);
+          image.mutate({
+            lat: e.latlng.lat,
+            lng: e.latlng.lng,
+          })
+          nearbyImages.mutate({
+            lat: e.latlng.lat,
+            lng: e.latlng.lng,
+          })
         }
-        if (!data.lat || !data.lng) {
-          console.error("Error fetching image", "No latitude or longitude");
-          return;
+      },
+      moveend() {
+        setCurrentZoom(map.getZoom());
+        if (map.getZoom() < 18) {
+          setClickedPosition(null);
         }
-        console.log(data);
-        // Set position first, then switch screens to ensure map initializes with correct center
-        setSelectedPostion([data.lat, data.lng]);
-        setScreenNumber(1);
       },
-      onError: (error) => {
-        console.error("Error fetching image", error);
-      },
-    })
-    
-  };
+    });
+    return null;
+  }
+
   return (
     <div className="flex h-full w-full flex-col space-y-2">
-      {screenNumber === 0 ?(
-        <div className="mx-auto w-fit rounded-lg bg-slate-800 shadow-xl md:min-w-[700px] lg:min-w-[1000px]">
-          <ComposableMap
-            style={{ width: "100%", height: "500px" }}
-            projectionConfig={{
-              center: [2.134452502762784, 62.9378024270368],
-            scale: 500,
-          }}
-        >
-          <ZoomableGroup minZoom={0.4} maxZoom={20}>
-            <Geographies geography={TorontoGeoJson}>
-              {({ geographies }) => (
-                <>
-                  {geographies.map((geo: Geo, i) => (
-                    <Geography
-                      onClick={() => handleMapClick(geo.properties?.name ?? "")}
-                      key={i}
-                      height="100%"
-                      width="100%"
-                      geography={geo}
-                      style={{
-                        default: defaultStyle,
-                        hover: hoverStyle,
-                        pressed: pressedStyle,
-                      }}
-                    ></Geography>
-                  ))}
-                  {geographies.map((geo: Geo) => {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-                    const centroid = geoCentroid(geo as any);
-                    return (
-                      <g key={geo.rsmKey}>
-                        <SimpleMarker coordinates={centroid}>
-                          <text
-                            fontSize={3} // Increased font size
-                            textAnchor="middle"
-                            fill="#263238" // Added fill color for better readability
-                            style={{ pointerEvents: "none" }} // Prevent text from capturing mouse events
-                          >
-                            {geo.properties?.name}
-                          </text>
-                        </SimpleMarker>
-                      </g>
-                    );
-                  })}
-                </>
-              )}
-            </Geographies>
-          </ZoomableGroup>
-        </ComposableMap>
-      </div>
-      ):(
       <div className="h-[560px] w-full">
         <MapContainer
-        
-          center={selectedPosition}
-          zoom={10}
+          center={[43.7, -79.42]} // Toronto coordinates
+          zoom={11}
           scrollWheelZoom={true}
           style={{ height: "500px", width: "100%" }}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
+            attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-          
 
-          <MapUpdater center={selectedPosition} zoom={13} />
+          <GeoJSON
+            data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
+            style={() => ({
+              color: "black",
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0,
+              hover: {
+                color: "blue",
+                weight: 3,
+                fillOpacity: 0.5,
+              },
+            })}
+          />
 
-          <MapClickHandler />
-          {/* <ImagePopup /> */}
+          <Polygon
+            positions={maskPolygon}
+            pathOptions={{
+              color: "black",
+              weight: 2,
+              fillColor: "white",
+              opacity: 1,
+              fillOpacity: 1,
+            }}
+          />
+
+          <MapEvents />
+
+          {clickedPosition && (
+            <Popup position={clickedPosition}>
+              <div className="flex w-64 flex-col gap-2">
+                {image.isPending ? (
+                <Skeleton className="h-48 w-64 rounded-xl" />
+              ) : image.isSuccess && image.data ? (
+                <img
+                  className="h-48 w-64"
+                  src={`/${image.data.url}`}
+                  alt="Street view"
+                />
+              ) : (
+                <p>Failed to load image</p>
+              )}
+                <div className="mx-auto flex flex-row gap-2">
+                  <Button onClick={() => {
+                    window.location.href = "/create";
+                  }} variant="secondary">
+                    <Hammer className="h-10 w-12" />
+                    Build
+                  </Button>
+                  <Button variant="secondary">
+                    <Edit className="h-10 w-12" />
+                    Edit
+                  </Button>
+                </div>
+                <div>
+                  <p>Previous Builds Nearby</p>
+                  <div className="flex-row flex gap-4">
+                    {nearbyImages.isPending ? (
+                      <Skeleton className="h-16 w-14 rounded-xl" />
+                    ) : nearbyImages.isSuccess && nearbyImages.data ? 
+                    (nearbyImages.data.map((image) => (
+                      <div
+                        key={image.id}
+                        className="h-16 w-14 rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
+                        onClick={() => {
+                          window.location.href = `/create/${image.id}`;
+                        }}
+                      >
+                        <img
+                          className="h-10 w-12"
+                          src={`/${image.url}`}
+                          alt="there will be a image here"
+                        />
+                        <div className="relative flex overflow-x-hidden">
+                          <p className="animate-marquee whitespace-nowrap">{image.address}</p>
+                        </div>
+                      </div>
+                    )))
+                    : <p>No nearby images</p>}
+                  </div>
+                </div>
+              </div>
+            </Popup>
+          )}
         </MapContainer>
       </div>
+      {currentZoom < 18 ? (
+        <p>Zoom in more to be able to select a location</p>
+      ) : (
+        <p>Select a location to get a street view image</p>
       )}
-       <div className="flex w-full max-w-sm gap-2 place-self-center">
-          <Input type="text" placeholder="Address" />
-          <Button variant="secondary" size="icon" className="size-8">
-            <Search />
-          </Button>
-        </div>
+      <div className="flex w-full max-w-sm gap-2 place-self-center">
+        <Input type="text" placeholder="Address" />
+        <Button variant="secondary" size="icon" className="size-8">
+          <Search />
+        </Button>
+      </div>
     </div>
   );
 }

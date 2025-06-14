@@ -110,7 +110,7 @@ export function ChatArea({
           </div>
           <div className="rounded-lg bg-gray-800 p-3">
             <p className="text-sm text-gray-300">
-              Welcome to AI Image Chat! Describe how you'd like to transform an image or select a previous generation.
+              Welcome to AI Image Chat! Describe how you&apos;d like to transform an image or select a previous generation.
             </p>
           </div>
         </div>

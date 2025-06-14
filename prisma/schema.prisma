@@ -66,6 +66,7 @@ model Images {
     id        Int      @id @default(autoincrement())
     name      String
     url       String
+    address   String?
     lat       Float?
     lng       Float?
     createdAt DateTime @default(now())
