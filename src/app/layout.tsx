@@ -8,7 +8,7 @@ import Header from "./_components/header";
 import Footer from "./_components/footer";
 
 export const metadata: Metadata = {
-  title: "The Missing Middle",
+  title: "Our Missing Middle",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
