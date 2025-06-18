@@ -16,7 +16,7 @@ export function ChatArea({
   lastImage,
   responseChain,
   isGenerating,
-  selectedResponseId,
+  selectedResponseId: _selectedResponseId,
   messagesEndRef,
 }: ChatAreaProps) {
   // Find the original image - either from the first response's sourceImage or from lastImage
