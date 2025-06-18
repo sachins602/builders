@@ -13,7 +13,7 @@ import { useState } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search, Hammer, Edit } from "lucide-react";
-import { torontoBoundary } from "../maptest2/torontoBoundary";
+import { torontoBoundary } from "./torontoBoundary";
 import { env } from "~/env";
 import { Skeleton } from "../ui/skeleton";
 import { api } from "~/trpc/react";
@@ -48,7 +48,6 @@ export default function MapComponent() {
     },
   });
 
-
   function MapEvents() {
     const map = useMapEvents({
       click(e) {
@@ -59,11 +58,11 @@ export default function MapComponent() {
           image.mutate({
             lat: e.latlng.lat,
             lng: e.latlng.lng,
-          })
+          });
           nearbyImages.mutate({
             lat: e.latlng.lat,
             lng: e.latlng.lng,
-          })
+          });
         }
       },
       moveend() {
@@ -122,20 +121,23 @@ export default function MapComponent() {
             <Popup position={clickedPosition}>
               <div className="flex w-64 flex-col gap-2">
                 {image.isPending ? (
-                <Skeleton className="h-48 w-64 rounded-xl" />
-              ) : image.isSuccess && image.data ? (
-                <img
-                  className="h-48 w-64"
-                  src={`/${image.data.url}`}
-                  alt="Street view"
-                />
-              ) : (
-                <p>Failed to load image</p>
-              )}
+                  <Skeleton className="h-48 w-64 rounded-xl" />
+                ) : image.isSuccess && image.data ? (
+                  <img
+                    className="h-48 w-64"
+                    src={`/${image.data.url}`}
+                    alt="Street view"
+                  />
+                ) : (
+                  <p>Failed to load image</p>
+                )}
                 <div className="mx-auto flex flex-row gap-2">
-                  <Button onClick={() => {
-                    window.location.href = "/create";
-                  }} variant="secondary">
+                  <Button
+                    onClick={() => {
+                      window.location.href = "/create";
+                    }}
+                    variant="secondary"
+                  >
                     <Hammer className="h-10 w-12" />
                     Build
                   </Button>
@@ -146,29 +148,33 @@ export default function MapComponent() {
                 </div>
                 <div>
                   <p>Previous Builds Nearby</p>
-                  <div className="flex-row flex gap-4">
+                  <div className="flex flex-row gap-4">
                     {nearbyImages.isPending ? (
                       <Skeleton className="h-16 w-14 rounded-xl" />
-                    ) : nearbyImages.isSuccess && nearbyImages.data ? 
-                    (nearbyImages.data.map((image) => (
-                      <div
-                        key={image.id}
-                        className="h-16 w-14 rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
-                        onClick={() => {
-                          window.location.href = `/create/${image.id}`;
-                        }}
-                      >
-                        <img
-                          className="h-10 w-12"
-                          src={`/${image.url}`}
-                          alt="there will be a image here"
-                        />
-                        <div className="relative flex overflow-x-hidden">
-                          <p className="animate-marquee whitespace-nowrap">{image.address}</p>
+                    ) : nearbyImages.isSuccess && nearbyImages.data ? (
+                      nearbyImages.data.map((image) => (
+                        <div
+                          key={image.id}
+                          className="h-16 w-14 rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
+                          onClick={() => {
+                            window.location.href = `/create/${image.id}`;
+                          }}
+                        >
+                          <img
+                            className="h-10 w-12"
+                            src={`/${image.url}`}
+                            alt="there will be a image here"
+                          />
+                          <div className="relative flex overflow-x-hidden">
+                            <p className="animate-marquee whitespace-nowrap">
+                              {image.address}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )))
-                    : <p>No nearby images</p>}
+                      ))
+                    ) : (
+                      <p>No nearby images</p>
+                    )}
                   </div>
                 </div>
               </div>

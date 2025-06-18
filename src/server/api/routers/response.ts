@@ -3,15 +3,12 @@ import path from "path";
 import { z } from "zod";
 import { env } from "~/env";
 
-
-
 import { TRPCError } from "@trpc/server";
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-
 
 interface GoogleGeocodingResponse {
   results: GeoCodeResponse[];
@@ -50,10 +47,7 @@ interface Location {
   lng?: number;
 }
 
-
-
 export const responseRouter = createTRPCRouter({
-
   saveStreetViewImage: protectedProcedure
     .input(z.object({ lat: z.number(), lng: z.number(), heading: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -64,13 +58,19 @@ export const responseRouter = createTRPCRouter({
         `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=${heading}&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
       );
       if (!response.ok) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Google API responded with ${response.status}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Google API responded with ${response.status}`,
+        });
       }
 
       const imageBuffer = await response.arrayBuffer();
 
       if (!imageBuffer) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch image data" });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch image data",
+        });
       }
 
       const arrayBuffer = new Uint8Array(imageBuffer);
@@ -96,34 +96,59 @@ export const responseRouter = createTRPCRouter({
       return image;
     }),
 
-
   saveStreetViewImageAddress: protectedProcedure
-    .input(z.object({ address: z.string().optional(), lat: z.number().optional(), lng: z.number().optional() }))
+    .input(
+      z.object({
+        address: z.string().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const { lat, lng } = input;
-      if (typeof lat !== 'number' || typeof lng !== 'number') {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Latitude and longitude are required." });
+      if (typeof lat !== "number" || typeof lng !== "number") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Latitude and longitude are required.",
+        });
       }
       const imageName = ctx.session.user.id + lat + lng;
 
-      const addressResponse = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`);
+      const addressResponse = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+      );
       if (!addressResponse.ok) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Google API responded with ${addressResponse.status}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Google API responded with ${addressResponse.status}`,
+        });
       }
-      const addressData = await addressResponse.json() as GoogleGeocodingResponse;
+      const addressData =
+        (await addressResponse.json()) as GoogleGeocodingResponse;
       if (!addressData.results[0]?.formatted_address) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "No address data received from Google" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No address data received from Google",
+        });
       }
       const formattedAddress = addressData.results[0].formatted_address;
 
-      const response = await fetch(`https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`);
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+      );
       if (!response.ok) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Google API responded with ${response.status}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Google API responded with ${response.status}`,
+        });
       }
 
       const imageBuffer = await response.arrayBuffer();
       if (!imageBuffer) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch image data" });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch image data",
+        });
       }
       const arrayBuffer = new Uint8Array(imageBuffer);
 
@@ -148,7 +173,6 @@ export const responseRouter = createTRPCRouter({
       return image;
     }),
 
-
   getImages: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.images.findMany({
       select: {
@@ -160,7 +184,6 @@ export const responseRouter = createTRPCRouter({
       },
       orderBy: { createdAt: "desc" }, // Optional: order by creation date
     });
-
   }),
 
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
@@ -179,6 +202,28 @@ export const responseRouter = createTRPCRouter({
     return responses;
   }),
 
+  // New combined endpoint for better performance
+  getChatData: protectedProcedure.query(async ({ ctx }) => {
+    const [lastImage, responseHistory] = await Promise.all([
+      ctx.db.images.findFirst({
+        orderBy: { createdAt: "desc" },
+        where: { createdBy: { id: ctx.session.user.id } },
+      }),
+      ctx.db.response.findMany({
+        orderBy: { createdAt: "desc" },
+        where: { createdBy: { id: ctx.session.user.id } },
+        include: {
+          sourceImage: true, // Include the original image data
+        },
+      }),
+    ]);
+
+    return {
+      lastImage: lastImage ?? null,
+      responseHistory,
+    };
+  }),
+
   getResponseById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
@@ -188,7 +233,7 @@ export const responseRouter = createTRPCRouter({
       return response;
     }),
 
-    getResponseByImageId: protectedProcedure
+  getResponseByImageId: protectedProcedure
     .input(z.object({ imageId: z.number() }))
     .query(async ({ ctx, input }) => {
       const response = await ctx.db.response.findFirst({
@@ -200,37 +245,46 @@ export const responseRouter = createTRPCRouter({
   getPlacesDetails: publicProcedure
     .input(z.object({ address: z.string() }))
     .mutation(async ({ input }) => {
-
-
       const { address } = input;
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
         `${address}, Toronto`,
       )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`;
 
-      const response = await (await fetch(url)).json() as GoogleGeocodingResponse;
+      const response = (await (
+        await fetch(url)
+      ).json()) as GoogleGeocodingResponse;
       if (response.status !== "OK") {
         if (response.error_message) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: response.error_message });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: response.error_message,
+          });
         }
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Geocoding API request failed." });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Geocoding API request failed.",
+        });
       }
 
       const result = response?.results[0];
 
       if (!result?.geometry?.location) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Could not find location for the given address." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Could not find location for the given address.",
+        });
       }
 
       const formattedGeoCodeData = {
         lat: result.geometry.location.lat,
         lng: result.geometry.location.lng,
         formattedAddress: result.formatted_address,
-      }
+      };
 
       return formattedGeoCodeData;
     }),
 
-    getNearbyImages: protectedProcedure
+  getNearbyImages: protectedProcedure
     .input(z.object({ lat: z.number(), lng: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const { lat, lng } = input;
@@ -250,7 +304,6 @@ export const responseRouter = createTRPCRouter({
       });
       return images;
     }),
-
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
