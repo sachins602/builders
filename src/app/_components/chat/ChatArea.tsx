@@ -19,25 +19,52 @@ export function ChatArea({
   selectedResponseId,
   messagesEndRef,
 }: ChatAreaProps) {
+  // Find the original image - either from the first response's sourceImage or from lastImage
+  const getOriginalImage = (): Image | null => {
+    if (responseChain.length > 0) {
+      // Find the first response in the chain (the one without a previousResponseId)
+      const firstResponse = responseChain.find((r) => !r.previousResponseId);
+      if (firstResponse?.sourceImage) {
+        return firstResponse.sourceImage;
+      }
+    }
+    return lastImage;
+  };
+
+  const originalImage = getOriginalImage();
+
+  // Show reference image when there's an original image and either:
+  // - There are responses in the chain, OR
+  // - There's no chain but there's a lastImage
   const showReferenceImage =
-    lastImage && responseChain.length === 0 && !selectedResponseId;
+    originalImage && (responseChain.length > 0 || lastImage);
+
   const showWelcomeMessage =
-    !lastImage && !responseChain.length && !isGenerating;
+    !originalImage && !responseChain.length && !isGenerating;
 
   return (
     <div className="flex-1 overflow-y-auto p-4">
-      {/* Reference image */}
+      {/* Reference image - now shows throughout the conversation */}
       {showReferenceImage && (
         <div className="mb-4">
           <div className="mb-2 flex items-center">
             <ImageIcon className="mr-2 h-5 w-5 text-gray-300" />
-            <span className="text-sm text-gray-300">Reference Image</span>
+            <span className="text-sm text-gray-300">
+              {responseChain.length > 0 ? "Original Image" : "Reference Image"}
+            </span>
           </div>
           <img
-            src={lastImage.url}
-            alt="Reference image"
+            src={originalImage.url}
+            alt={
+              responseChain.length > 0 ? "Original image" : "Reference image"
+            }
             className="max-h-64 rounded-md object-cover"
           />
+          {originalImage.address && (
+            <p className="mt-1 text-xs text-gray-400">
+              {originalImage.address}
+            </p>
+          )}
         </div>
       )}
 

@@ -212,6 +212,9 @@ export const responseRouter = createTRPCRouter({
       ctx.db.response.findMany({
         orderBy: { createdAt: "desc" },
         where: { createdBy: { id: ctx.session.user.id } },
+        include: {
+          sourceImage: true, // Include the original image data
+        },
       }),
     ]);
 

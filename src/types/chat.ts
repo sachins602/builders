@@ -5,6 +5,7 @@ export interface ResponseWithImage {
   createdAt: Date;
   previousResponseId: number | null;
   sourceImageId: number | null;
+  sourceImage?: Image | null;
 }
 
 export interface Image {
