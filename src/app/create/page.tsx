@@ -1,6 +1,6 @@
 import { auth } from "~/server/auth";
-import { ProompInput } from "../_components/input";
 import { HydrateClient } from "~/trpc/server";
+import { ChatInterface } from "../_components/ChatInterface";
 
 export default async function Create() {
   const session = await auth();
@@ -20,13 +20,10 @@ export default async function Create() {
   return (
     <HydrateClient>
       <div className="flex flex-col bg-gray-900 text-white">
-
         {/* Main content with sidebar */}
         <main className="flex flex-1">
-          
-            {/* Chat interface with sidebar */}
-            <ProompInput />
-        
+          {/* Chat interface with sidebar */}
+          <ChatInterface />
         </main>
       </div>
     </HydrateClient>
