@@ -52,11 +52,18 @@ export const openaiRouter = createTRPCRouter({
       const imageName = String(Math.floor(Math.random() * 1000));
       const fileType = "jpg";
       // Ensure the directory exists
-      const generatedImagesDir = path.join(process.cwd(), "public", "generatedimages");
+      const generatedImagesDir = path.join(
+        process.cwd(),
+        "public",
+        "generatedimages",
+      );
       if (!fs.existsSync(generatedImagesDir)) {
         fs.mkdirSync(generatedImagesDir, { recursive: true });
       }
-      const filePath = path.join(generatedImagesDir, `${imageName}.${fileType}`);
+      const filePath = path.join(
+        generatedImagesDir,
+        `${imageName}.${fileType}`,
+      );
 
       // Check if b64_json exists before writing to file
       const imageData = response.data[0]?.b64_json;
@@ -65,14 +72,14 @@ export const openaiRouter = createTRPCRouter({
       }
 
       // Write the file using Buffer to properly handle base64 data
-      fs.writeFileSync(filePath, Buffer.from(imageData, 'base64'));
+      fs.writeFileSync(filePath, Buffer.from(imageData, "base64"));
 
       // save the path to the database
       const imagePathDb = `/generatedimages/${imageName}.${fileType}`;
 
       // Create response data based on whether this is a new generation or a follow-up
       const responseData = {
-        proompt: input.prompt,
+        prompt: input.prompt,
         url: imagePathDb,
         createdBy: { connect: { id: ctx.session.user.id } },
       };
@@ -85,7 +92,7 @@ export const openaiRouter = createTRPCRouter({
             previousResponse: { connect: { id: input.previousResponseId } },
           },
         });
-      } 
+      }
       // If this is based on an original image, link to that image
       else if (input.imageId) {
         return ctx.db.response.create({
@@ -95,7 +102,9 @@ export const openaiRouter = createTRPCRouter({
           },
         });
       } else {
-        throw new Error("Either imageId or previousResponseId must be provided");
+        throw new Error(
+          "Either imageId or previousResponseId must be provided",
+        );
       }
     }),
 
@@ -118,7 +127,11 @@ export const openaiRouter = createTRPCRouter({
       }
 
       // Get the full path to the previous image
-      const imagePath = path.join(process.cwd(), "public", previousResponse.url);
+      const imagePath = path.join(
+        process.cwd(),
+        "public",
+        previousResponse.url,
+      );
 
       // Check if the file exists
       if (!fs.existsSync(imagePath)) {
@@ -143,11 +156,18 @@ export const openaiRouter = createTRPCRouter({
       // Save the new image
       const imageName = String(Math.floor(Math.random() * 1000));
       const fileType = "jpg";
-      const generatedImagesDir = path.join(process.cwd(), "public", "generatedimages");
+      const generatedImagesDir = path.join(
+        process.cwd(),
+        "public",
+        "generatedimages",
+      );
       if (!fs.existsSync(generatedImagesDir)) {
         fs.mkdirSync(generatedImagesDir, { recursive: true });
       }
-      const filePath = path.join(generatedImagesDir, `${imageName}.${fileType}`);
+      const filePath = path.join(
+        generatedImagesDir,
+        `${imageName}.${fileType}`,
+      );
 
       // Check if b64_json exists before writing to file
       const imageData = response.data[0]?.b64_json;
@@ -156,7 +176,7 @@ export const openaiRouter = createTRPCRouter({
       }
 
       // Write the file using Buffer to properly handle base64 data
-      fs.writeFileSync(filePath, Buffer.from(imageData, 'base64'));
+      fs.writeFileSync(filePath, Buffer.from(imageData, "base64"));
 
       // Save the path to the database
       const imagePathDb = `/generatedimages/${imageName}.${fileType}`;
@@ -164,7 +184,7 @@ export const openaiRouter = createTRPCRouter({
       // Create a new response that links to the previous one
       return ctx.db.response.create({
         data: {
-          proompt: input.prompt,
+          prompt: input.prompt,
           url: imagePathDb,
           createdBy: { connect: { id: ctx.session.user.id } },
           previousResponse: { connect: { id: input.previousResponseId } },

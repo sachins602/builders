@@ -38,7 +38,7 @@ export function Sidebar({
                 className="h-20 w-full rounded-md object-cover"
               />
               <p className="mt-2 line-clamp-2 text-xs text-gray-300">
-                {response.proompt}
+                {response.prompt}
               </p>
               <p className="mt-1 text-xs text-gray-400">
                 {new Date(response.createdAt).toLocaleDateString()}

@@ -1,6 +1,6 @@
 export interface ResponseWithImage {
   id: number;
-  proompt: string;
+  prompt: string;
   url: string;
   createdAt: Date;
   previousResponseId: number | null;

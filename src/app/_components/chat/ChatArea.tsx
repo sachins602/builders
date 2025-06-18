@@ -75,7 +75,7 @@ export function ChatArea({
           <div className="mb-4 flex justify-end">
             <div className="max-w-3xl">
               <div className="rounded-lg bg-blue-600 p-3 text-white">
-                {response.proompt}
+                {response.prompt}
               </div>
               <div className="mt-1 text-right text-xs text-gray-400">
                 {new Date(response.createdAt).toLocaleTimeString()}

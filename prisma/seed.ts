@@ -27,43 +27,45 @@ interface AccountData {
 }
 
 interface SessionData {
-    id: string;
-    sessionToken: string;
-    userId: string;
-    expires: string;
+  id: string;
+  sessionToken: string;
+  userId: string;
+  expires: string;
 }
 
 interface ResponseData {
-    id: string;
-    proompt: string;
-    url: string;
-    createdAt: string;
-    updatedAt: string;
-    createdById: string;
-    sourceImageId: string | null;
-    previousResponseId: string | null;
+  id: string;
+  prompt: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  sourceImageId: string | null;
+  previousResponseId: string | null;
 }
 
 interface ImageData {
-    id: string;
-    name: string;
-    url: string;
-    address: string | null;
-    lat: string | null;
-    lng: string | null;
-    createdAt: string;
-    updatedAt: string;
-    createdById: string;
+  id: string;
+  name: string;
+  url: string;
+  address: string | null;
+  lat: string | null;
+  lng: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
 }
 
 interface Table<T> {
-    type: 'table';
-    name: string;
-    data: T[];
+  type: "table";
+  name: string;
+  data: T[];
 }
 
 // Cast the imported JSON to our defined structure
-const typedDbData = DbData as Array<Table<UserData | AccountData | SessionData | ImageData | ResponseData>>;
+const typedDbData = DbData as Array<
+  Table<UserData | AccountData | SessionData | ImageData | ResponseData>
+>;
 
 const prisma = new PrismaClient();
 
@@ -81,11 +83,21 @@ async function main() {
   console.log("Old data cleared.");
 
   // Use type guards to safely access data for each table
-  const usersData = typedDbData.find((table): table is Table<UserData> => table.name === 'user')?.data;
-  const accountsData = typedDbData.find((table): table is Table<AccountData> => table.name === 'account')?.data;
-  const sessionsData = typedDbData.find((table): table is Table<SessionData> => table.name === 'session')?.data;
-  const imagesData = typedDbData.find((table): table is Table<ImageData> => table.name === 'images')?.data;
-  const responsesData = typedDbData.find((table): table is Table<ResponseData> => table.name === 'response')?.data;
+  const usersData = typedDbData.find(
+    (table): table is Table<UserData> => table.name === "user",
+  )?.data;
+  const accountsData = typedDbData.find(
+    (table): table is Table<AccountData> => table.name === "account",
+  )?.data;
+  const sessionsData = typedDbData.find(
+    (table): table is Table<SessionData> => table.name === "session",
+  )?.data;
+  const imagesData = typedDbData.find(
+    (table): table is Table<ImageData> => table.name === "images",
+  )?.data;
+  const responsesData = typedDbData.find(
+    (table): table is Table<ResponseData> => table.name === "response",
+  )?.data;
 
   // Seed Users
   if (usersData) {
@@ -95,7 +107,9 @@ async function main() {
           id: user.id,
           name: user.name,
           email: user.email,
-          emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
+          emailVerified: user.emailVerified
+            ? new Date(user.emailVerified)
+            : null,
           image: user.image,
         },
       });
@@ -115,12 +129,16 @@ async function main() {
           providerAccountId: account.providerAccountId,
           refresh_token: account.refresh_token,
           access_token: account.access_token,
-          expires_at: account.expires_at ? parseInt(account.expires_at, 10) : null,
+          expires_at: account.expires_at
+            ? parseInt(account.expires_at, 10)
+            : null,
           token_type: account.token_type,
           scope: account.scope,
           id_token: account.id_token,
           session_state: account.session_state,
-          refresh_token_expires_in: account.refresh_token_expires_in ? parseInt(account.refresh_token_expires_in, 10) : null,
+          refresh_token_expires_in: account.refresh_token_expires_in
+            ? parseInt(account.refresh_token_expires_in, 10)
+            : null,
         },
       });
     }
@@ -168,13 +186,17 @@ async function main() {
         await prisma.response.create({
           data: {
             id: parseInt(response.id, 10),
-            proompt: response.proompt,
+            prompt: response.prompt,
             url: response.url,
             createdAt: new Date(response.createdAt),
             updatedAt: new Date(response.updatedAt),
             createdById: response.createdById,
-            sourceImageId: response.sourceImageId ? parseInt(response.sourceImageId, 10) : null,
-            previousResponseId: response.previousResponseId ? parseInt(response.previousResponseId, 10) : null,
+            sourceImageId: response.sourceImageId
+              ? parseInt(response.sourceImageId, 10)
+              : null,
+            previousResponseId: response.previousResponseId
+              ? parseInt(response.previousResponseId, 10)
+              : null,
           },
         });
       }
@@ -195,4 +217,3 @@ void (async () => {
     await prisma.$disconnect();
   }
 })();
-
