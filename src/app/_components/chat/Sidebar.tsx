@@ -1,38 +1,43 @@
 "use client";
 
-import React from 'react';
-import type { ResponseWithImage } from './input'; // Assuming ResponseWithImage is exported from input.tsx or a types file
+import React from "react";
+import type { ResponseWithImage } from "~/types/chat";
 
 interface SidebarProps {
-  responseHistory: ResponseWithImage[] | undefined | null;
+  responseHistory: ResponseWithImage[];
   selectedResponseId: number | null;
-  handleSelectResponse: (id: number) => void;
+  onSelectResponse: (id: number) => void;
 }
 
-export function Sidebar({ responseHistory, selectedResponseId, handleSelectResponse }: SidebarProps) {
+export function Sidebar({
+  responseHistory,
+  selectedResponseId,
+  onSelectResponse,
+}: SidebarProps) {
   return (
-    <div className="w-64 flex flex-col border-r border-gray-700 bg-gray-800 h-[535px] overflow-y-auto">
-      <h3 className="p-4 mb-0 text-sm font-medium text-gray-300 sticky top-0 bg-gray-800 z-10">
+    <div className="flex h-[535px] w-64 flex-col overflow-y-auto border-r border-gray-700 bg-gray-800">
+      <h3 className="sticky top-0 z-10 mb-0 bg-gray-800 p-4 text-sm font-medium text-gray-300">
         Recent Generations
       </h3>
-      <div className="p-4 pt-0 flex flex-col gap-3">
-        {responseHistory && responseHistory.length > 0 ? (
+
+      <div className="flex flex-col gap-3 p-4 pt-0">
+        {responseHistory.length > 0 ? (
           responseHistory.slice(0, 10).map((response) => (
             <div
               key={response.id}
               className={`cursor-pointer rounded-lg p-2 transition-all ${
                 response.id === selectedResponseId
-                  ? 'bg-gray-600 ring-1 ring-blue-500'
-                  : 'bg-gray-700 hover:bg-gray-600'
+                  ? "bg-gray-600 ring-1 ring-blue-500"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
-              onClick={() => handleSelectResponse(response.id)}
+              onClick={() => onSelectResponse(response.id)}
             >
               <img
                 src={response.url}
                 alt="Previous generation"
                 className="h-20 w-full rounded-md object-cover"
               />
-              <p className="mt-2 text-xs text-gray-300 line-clamp-2">
+              <p className="mt-2 line-clamp-2 text-xs text-gray-300">
                 {response.proompt}
               </p>
               <p className="mt-1 text-xs text-gray-400">
