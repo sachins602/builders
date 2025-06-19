@@ -5,6 +5,7 @@ import {
   GeoJSON,
   useMapEvents,
   Popup,
+  Rectangle,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import TorontoTopoJSON from "public/toronto_crs84.json";
@@ -36,6 +37,8 @@ export default function MapComponent() {
   >(null);
 
   const utils = api.useUtils();
+
+  const parcelData = api.response.getParcelData.useQuery();
 
   const image = api.response.saveStreetViewImageAddress.useMutation({
     onSuccess: () => {
@@ -121,6 +124,30 @@ export default function MapComponent() {
               fillOpacity: 1,
             }}
           />
+
+          {parcelData.data?.map((parcel) => (
+            <Rectangle
+              key={parcel.id}
+              bounds={[
+                [(parcel.lat ?? 0) + 0.0001, (parcel.lng ?? 0) + 0.0001],
+                [(parcel.lat ?? 0) - 0.0001, (parcel.lng ?? 0) - 0.0001],
+              ]}
+              eventHandlers={{
+                click: (e) => {
+                  console.log("click");
+                },
+                mouseover: (e) => {
+                  console.log("over");
+                },
+              }}
+              pathOptions={{
+                color: "red",
+                interactive: true,
+                weight: 2,
+                opacity: 1,
+              }}
+            />
+          ))}
 
           <MapEvents />
 
