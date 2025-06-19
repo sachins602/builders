@@ -20,8 +20,13 @@ interface GeoCodeResponse {
   address_components?: AddressComponent[];
   formatted_address?: string;
   geometry?: Geometry;
+  navigation_points?: NavigationPoint[];
   place_id?: string;
   types?: string[];
+}
+
+interface NavigationPoint {
+  location?: Location[];
 }
 
 interface AddressComponent {
@@ -132,6 +137,14 @@ export const responseRouter = createTRPCRouter({
         });
       }
       const formattedAddress = addressData.results[0].formatted_address;
+      const parcelData = {
+        location: addressData.results[0].geometry?.location ?? null,
+        viewport: addressData.results[0].geometry?.viewport ?? null,
+      };
+
+      const parcelDataJson = JSON.stringify(parcelData);
+
+      console.log("parcelData:", parcelData);
 
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
@@ -164,6 +177,7 @@ export const responseRouter = createTRPCRouter({
           address: formattedAddress,
           lat,
           lng,
+          parcelData: parcelDataJson,
           name: imageName,
           url: `streetviewimages/${imageName}.${fileType}`,
           createdBy: { connect: { id: ctx.session.user.id } },
@@ -307,5 +321,17 @@ export const responseRouter = createTRPCRouter({
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
+  }),
+
+  getParcelData: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.db.images.findMany({
+      where: {
+        parcelData: {
+          not: {
+            equals: null,
+          },
+        },
+      },
+    });
   }),
 });
