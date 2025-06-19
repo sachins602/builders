@@ -34,7 +34,14 @@ export default function MapComponent() {
   const [clickedPosition, setClickedPosition] = useState<
     [number, number] | null
   >(null);
+
+  const utils = api.useUtils();
+
   const image = api.response.saveStreetViewImageAddress.useMutation({
+    onSuccess: () => {
+      // Invalidate the getChatData query to refresh the last image and responses
+      void utils.response.getChatData.invalidate();
+    },
     onError: (error) => {
       console.error("Error fetching image:", error);
       // Consider adding a toast notification here for better user feedback
