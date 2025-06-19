@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import DbData from "./homebuilders.json";
 
 // Define interfaces for the JSON data structure to ensure type safety
@@ -51,6 +51,7 @@ interface ImageData {
   address: string | null;
   lat: string | null;
   lng: string | null;
+  parcelData: Prisma.JsonValue | null;
   createdAt: string;
   updatedAt: string;
   createdById: string;
@@ -171,6 +172,7 @@ async function main() {
           address: image.address,
           lat: image.lat ? parseFloat(image.lat) : null,
           lng: image.lng ? parseFloat(image.lng) : null,
+          parcelData: image.parcelData ?? Prisma.DbNull,
           createdAt: new Date(image.createdAt),
           updatedAt: new Date(image.updatedAt),
           createdById: image.createdById,
