@@ -8,6 +8,8 @@ import {
   Rectangle,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import type L from "leaflet";
+import type { LeafletMouseEvent } from "leaflet";
 import TorontoTopoJSON from "public/toronto_crs84.json";
 import { useState } from "react";
 
@@ -38,7 +40,7 @@ export default function MapComponent() {
 
   const utils = api.useUtils();
 
-  const parcelData = api.response.getParcelData.useQuery();
+  const parcelData = api.response.getEnhancedParcelData.useQuery();
 
   const image = api.response.saveStreetViewImageAddress.useMutation({
     onSuccess: () => {
@@ -125,29 +127,111 @@ export default function MapComponent() {
             }}
           />
 
-          {parcelData.data?.map((parcel) => (
-            <Rectangle
-              key={parcel.id}
-              bounds={[
-                [(parcel.lat ?? 0) + 0.0001, (parcel.lng ?? 0) + 0.0001],
-                [(parcel.lat ?? 0) - 0.0001, (parcel.lng ?? 0) - 0.0001],
-              ]}
-              eventHandlers={{
-                click: (e) => {
-                  console.log("click");
-                },
-                mouseover: (e) => {
-                  console.log("over");
-                },
-              }}
-              pathOptions={{
-                color: "red",
-                interactive: true,
-                weight: 2,
-                opacity: 1,
-              }}
-            />
-          ))}
+          {parcelData.data?.map((parcel) => {
+            // If we have actual property boundary data, render it as a polygon
+            if (
+              parcel.propertyBoundary?.coordinates &&
+              Array.isArray(parcel.propertyBoundary.coordinates[0])
+            ) {
+              const coordinates = (
+                parcel.propertyBoundary.coordinates[0] as [number, number][]
+              ).map(([lng, lat]) => [lat, lng] as [number, number]);
+
+              // Determine color based on boundary source and accuracy
+              const getColor = () => {
+                if (
+                  parcel.boundarySource === "osm" &&
+                  parcel.boundaryAccuracy === "high"
+                )
+                  return "#22c55e"; // Green for OSM high accuracy
+                if (parcel.boundarySource === "toronto_open_data")
+                  return "#3b82f6"; // Blue for Toronto data
+                if (parcel.boundarySource === "google") return "#f59e0b"; // Orange for Google
+                return "#ef4444"; // Red for fallback
+              };
+
+              return (
+                <Polygon
+                  key={parcel.id}
+                  positions={coordinates}
+                  eventHandlers={{
+                    click: () => {
+                      console.log(`Property clicked: ${parcel.address}`);
+                      console.log(`Boundary source: ${parcel.boundarySource}`);
+                      console.log(`Building type: ${parcel.buildingType}`);
+                      if (parcel.buildingArea) {
+                        console.log(
+                          `Building area: ${Math.round(
+                            parcel.buildingArea,
+                          )} m²`,
+                        );
+                      }
+                    },
+                    mouseover: (e: LeafletMouseEvent) => {
+                      (e.target as L.Path).setStyle({ fillOpacity: 0.7 });
+                    },
+                    mouseout: (e: LeafletMouseEvent) => {
+                      (e.target as L.Path).setStyle({ fillOpacity: 0.3 });
+                    },
+                  }}
+                  pathOptions={{
+                    color: getColor(),
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.3,
+                    interactive: true,
+                  }}
+                >
+                  <Popup>
+                    <div className="p-2">
+                      <h3 className="text-sm font-semibold">
+                        {parcel.address}
+                      </h3>
+                      <div className="mt-1 space-y-1 text-xs text-gray-600">
+                        <div>Source: {parcel.boundarySource}</div>
+                        <div>Accuracy: {parcel.boundaryAccuracy}</div>
+                        {parcel.buildingType && (
+                          <div>Type: {parcel.buildingType}</div>
+                        )}
+                        {parcel.buildingArea && (
+                          <div>Area: {Math.round(parcel.buildingArea)} m²</div>
+                        )}
+                        {parcel.propertyType && (
+                          <div>Use: {parcel.propertyType}</div>
+                        )}
+                      </div>
+                    </div>
+                  </Popup>
+                </Polygon>
+              );
+            }
+
+            // Fallback to rectangle for parcels without proper boundary data
+            return (
+              <Rectangle
+                key={parcel.id}
+                bounds={[
+                  [(parcel.lat ?? 0) + 0.0001, (parcel.lng ?? 0) + 0.0001],
+                  [(parcel.lat ?? 0) - 0.0001, (parcel.lng ?? 0) - 0.0001],
+                ]}
+                eventHandlers={{
+                  click: () => {
+                    console.log("Fallback parcel click");
+                  },
+                  mouseover: () => {
+                    console.log("Fallback parcel over");
+                  },
+                }}
+                pathOptions={{
+                  color: "#ef4444",
+                  interactive: true,
+                  weight: 2,
+                  opacity: 1,
+                  fillOpacity: 0.3,
+                }}
+              />
+            );
+          })}
 
           <MapEvents />
 
@@ -221,6 +305,32 @@ export default function MapComponent() {
       ) : (
         <p>Select a location to get a street view image</p>
       )}
+
+      {/* Property Boundary Legend */}
+      <div className="rounded-lg bg-white p-3 shadow-md">
+        <h4 className="mb-2 text-sm font-semibold">
+          Property Boundary Sources
+        </h4>
+        <div className="space-y-1 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-4 border border-green-500 bg-green-200"></div>
+            <span>OpenStreetMap (High Accuracy)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-4 border border-blue-500 bg-blue-200"></div>
+            <span>Toronto Open Data</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-4 border border-orange-500 bg-orange-200"></div>
+            <span>Google Maps</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-4 border border-red-500 bg-red-200"></div>
+            <span>Fallback/Estimated</span>
+          </div>
+        </div>
+      </div>
+
       <div className="flex w-full max-w-sm gap-2 place-self-center">
         <Input type="text" placeholder="Address" />
         <Button variant="secondary" size="icon" className="size-8">

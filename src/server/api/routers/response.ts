@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { z } from "zod";
 import { env } from "~/env";
+import { getPropertyBoundary } from "~/lib/propertyBoundaryService";
 
 import { TRPCError } from "@trpc/server";
 import {
@@ -119,72 +120,137 @@ export const responseRouter = createTRPCRouter({
       }
       const imageName = ctx.session.user.id + lat + lng;
 
-      const addressResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
-      );
-      if (!addressResponse.ok) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Google API responded with ${addressResponse.status}`,
+      try {
+        // Get enhanced property boundary data
+        const propertyBoundary = await getPropertyBoundary(lat, lng);
+        console.log(
+          `Using ${propertyBoundary.source} boundary data with ${propertyBoundary.accuracy} accuracy`,
+        );
+
+        // Get address information from Google (for street view image)
+        const addressResponse = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        );
+        if (!addressResponse.ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Google API responded with ${addressResponse.status}`,
+          });
+        }
+        const addressData =
+          (await addressResponse.json()) as GoogleGeocodingResponse;
+        if (!addressData.results[0]?.formatted_address) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No address data received from Google",
+          });
+        }
+        const formattedAddress = addressData.results[0].formatted_address;
+
+        // Legacy parcel data for backward compatibility
+        const legacyParcelData = {
+          location: addressData.results[0].geometry?.location ?? null,
+          viewport: addressData.results[0].geometry?.viewport ?? null,
+        };
+
+        // Get street view image
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        );
+        if (!response.ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Google API responded with ${response.status}`,
+          });
+        }
+
+        const imageBuffer = await response.arrayBuffer();
+        if (!imageBuffer) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to fetch image data",
+          });
+        }
+        const arrayBuffer = new Uint8Array(imageBuffer);
+
+        const fileType = "jpg";
+        const dir = path.resolve(process.cwd(), `public/streetviewimages`);
+        await fs.mkdir(dir, { recursive: true });
+        const filePath = path.join(dir, `${imageName}.${fileType}`);
+
+        await fs.writeFile(filePath, arrayBuffer);
+
+        // Calculate area of the property boundary
+        const buildingArea = propertyBoundary.properties.buildingArea;
+
+        // Create enhanced image record with property boundary data
+        const image = await ctx.db.images.create({
+          data: {
+            address: propertyBoundary.properties.address ?? formattedAddress,
+            lat,
+            lng,
+            name: imageName,
+            url: `streetviewimages/${imageName}.${fileType}`,
+
+            // Legacy parcel data for backward compatibility
+            parcelData: JSON.stringify(legacyParcelData),
+
+            // Enhanced property boundary data
+            osmBuildingId: propertyBoundary.properties.osmId,
+            osmBuildingGeometry: JSON.stringify(propertyBoundary.geometry),
+            propertyBoundary: JSON.stringify(propertyBoundary.geometry),
+            boundarySource: propertyBoundary.source,
+            boundaryAccuracy: propertyBoundary.accuracy,
+
+            // Property details
+            propertyType: propertyBoundary.properties.propertyType,
+            buildingType: propertyBoundary.properties.buildingType,
+            buildingArea: buildingArea,
+            lotArea: propertyBoundary.properties.lotArea,
+
+            createdBy: { connect: { id: ctx.session.user.id } },
+          },
         });
-      }
-      const addressData =
-        (await addressResponse.json()) as GoogleGeocodingResponse;
-      if (!addressData.results[0]?.formatted_address) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "No address data received from Google",
+
+        return image;
+      } catch (error) {
+        console.error("Error in saveStreetViewImageAddress:", error);
+        // Fallback to original functionality if enhanced boundary fails
+        const addressResponse = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        );
+        const addressData =
+          (await addressResponse.json()) as GoogleGeocodingResponse;
+        const formattedAddress =
+          addressData.results[0]?.formatted_address ?? "Unknown Address";
+
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        );
+        const imageBuffer = await response.arrayBuffer();
+        const arrayBuffer = new Uint8Array(imageBuffer);
+
+        const fileType = "jpg";
+        const dir = path.resolve(process.cwd(), `public/streetviewimages`);
+        await fs.mkdir(dir, { recursive: true });
+        const filePath = path.join(dir, `${imageName}.${fileType}`);
+        await fs.writeFile(filePath, arrayBuffer);
+
+        const image = await ctx.db.images.create({
+          data: {
+            address: formattedAddress,
+            lat,
+            lng,
+            name: imageName,
+            url: `streetviewimages/${imageName}.${fileType}`,
+            boundarySource: "fallback",
+            boundaryAccuracy: "low",
+            createdBy: { connect: { id: ctx.session.user.id } },
+          },
         });
+
+        return image;
       }
-      const formattedAddress = addressData.results[0].formatted_address;
-      const parcelData = {
-        location: addressData.results[0].geometry?.location ?? null,
-        viewport: addressData.results[0].geometry?.viewport ?? null,
-      };
-
-      const parcelDataJson = JSON.stringify(parcelData);
-
-      console.log("parcelData:", parcelData);
-
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
-      );
-      if (!response.ok) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Google API responded with ${response.status}`,
-        });
-      }
-
-      const imageBuffer = await response.arrayBuffer();
-      if (!imageBuffer) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch image data",
-        });
-      }
-      const arrayBuffer = new Uint8Array(imageBuffer);
-
-      const fileType = "jpg";
-      const dir = path.resolve(process.cwd(), `public/streetviewimages`);
-      await fs.mkdir(dir, { recursive: true });
-      const filePath = path.join(dir, `${imageName}.${fileType}`);
-
-      await fs.writeFile(filePath, arrayBuffer);
-
-      const image = await ctx.db.images.create({
-        data: {
-          address: formattedAddress,
-          lat,
-          lng,
-          parcelData: parcelDataJson,
-          name: imageName,
-          url: `streetviewimages/${imageName}.${fileType}`,
-          createdBy: { connect: { id: ctx.session.user.id } },
-        },
-      });
-
-      return image;
     }),
 
   getImages: protectedProcedure.query(async ({ ctx }) => {
@@ -326,12 +392,77 @@ export const responseRouter = createTRPCRouter({
   getParcelData: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db.images.findMany({
       where: {
-        parcelData: {
+        OR: [
+          {
+            parcelData: {
+              not: {
+                equals: null,
+              },
+            },
+          },
+          {
+            propertyBoundary: {
+              not: {
+                equals: null,
+              },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        lat: true,
+        lng: true,
+        address: true,
+        propertyBoundary: true,
+        osmBuildingGeometry: true,
+        boundarySource: true,
+        boundaryAccuracy: true,
+        propertyType: true,
+        buildingType: true,
+        buildingArea: true,
+        lotArea: true,
+        // Legacy support
+        parcelData: true,
+      },
+    });
+  }),
+
+  getEnhancedParcelData: protectedProcedure.query(async ({ ctx }) => {
+    const parcels = await ctx.db.images.findMany({
+      where: {
+        propertyBoundary: {
           not: {
             equals: null,
           },
         },
       },
+      select: {
+        id: true,
+        lat: true,
+        lng: true,
+        address: true,
+        propertyBoundary: true,
+        osmBuildingGeometry: true,
+        boundarySource: true,
+        boundaryAccuracy: true,
+        propertyType: true,
+        buildingType: true,
+        buildingArea: true,
+        lotArea: true,
+        osmBuildingId: true,
+      },
     });
+
+    // Parse the JSON boundary data for frontend use
+    return parcels.map((parcel) => ({
+      ...parcel,
+      propertyBoundary: parcel.propertyBoundary
+        ? (JSON.parse(parcel.propertyBoundary as string) as GeoJSON.Polygon)
+        : null,
+      osmBuildingGeometry: parcel.osmBuildingGeometry
+        ? (JSON.parse(parcel.osmBuildingGeometry as string) as GeoJSON.Polygon)
+        : null,
+    }));
   }),
 });

@@ -19,35 +19,23 @@ export function Sidebar({
       <h3 className="sticky top-0 z-10 mb-0 bg-gray-800 p-4 text-sm font-medium text-gray-300">
         Recent Generations
       </h3>
-
-      <div className="flex flex-col gap-3 p-4 pt-0">
-        {responseHistory.length > 0 ? (
-          responseHistory.slice(0, 10).map((response) => (
-            <div
-              key={response.id}
-              className={`cursor-pointer rounded-lg p-2 transition-all ${
-                response.id === selectedResponseId
-                  ? "bg-gray-600 ring-1 ring-blue-500"
-                  : "bg-gray-700 hover:bg-gray-600"
-              }`}
-              onClick={() => onSelectResponse(response.id)}
-            >
-              <img
-                src={response.url}
-                alt="Previous generation"
-                className="h-20 w-full rounded-md object-cover"
-              />
-              <p className="mt-2 line-clamp-2 text-xs text-gray-300">
-                {response.prompt}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                {new Date(response.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-          ))
-        ) : (
-          <p className="text-xs text-gray-400">No previous generations</p>
-        )}
+      <div className="flex flex-col gap-2 p-2">
+        {responseHistory.map((response) => (
+          <button
+            key={response.id}
+            className={`rounded-md p-2 text-left text-sm text-gray-300 hover:bg-gray-700 ${
+              selectedResponseId === response.id ? "bg-gray-700" : ""
+            }`}
+            onClick={() => onSelectResponse(response.id)}
+          >
+            <img
+              src={response.url}
+              alt="Previously generated image"
+              className="mb-2 h-auto w-full rounded-md object-cover"
+            />
+            <span className="line-clamp-2">{response.prompt}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
