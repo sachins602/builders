@@ -136,19 +136,6 @@ export default function MapComponent() {
                 parcel.propertyBoundary.coordinates[0] as [number, number][]
               ).map(([lng, lat]) => [lat, lng] as [number, number]);
 
-              // Determine color based on boundary source and accuracy
-              const getColor = () => {
-                if (
-                  parcel.boundarySource === "osm" &&
-                  parcel.boundaryAccuracy === "high"
-                )
-                  return "#22c55e"; // Green for OSM high accuracy
-                if (parcel.boundarySource === "toronto_open_data")
-                  return "#3b82f6"; // Blue for Toronto data
-                if (parcel.boundarySource === "google") return "#f59e0b"; // Orange for Google
-                return "#ef4444"; // Red for fallback
-              };
-
               return (
                 <Polygon
                   key={parcel.id}
@@ -156,7 +143,6 @@ export default function MapComponent() {
                   eventHandlers={{
                     click: () => {
                       console.log(`Property clicked: ${parcel.address}`);
-                      console.log(`Boundary source: ${parcel.boundarySource}`);
                       console.log(`Building type: ${parcel.buildingType}`);
                       if (parcel.buildingArea) {
                         console.log(
@@ -174,7 +160,7 @@ export default function MapComponent() {
                     },
                   }}
                   pathOptions={{
-                    color: getColor(),
+                    color: "#22c55e", // Green for OSM high accuracy
                     weight: 2,
                     opacity: 1,
                     fillOpacity: 0.3,
@@ -187,8 +173,6 @@ export default function MapComponent() {
                         {parcel.address}
                       </h3>
                       <div className="mt-1 space-y-1 text-xs text-gray-600">
-                        <div>Source: {parcel.boundarySource}</div>
-                        <div>Accuracy: {parcel.boundaryAccuracy}</div>
                         {parcel.buildingType && (
                           <div>Type: {parcel.buildingType}</div>
                         )}
@@ -205,7 +189,6 @@ export default function MapComponent() {
               );
             }
 
-            // Fallback to rectangle for parcels without proper boundary data
             return null;
           })}
 
