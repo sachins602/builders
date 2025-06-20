@@ -155,7 +155,9 @@ export const responseRouter = createTRPCRouter({
 
         // Get street view image
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(
+            formattedAddress,
+          )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
         );
         if (!response.ok) {
           throw new TRPCError({
@@ -225,7 +227,9 @@ export const responseRouter = createTRPCRouter({
           addressData.results[0]?.formatted_address ?? "Unknown Address";
 
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(
+            formattedAddress,
+          )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
         );
         const imageBuffer = await response.arrayBuffer();
         const arrayBuffer = new Uint8Array(imageBuffer);
@@ -368,21 +372,20 @@ export const responseRouter = createTRPCRouter({
     .input(z.object({ lat: z.number(), lng: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const { lat, lng } = input;
-      const images = await ctx.db.images.findMany({
+      const nearbyImages = await ctx.db.images.findMany({
         where: {
           lat: {
-            gte: lat - 0.1,
-            lte: lat + 0.1,
+            gte: lat - 0.01,
+            lte: lat + 0.01,
           },
           lng: {
-            gte: lng - 0.1,
-            lte: lng + 0.1,
+            gte: lng - 0.01,
+            lte: lng + 0.01,
           },
         },
-        orderBy: { createdAt: "desc" },
         take: 4,
       });
-      return images;
+      return nearbyImages;
     }),
 
   getSecretMessage: protectedProcedure.query(() => {
@@ -428,29 +431,19 @@ export const responseRouter = createTRPCRouter({
     });
   }),
 
-  getEnhancedParcelData: protectedProcedure.query(async ({ ctx }) => {
+  getEnhancedParcelData: publicProcedure.query(async ({ ctx }) => {
     const parcels = await ctx.db.images.findMany({
-      where: {
-        propertyBoundary: {
-          not: {
-            equals: null,
-          },
-        },
-      },
       select: {
         id: true,
+        address: true,
         lat: true,
         lng: true,
-        address: true,
         propertyBoundary: true,
-        osmBuildingGeometry: true,
         boundarySource: true,
         boundaryAccuracy: true,
         propertyType: true,
         buildingType: true,
         buildingArea: true,
-        lotArea: true,
-        osmBuildingId: true,
       },
     });
 
@@ -460,9 +453,26 @@ export const responseRouter = createTRPCRouter({
       propertyBoundary: parcel.propertyBoundary
         ? (JSON.parse(parcel.propertyBoundary as string) as GeoJSON.Polygon)
         : null,
-      osmBuildingGeometry: parcel.osmBuildingGeometry
-        ? (JSON.parse(parcel.osmBuildingGeometry as string) as GeoJSON.Polygon)
-        : null,
     }));
   }),
+
+  createResponse: protectedProcedure
+    .input(
+      z.object({
+        prompt: z.string(),
+        url: z.string(),
+        sourceImageId: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { prompt, url, sourceImageId } = input;
+      return ctx.db.response.create({
+        data: {
+          prompt,
+          url,
+          sourceImageId,
+          createdById: ctx.session.user.id,
+        },
+      });
+    }),
 });
