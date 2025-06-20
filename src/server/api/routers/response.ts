@@ -132,7 +132,7 @@ export const responseRouter = createTRPCRouter({
         }
 
         console.log(
-          `Using ${propertyBoundary.source} boundary data with ${propertyBoundary.accuracy} accuracy`,
+          `Using OSM boundary data for building: ${propertyBoundary.properties.buildingType}`,
         );
 
         // Get address information from Google (for street view image)
@@ -209,14 +209,13 @@ export const responseRouter = createTRPCRouter({
             osmBuildingId: propertyBoundary.properties.osmId,
             osmBuildingGeometry: JSON.stringify(propertyBoundary.geometry),
             propertyBoundary: JSON.stringify(propertyBoundary.geometry),
-            boundarySource: propertyBoundary.source,
-            boundaryAccuracy: propertyBoundary.accuracy,
+            boundarySource: "osm",
+            boundaryAccuracy: "high",
 
             // Property details
             propertyType: propertyBoundary.properties.propertyType,
             buildingType: propertyBoundary.properties.buildingType,
             buildingArea: buildingArea,
-            lotArea: propertyBoundary.properties.lotArea,
 
             createdBy: { connect: { id: ctx.session.user.id } },
           },

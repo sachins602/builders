@@ -1,87 +1,69 @@
 export interface PropertyBoundary {
-  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
-  source: "osm";
-  accuracy: "high";
+  geometry: GeoJSON.Polygon;
   properties: {
-    osmId?: string;
-    osmType?: "way" | "relation";
-    propertyType?: string;
-    buildingType?: string;
-    lotArea?: number;
-    buildingArea?: number;
+    osmId: string;
+    buildingType: string;
+    propertyType: string;
     address?: string;
-    [key: string]: unknown;
+    buildingArea?: number;
   };
-}
-
-// Type definitions for OSM Overpass API responses
-interface OSMCoordinate {
-  lat: number;
-  lon: number;
 }
 
 interface OSMElement {
   id: number;
   type: "way" | "relation" | "node";
-  geometry?: OSMCoordinate[];
+  geometry?: Array<{ lat: number; lon: number }>;
   tags?: Record<string, string>;
 }
 
-interface OSMOverpassResponse {
-  elements: OSMElement[];
-}
-
-// OSM Overpass API queries for building boundaries
-const getOSMBuildingBoundary = async (
+// Get property boundary from OpenStreetMap
+export const getPropertyBoundary = async (
   lat: number,
   lng: number,
-  radius = 50,
 ): Promise<PropertyBoundary | null> => {
   try {
-    // Overpass QL query to find buildings near the clicked point
-    const overpassQuery = `
+    // Query OSM for buildings within 50m of the clicked point
+    const query = `
       [out:json][timeout:25];
       (
-        way["building"](around:${radius},${lat},${lng});
-        relation["building"](around:${radius},${lat},${lng});
+        way["building"](around:50,${lat},${lng});
+        relation["building"](around:50,${lat},${lng});
       );
       out geom;
     `;
 
     const response = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: `data=${encodeURIComponent(overpassQuery)}`,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `data=${encodeURIComponent(query)}`,
     });
 
     if (!response.ok) {
-      throw new Error(`Overpass API error: ${response.status}`);
-    }
-
-    const data = (await response.json()) as OSMOverpassResponse;
-
-    if (!data.elements || data.elements.length === 0) {
+      console.error(`OSM API error: ${response.status}`);
       return null;
     }
 
-    // Find the closest building to the clicked point
+    const data = (await response.json()) as { elements: OSMElement[] };
+
+    if (!data.elements?.length) {
+      console.log("No buildings found at this location");
+      return null;
+    }
+
+    // Find the closest building
     let closestBuilding: OSMElement | null = null;
     let minDistance = Infinity;
 
     for (const element of data.elements) {
       if (element.type === "way" && element.geometry) {
         // Calculate center of building
-        const coordinates = element.geometry;
+        const coords = element.geometry;
         const centerLat =
-          coordinates.reduce((sum, coord) => sum + coord.lat, 0) /
-          coordinates.length;
+          coords.reduce((sum, c) => sum + c.lat, 0) / coords.length;
         const centerLng =
-          coordinates.reduce((sum, coord) => sum + coord.lon, 0) /
-          coordinates.length;
+          coords.reduce((sum, c) => sum + c.lon, 0) / coords.length;
 
-        // Calculate distance from clicked point
+        // Simple distance calculation
         const distance = Math.sqrt(
           Math.pow(lat - centerLat, 2) + Math.pow(lng - centerLng, 2),
         );
@@ -93,104 +75,78 @@ const getOSMBuildingBoundary = async (
       }
     }
 
-    if (!closestBuilding?.geometry) {
-      return null;
-    }
+    if (!closestBuilding?.geometry) return null;
 
-    // Convert OSM geometry to GeoJSON
+    // Convert to GeoJSON polygon
     const coordinates = closestBuilding.geometry.map(
       (coord) => [coord.lon, coord.lat] as [number, number],
     );
 
-    // Ensure the polygon is closed
-    if (coordinates.length > 0) {
-      const firstCoord = coordinates[0];
-      const lastCoord = coordinates[coordinates.length - 1];
-      if (
-        firstCoord &&
-        lastCoord &&
-        (firstCoord[0] !== lastCoord[0] || firstCoord[1] !== lastCoord[1])
-      ) {
-        coordinates.push(firstCoord);
-      }
+    // Ensure polygon is closed
+    if (
+      coordinates.length > 0 &&
+      (coordinates[0]![0] !== coordinates[coordinates.length - 1]![0] ||
+        coordinates[0]![1] !== coordinates[coordinates.length - 1]![1])
+    ) {
+      coordinates.push(coordinates[0]!);
     }
 
-    const geometry: GeoJSON.Polygon = {
-      type: "Polygon",
-      coordinates: [coordinates],
-    };
+    // Extract property information
+    const tags = closestBuilding.tags ?? {};
+    const buildingType = tags.building ?? "yes";
 
     return {
-      geometry,
-      source: "osm",
-      accuracy: "high",
+      geometry: {
+        type: "Polygon",
+        coordinates: [coordinates],
+      },
       properties: {
         osmId: closestBuilding.id.toString(),
-        osmType:
-          closestBuilding.type === "node" ? undefined : closestBuilding.type,
-        buildingType: closestBuilding.tags?.building ?? "yes",
-        propertyType:
-          closestBuilding.tags?.["building:use"] ??
-          getPropertyTypeFromBuilding(closestBuilding.tags?.building),
-        address: formatOSMAddress(closestBuilding.tags),
-        ...closestBuilding.tags,
+        buildingType,
+        propertyType: getPropertyType(buildingType),
+        address: formatAddress(tags),
+        buildingArea: calculateArea(coordinates),
       },
     };
   } catch (error) {
-    console.error("Error fetching OSM building boundary:", error);
+    console.error("Error fetching OSM data:", error);
     return null;
   }
 };
 
-// Main function to get property boundary
-export const getPropertyBoundary = async (
-  lat: number,
-  lng: number,
-): Promise<PropertyBoundary | null> => {
-  // Try OSM (most detailed building outlines)
-  const boundary = await getOSMBuildingBoundary(lat, lng);
-  if (boundary) {
-    console.log("Using OSM boundary data");
-    return boundary;
-  }
+// Simplified property type detection
+function getPropertyType(buildingType: string): string {
+  const residential = ["house", "detached", "apartments", "residential"];
+  const commercial = ["commercial", "office", "retail", "shop"];
 
-  // If no boundary is found, return null
-  console.log("No OSM boundary found at this location.");
-  return null;
-};
+  if (residential.some((type) => buildingType.includes(type)))
+    return "residential";
+  if (commercial.some((type) => buildingType.includes(type)))
+    return "commercial";
+  return "other";
+}
 
-// Helper functions
-const getPropertyTypeFromBuilding = (
-  buildingType: string | undefined,
-): string => {
-  if (!buildingType) return "unknown";
-
-  const residentialTypes = [
-    "house",
-    "detached",
-    "semidetached_house",
-    "terraced",
-    "apartments",
-  ];
-  const commercialTypes = ["commercial", "office", "retail", "shop"];
-  const industrialTypes = ["industrial", "warehouse", "factory"];
-
-  if (residentialTypes.includes(buildingType)) return "residential";
-  if (commercialTypes.includes(buildingType)) return "commercial";
-  if (industrialTypes.includes(buildingType)) return "industrial";
-
-  return "mixed";
-};
-
-const formatOSMAddress = (
-  tags: Record<string, string> | undefined,
-): string | undefined => {
-  if (!tags) return undefined;
-
-  const parts = [];
-  if (tags["addr:housenumber"]) parts.push(tags["addr:housenumber"]);
-  if (tags["addr:street"]) parts.push(tags["addr:street"]);
-  if (tags["addr:city"]) parts.push(tags["addr:city"]);
+// Format address from OSM tags
+function formatAddress(tags: Record<string, string>): string | undefined {
+  const parts = [
+    tags["addr:housenumber"],
+    tags["addr:street"],
+    tags["addr:city"],
+  ].filter(Boolean);
 
   return parts.length > 0 ? parts.join(" ") : undefined;
-};
+}
+
+// Simple area calculation (approximate)
+function calculateArea(coords: [number, number][]): number {
+  if (coords.length < 3) return 0;
+
+  let area = 0;
+  for (let i = 0; i < coords.length - 1; i++) {
+    area +=
+      coords[i]![0] * coords[i + 1]![1] - coords[i + 1]![0] * coords[i]![1];
+  }
+
+  // Convert to approximate square meters (very rough approximation)
+  return Math.abs(area / 2) * 111320 * 111320;
+}
