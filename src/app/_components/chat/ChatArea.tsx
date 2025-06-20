@@ -8,7 +8,6 @@ interface ChatAreaProps {
   lastImage: Image | null;
   responseChain: ResponseWithImage[];
   isGenerating: boolean;
-  selectedResponseId: number | null;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -16,128 +15,90 @@ export function ChatArea({
   lastImage,
   responseChain,
   isGenerating,
-  selectedResponseId: _selectedResponseId,
   messagesEndRef,
 }: ChatAreaProps) {
-  // Find the original image - either from the first response's sourceImage or from lastImage
-  const getOriginalImage = (): Image | null => {
-    if (responseChain.length > 0) {
-      // Find the first response in the chain (the one without a previousResponseId)
-      const firstResponse = responseChain.find((r) => !r.previousResponseId);
-      if (firstResponse?.sourceImage) {
-        return firstResponse.sourceImage;
-      }
-    }
-    return lastImage;
-  };
-
-  const originalImage = getOriginalImage();
-
-  // Show reference image when there's an original image and either:
-  // - There are responses in the chain, OR
-  // - There's no chain but there's a lastImage
-  const showReferenceImage =
-    originalImage && (responseChain.length > 0 || lastImage);
-
-  const showWelcomeMessage =
-    !originalImage && !responseChain.length && !isGenerating;
+  const originalImage =
+    responseChain.find((r) => !r.previousResponseId)?.sourceImage ?? lastImage;
+  const showWelcomeMessage = !originalImage && !isGenerating;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4">
-      {/* Reference image - now shows throughout the conversation */}
-      {showReferenceImage && (
-        <div className="mb-4">
-          <div className="mb-2 flex items-center">
-            <ImageIcon className="mr-2 h-5 w-5 text-gray-300" />
-            <span className="text-sm text-gray-300">
-              {responseChain.length > 0 ? "Original Image" : "Reference Image"}
-            </span>
+    <div className="h-full flex-1 overflow-y-auto p-6">
+      <div className="mx-auto max-w-4xl">
+        {originalImage && (
+          <div className="mb-6 rounded-lg border bg-white p-4">
+            <div className="mb-2 flex items-center text-sm font-semibold text-gray-700">
+              <ImageIcon className="mr-2 h-5 w-5" />
+              <span>
+                {responseChain.length > 0
+                  ? "Original Image"
+                  : "Reference Image"}
+              </span>
+            </div>
+            <img
+              src={originalImage.url}
+              alt={
+                responseChain.length > 0 ? "Original image" : "Reference image"
+              }
+              className="max-h-72 w-full rounded-md object-contain"
+            />
+            {originalImage.address && (
+              <p className="mt-2 text-center text-xs text-gray-500">
+                {originalImage.address}
+              </p>
+            )}
           </div>
-          <img
-            src={originalImage.url}
-            alt={
-              responseChain.length > 0 ? "Original image" : "Reference image"
-            }
-            className="max-h-64 rounded-md object-cover"
-          />
-          {originalImage.address && (
-            <p className="mt-1 text-xs text-gray-400">
-              {originalImage.address}
-            </p>
-          )}
-        </div>
-      )}
+        )}
 
-      {/* Message thread */}
-      {responseChain.map((response, index) => (
-        <div key={response.id} className="mb-4">
-          {/* User prompt */}
-          <div className="mb-4 flex justify-end">
-            <div className="max-w-3xl">
-              <div className="rounded-lg bg-blue-600 p-3 text-white">
-                {response.prompt}
-              </div>
-              <div className="mt-1 text-right text-xs text-gray-400">
-                {new Date(response.createdAt).toLocaleTimeString()}
+        {responseChain.map((response) => (
+          <div key={response.id} className="mb-6">
+            <div className="mb-4 flex items-end justify-end gap-2">
+              <div className="max-w-xl rounded-2xl rounded-br-none bg-blue-500 p-4 text-white">
+                <p>{response.prompt}</p>
               </div>
             </div>
-          </div>
-
-          {/* AI response */}
-          <div className="flex">
-            <div className="mr-2 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-700">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <div className="max-w-3xl rounded-lg bg-gray-800 p-3">
-              <img
-                src={response.url}
-                alt={`AI generated image ${index + 1}`}
-                className="max-h-64 rounded-md object-cover"
-              />
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200">
+                <Sparkles className="h-6 w-6 text-gray-600" />
+              </div>
+              <div className="max-w-xl rounded-2xl rounded-bl-none border bg-white p-2">
+                <img
+                  src={response.url}
+                  alt={`AI generated image`}
+                  className="max-h-80 rounded-lg object-contain"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {/* Loading indicator */}
-      {isGenerating && (
-        <div className="mb-4 flex">
-          <div className="mr-2 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-700">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
-          <div className="rounded-lg bg-gray-800 p-3">
-            <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 animate-bounce rounded-full bg-purple-500"></div>
-              <div
-                className="h-2 w-2 animate-bounce rounded-full bg-purple-500"
-                style={{ animationDelay: "0.2s" }}
-              ></div>
-              <div
-                className="h-2 w-2 animate-bounce rounded-full bg-purple-500"
-                style={{ animationDelay: "0.4s" }}
-              ></div>
-              <span className="ml-2 text-sm text-gray-400">Generating...</span>
+        {isGenerating && (
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200">
+              <Sparkles className="h-6 w-6 text-gray-600" />
+            </div>
+            <div className="rounded-2xl rounded-bl-none border bg-white p-4">
+              <div className="flex items-center space-x-2">
+                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]"></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]"></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500"></div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Welcome message */}
-      {showWelcomeMessage && (
-        <div className="mb-4 flex">
-          <div className="mr-2 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-700">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
-          <div className="rounded-lg bg-gray-800 p-3">
-            <p className="text-sm text-gray-300">
-              Welcome to AI Image Chat! Describe how you&apos;d like to
-              transform an image or select a previous generation.
+        {showWelcomeMessage && (
+          <div className="text-center text-gray-500">
+            <Sparkles className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+            <h3 className="text-xl font-semibold">Welcome to AI Image Chat</h3>
+            <p className="mt-2">
+              Start by selecting an image on the map, or describe how you&apos;d
+              like to transform a previous generation.
             </p>
           </div>
-        </div>
-      )}
+        )}
 
-      <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { useChat } from "~/hooks/use-chat";
+import { useChat } from "~/lib/use-chat";
 import { Sidebar } from "./chat/Sidebar";
 import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
@@ -24,19 +24,18 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex h-screen w-full">
       <Sidebar
         responseHistory={chatData.responseHistory}
         selectedResponseId={state.selectedResponseId}
         onSelectResponse={actions.selectResponse}
       />
 
-      <div className="flex h-[535px] flex-1 flex-col">
+      <div className="flex flex-1 flex-col">
         <ChatArea
           lastImage={chatData.lastImage}
           responseChain={state.responseChain}
           isGenerating={state.isGenerating}
-          selectedResponseId={state.selectedResponseId}
           messagesEndRef={messagesEndRef}
         />
 

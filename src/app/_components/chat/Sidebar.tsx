@@ -15,28 +15,38 @@ export function Sidebar({
   onSelectResponse,
 }: SidebarProps) {
   return (
-    <div className="flex h-[535px] w-64 flex-col overflow-y-auto border-r border-gray-700 bg-gray-800">
-      <h3 className="sticky top-0 z-10 mb-0 bg-gray-800 p-4 text-sm font-medium text-gray-300">
-        Recent Generations
-      </h3>
-      <div className="flex flex-col gap-2 p-2">
+    <aside className="flex h-full w-80 flex-col border-r bg-gray-50">
+      <div className="flex-shrink-0 p-4">
+        <h3 className="text-lg font-semibold text-gray-800">History</h3>
+        <p className="text-sm text-gray-500">Previously generated images</p>
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-2">
         {responseHistory.map((response) => (
           <button
             key={response.id}
-            className={`rounded-md p-2 text-left text-sm text-gray-300 hover:bg-gray-700 ${
-              selectedResponseId === response.id ? "bg-gray-700" : ""
+            className={`w-full rounded-lg p-2 text-left ${
+              selectedResponseId === response.id
+                ? "bg-blue-100"
+                : "hover:bg-gray-100"
             }`}
             onClick={() => onSelectResponse(response.id)}
           >
             <img
               src={response.url}
               alt="Previously generated image"
-              className="mb-2 h-auto w-full rounded-md object-cover"
+              className="mb-2 w-full rounded-md object-cover"
             />
-            <span className="line-clamp-2">{response.prompt}</span>
+            <span className="line-clamp-2 text-sm text-gray-700">
+              {response.prompt}
+            </span>
           </button>
         ))}
+        {responseHistory.length === 0 && (
+          <p className="p-4 text-sm text-gray-500">
+            No history yet. Start by generating an image!
+          </p>
+        )}
       </div>
-    </div>
+    </aside>
   );
 }
