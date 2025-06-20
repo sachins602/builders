@@ -69,20 +69,13 @@ model Images {
     address   String?
     lat       Float?
     lng       Float?
-    parcelData Json?
     
-    // Enhanced property boundary data
-    osmBuildingId String?     // OSM building ID (way/relation)
-    osmBuildingGeometry Json? // OSM building boundary geometry
-    propertyBoundary Json?    // Property parcel boundary (from multiple sources)
-    boundarySource String?   // Source of boundary data: 'osm', 'toronto_open_data', 'google', 'fallback'
-    boundaryAccuracy String? // 'high', 'medium', 'low' based on data quality
-    
-    // Additional property details
-    propertyType String?     // residential, commercial, industrial, etc.
+    // OSM building data
+    osmBuildingId String?     // OSM building ID
+    propertyBoundary Json?    // Building boundary geometry
+    propertyType String?     // residential, commercial, etc.
     buildingType String?     // house, apartment, office, etc.
-    lotArea Float?          // Property lot area in square meters
-    buildingArea Float?     // Building footprint area in square meters
+    buildingArea Float?     // Building area in square meters
     
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

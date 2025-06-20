@@ -155,12 +155,6 @@ export const responseRouter = createTRPCRouter({
         }
         const formattedAddress = addressData.results[0].formatted_address;
 
-        // Legacy parcel data for backward compatibility
-        const legacyParcelData = {
-          location: addressData.results[0].geometry?.location ?? null,
-          viewport: addressData.results[0].geometry?.viewport ?? null,
-        };
-
         // Get street view image
         const response = await fetch(
           `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(
@@ -190,9 +184,6 @@ export const responseRouter = createTRPCRouter({
 
         await fs.writeFile(filePath, arrayBuffer);
 
-        // Calculate area of the property boundary
-        const buildingArea = propertyBoundary.properties.buildingArea;
-
         // Create enhanced image record with property boundary data
         const image = await ctx.db.images.create({
           data: {
@@ -202,20 +193,12 @@ export const responseRouter = createTRPCRouter({
             name: imageName,
             url: `streetviewimages/${imageName}.${fileType}`,
 
-            // Legacy parcel data for backward compatibility
-            parcelData: JSON.stringify(legacyParcelData),
-
-            // Enhanced property boundary data
+            // OSM building data
             osmBuildingId: propertyBoundary.properties.osmId,
-            osmBuildingGeometry: JSON.stringify(propertyBoundary.geometry),
             propertyBoundary: JSON.stringify(propertyBoundary.geometry),
-            boundarySource: "osm",
-            boundaryAccuracy: "high",
-
-            // Property details
             propertyType: propertyBoundary.properties.propertyType,
             buildingType: propertyBoundary.properties.buildingType,
-            buildingArea: buildingArea,
+            buildingArea: propertyBoundary.properties.buildingArea,
 
             createdBy: { connect: { id: ctx.session.user.id } },
           },
@@ -369,45 +352,6 @@ export const responseRouter = createTRPCRouter({
     return "you can now see this secret message!";
   }),
 
-  getParcelData: protectedProcedure.query(async ({ ctx }) => {
-    return await ctx.db.images.findMany({
-      where: {
-        OR: [
-          {
-            parcelData: {
-              not: {
-                equals: null,
-              },
-            },
-          },
-          {
-            propertyBoundary: {
-              not: {
-                equals: null,
-              },
-            },
-          },
-        ],
-      },
-      select: {
-        id: true,
-        lat: true,
-        lng: true,
-        address: true,
-        propertyBoundary: true,
-        osmBuildingGeometry: true,
-        boundarySource: true,
-        boundaryAccuracy: true,
-        propertyType: true,
-        buildingType: true,
-        buildingArea: true,
-        lotArea: true,
-        // Legacy support
-        parcelData: true,
-      },
-    });
-  }),
-
   getEnhancedParcelData: publicProcedure.query(async ({ ctx }) => {
     const parcels = await ctx.db.images.findMany({
       select: {
@@ -416,8 +360,6 @@ export const responseRouter = createTRPCRouter({
         lat: true,
         lng: true,
         propertyBoundary: true,
-        boundarySource: true,
-        boundaryAccuracy: true,
         propertyType: true,
         buildingType: true,
         buildingArea: true,
