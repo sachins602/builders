@@ -6,12 +6,14 @@ export default async function Create() {
   const session = await auth();
   if (!session?.user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-800 text-white">
-        <div className="rounded-lg bg-gray-700 p-8 shadow-lg">
-          <h2 className="mb-4 text-xl font-semibold">
+      <div className="flex h-full items-center justify-center">
+        <div className="rounded-lg border bg-white p-8 shadow-lg">
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
             Authentication Required
           </h2>
-          <p>Please sign in to use the AI image generation feature.</p>
+          <p className="text-gray-600">
+            Please sign in to use the AI image generation feature.
+          </p>
         </div>
       </div>
     );
@@ -19,13 +21,7 @@ export default async function Create() {
 
   return (
     <HydrateClient>
-      <div className="flex flex-col bg-gray-900 text-white">
-        {/* Main content with sidebar */}
-        <main className="flex flex-1">
-          {/* Chat interface with sidebar */}
-          <ChatInterface />
-        </main>
-      </div>
+      <ChatInterface />
     </HydrateClient>
   );
 }

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import DbData from "./homebuilders.json";
 
 // Define interfaces for the JSON data structure to ensure type safety

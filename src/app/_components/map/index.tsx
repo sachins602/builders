@@ -7,6 +7,8 @@ import {
   Popup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import type L from "leaflet";
+import type { LeafletMouseEvent } from "leaflet";
 import TorontoTopoJSON from "public/toronto_crs84.json";
 import { useState } from "react";
 
@@ -34,7 +36,16 @@ export default function MapComponent() {
   const [clickedPosition, setClickedPosition] = useState<
     [number, number] | null
   >(null);
+
+  const utils = api.useUtils();
+
+  const parcelData = api.response.getEnhancedParcelData.useQuery();
+
   const image = api.response.saveStreetViewImageAddress.useMutation({
+    onSuccess: () => {
+      // Invalidate the getChatData query to refresh the last image and responses
+      void utils.response.getChatData.invalidate();
+    },
     onError: (error) => {
       console.error("Error fetching image:", error);
       // Consider adding a toast notification here for better user feedback
@@ -76,8 +87,8 @@ export default function MapComponent() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col space-y-2">
-      <div className="h-[560px] w-full">
+    <div className="flex h-[calc(100vh-100px)] w-full flex-col space-y-2">
+      <div className="h-full w-full">
         <MapContainer
           center={[43.7, -79.42]} // Toronto coordinates
           zoom={11}
@@ -114,6 +125,72 @@ export default function MapComponent() {
               fillOpacity: 1,
             }}
           />
+
+          {parcelData.data?.map((parcel) => {
+            // If we have actual property boundary data, render it as a polygon
+            if (
+              parcel.propertyBoundary?.coordinates &&
+              Array.isArray(parcel.propertyBoundary.coordinates[0])
+            ) {
+              const coordinates = (
+                parcel.propertyBoundary.coordinates[0] as [number, number][]
+              ).map(([lng, lat]) => [lat, lng] as [number, number]);
+
+              return (
+                <Polygon
+                  key={parcel.id}
+                  positions={coordinates}
+                  eventHandlers={{
+                    click: () => {
+                      console.log(`Property clicked: ${parcel.address}`);
+                      console.log(`Building type: ${parcel.buildingType}`);
+                      if (parcel.buildingArea) {
+                        console.log(
+                          `Building area: ${Math.round(
+                            parcel.buildingArea,
+                          )} m²`,
+                        );
+                      }
+                    },
+                    mouseover: (e: LeafletMouseEvent) => {
+                      (e.target as L.Path).setStyle({ fillOpacity: 0.7 });
+                    },
+                    mouseout: (e: LeafletMouseEvent) => {
+                      (e.target as L.Path).setStyle({ fillOpacity: 0.3 });
+                    },
+                  }}
+                  pathOptions={{
+                    color: "#22c55e", // Green for OSM high accuracy
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.3,
+                    interactive: true,
+                  }}
+                >
+                  <Popup>
+                    <div className="p-2">
+                      <h3 className="text-sm font-semibold">
+                        {parcel.address}
+                      </h3>
+                      <div className="mt-1 space-y-1 text-xs text-gray-600">
+                        {parcel.buildingType && (
+                          <div>Type: {parcel.buildingType}</div>
+                        )}
+                        {parcel.buildingArea && (
+                          <div>Area: {Math.round(parcel.buildingArea)} m²</div>
+                        )}
+                        {parcel.propertyType && (
+                          <div>Use: {parcel.propertyType}</div>
+                        )}
+                      </div>
+                    </div>
+                  </Popup>
+                </Polygon>
+              );
+            }
+
+            return null;
+          })}
 
           <MapEvents />
 
@@ -187,6 +264,7 @@ export default function MapComponent() {
       ) : (
         <p>Select a location to get a street view image</p>
       )}
+
       <div className="flex w-full max-w-sm gap-2 place-self-center">
         <Input type="text" placeholder="Address" />
         <Button variant="secondary" size="icon" className="size-8">
