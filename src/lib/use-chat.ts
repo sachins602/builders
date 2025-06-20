@@ -15,10 +15,8 @@ export function useChat() {
     api.response.getChatData.useQuery();
 
   // Memoize these to prevent infinite re-renders
-  const lastImage = useMemo(
-    () => apiChatData?.lastImage ?? null,
-    [apiChatData?.lastImage],
-  );
+  const lastImage = apiChatData?.lastImage ?? null;
+
   const responseHistory = useMemo(
     () => apiChatData?.responseHistory ?? [],
     [apiChatData?.responseHistory],
@@ -90,7 +88,7 @@ export function useChat() {
       },
     });
 
-  // Build response chain when selection changes
+  // Build response chain when selection changes OR when data loads
   useEffect(() => {
     if (responseHistory.length === 0) {
       setState((prev) => ({ ...prev, responseChain: [] }));
@@ -109,9 +107,52 @@ export function useChat() {
       const chain = buildResponseChain(selected, responseHistory);
       setState((prev) => ({ ...prev, responseChain: chain }));
     } else {
-      setState((prev) => ({ ...prev, responseChain: [] }));
+      // If no response is selected but we have a last image,
+      // automatically show any responses associated with that image
+      if (lastImage && responseHistory.length > 0) {
+        // Find responses that were generated from the last image
+        const responsesForLastImage = responseHistory.filter(
+          (response) => response.sourceImageId === lastImage.id,
+        );
+
+        if (responsesForLastImage.length > 0) {
+          // Find the latest response chain for this image
+          // Look for the most recent response that doesn't have a next response
+          const latestResponse = responsesForLastImage
+            .filter((response) => {
+              // Find responses that are not referenced by other responses as previousResponseId
+              return !responsesForLastImage.some(
+                (r) => r.previousResponseId === response.id,
+              );
+            })
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime(),
+            )[0];
+
+          if (latestResponse) {
+            // Build the chain for this latest response
+            const chain = buildResponseChain(latestResponse, responseHistory);
+            setState((prev) => ({
+              ...prev,
+              responseChain: chain,
+              selectedResponseId: latestResponse.id,
+            }));
+          }
+        } else {
+          setState((prev) => ({ ...prev, responseChain: [] }));
+        }
+      } else {
+        setState((prev) => ({ ...prev, responseChain: [] }));
+      }
     }
-  }, [state.selectedResponseId, responseHistory, buildResponseChain]);
+  }, [
+    state.selectedResponseId,
+    responseHistory,
+    lastImage,
+    buildResponseChain,
+  ]);
 
   // Actions
   const generateImage = useCallback(() => {

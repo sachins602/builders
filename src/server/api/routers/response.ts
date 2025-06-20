@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { z } from "zod";
 import { env } from "~/env";
+import { getPropertyBoundary } from "~/lib/propertyBoundaryService";
 
 import { TRPCError } from "@trpc/server";
 import {
@@ -20,8 +21,13 @@ interface GeoCodeResponse {
   address_components?: AddressComponent[];
   formatted_address?: string;
   geometry?: Geometry;
+  navigation_points?: NavigationPoint[];
   place_id?: string;
   types?: string[];
+}
+
+interface NavigationPoint {
+  location?: Location[];
 }
 
 interface AddressComponent {
@@ -114,63 +120,101 @@ export const responseRouter = createTRPCRouter({
       }
       const imageName = ctx.session.user.id + lat + lng;
 
-      const addressResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
-      );
-      if (!addressResponse.ok) {
+      try {
+        // Get enhanced property boundary data
+        const propertyBoundary = await getPropertyBoundary(lat, lng);
+
+        if (!propertyBoundary) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No property boundary found at this location.",
+          });
+        }
+
+        console.log(
+          `Using OSM boundary data for building: ${propertyBoundary.properties.buildingType}`,
+        );
+
+        // Get address information from Google (for street view image)
+        const addressResponse = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        );
+        if (!addressResponse.ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Google API responded with ${addressResponse.status}`,
+          });
+        }
+        const addressData =
+          (await addressResponse.json()) as GoogleGeocodingResponse;
+        if (!addressData.results[0]?.formatted_address) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No address data received from Google",
+          });
+        }
+        const formattedAddress = addressData.results[0].formatted_address;
+
+        // Get street view image
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(
+            formattedAddress,
+          )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        );
+        if (!response.ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Google API responded with ${response.status}`,
+          });
+        }
+
+        const imageBuffer = await response.arrayBuffer();
+        if (!imageBuffer) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to fetch image data",
+          });
+        }
+        const arrayBuffer = new Uint8Array(imageBuffer);
+
+        const fileType = "jpg";
+        const dir = path.resolve(process.cwd(), `public/streetviewimages`);
+        await fs.mkdir(dir, { recursive: true });
+        const filePath = path.join(dir, `${imageName}.${fileType}`);
+
+        await fs.writeFile(filePath, arrayBuffer);
+
+        // Create enhanced image record with property boundary data
+        const image = await ctx.db.images.create({
+          data: {
+            address: propertyBoundary.properties.address ?? formattedAddress,
+            lat,
+            lng,
+            name: imageName,
+            url: `streetviewimages/${imageName}.${fileType}`,
+
+            // OSM building data
+            osmBuildingId: propertyBoundary.properties.osmId,
+            propertyBoundary: JSON.stringify(propertyBoundary.geometry),
+            propertyType: propertyBoundary.properties.propertyType,
+            buildingType: propertyBoundary.properties.buildingType,
+            buildingArea: propertyBoundary.properties.buildingArea,
+
+            createdBy: { connect: { id: ctx.session.user.id } },
+          },
+        });
+
+        return image;
+      } catch (error) {
+        console.error("Error in saveStreetViewImageAddress:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Google API responded with ${addressResponse.status}`,
+          message:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred",
         });
       }
-      const addressData =
-        (await addressResponse.json()) as GoogleGeocodingResponse;
-      if (!addressData.results[0]?.formatted_address) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "No address data received from Google",
-        });
-      }
-      const formattedAddress = addressData.results[0].formatted_address;
-
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(formattedAddress)}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
-      );
-      if (!response.ok) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Google API responded with ${response.status}`,
-        });
-      }
-
-      const imageBuffer = await response.arrayBuffer();
-      if (!imageBuffer) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch image data",
-        });
-      }
-      const arrayBuffer = new Uint8Array(imageBuffer);
-
-      const fileType = "jpg";
-      const dir = path.resolve(process.cwd(), `public/streetviewimages`);
-      await fs.mkdir(dir, { recursive: true });
-      const filePath = path.join(dir, `${imageName}.${fileType}`);
-
-      await fs.writeFile(filePath, arrayBuffer);
-
-      const image = await ctx.db.images.create({
-        data: {
-          address: formattedAddress,
-          lat,
-          lng,
-          name: imageName,
-          url: `streetviewimages/${imageName}.${fileType}`,
-          createdBy: { connect: { id: ctx.session.user.id } },
-        },
-      });
-
-      return image;
     }),
 
   getImages: protectedProcedure.query(async ({ ctx }) => {
@@ -288,24 +332,66 @@ export const responseRouter = createTRPCRouter({
     .input(z.object({ lat: z.number(), lng: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const { lat, lng } = input;
-      const images = await ctx.db.images.findMany({
+      const nearbyImages = await ctx.db.images.findMany({
         where: {
           lat: {
-            gte: lat - 0.1,
-            lte: lat + 0.1,
+            gte: lat - 0.01,
+            lte: lat + 0.01,
           },
           lng: {
-            gte: lng - 0.1,
-            lte: lng + 0.1,
+            gte: lng - 0.01,
+            lte: lng + 0.01,
           },
         },
-        orderBy: { createdAt: "desc" },
         take: 4,
       });
-      return images;
+      return nearbyImages;
     }),
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
   }),
+
+  getEnhancedParcelData: publicProcedure.query(async ({ ctx }) => {
+    const parcels = await ctx.db.images.findMany({
+      select: {
+        id: true,
+        address: true,
+        lat: true,
+        lng: true,
+        propertyBoundary: true,
+        propertyType: true,
+        buildingType: true,
+        buildingArea: true,
+      },
+    });
+
+    // Parse the JSON boundary data for frontend use
+    return parcels.map((parcel) => ({
+      ...parcel,
+      propertyBoundary: parcel.propertyBoundary
+        ? (JSON.parse(parcel.propertyBoundary as string) as GeoJSON.Polygon)
+        : null,
+    }));
+  }),
+
+  createResponse: protectedProcedure
+    .input(
+      z.object({
+        prompt: z.string(),
+        url: z.string(),
+        sourceImageId: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { prompt, url, sourceImageId } = input;
+      return ctx.db.response.create({
+        data: {
+          prompt,
+          url,
+          sourceImageId,
+          createdById: ctx.session.user.id,
+        },
+      });
+    }),
 });

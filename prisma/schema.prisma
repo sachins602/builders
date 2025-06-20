@@ -69,6 +69,14 @@ model Images {
     address   String?
     lat       Float?
     lng       Float?
+    
+    // OSM building data
+    osmBuildingId String?     // OSM building ID
+    propertyBoundary Json?    // Building boundary geometry
+    propertyType String?     // residential, commercial, etc.
+    buildingType String?     // house, apartment, office, etc.
+    buildingArea Float?     // Building area in square meters
+    
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
