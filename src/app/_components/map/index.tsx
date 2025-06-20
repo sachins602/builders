@@ -265,19 +265,6 @@ export default function MapComponent() {
         <p>Select a location to get a street view image</p>
       )}
 
-      {/* Property Boundary Legend */}
-      <div className="rounded-lg bg-white p-3 shadow-md">
-        <h4 className="mb-2 text-sm font-semibold">
-          Property Boundary Sources
-        </h4>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-4 border border-green-500 bg-green-200"></div>
-            <span>OpenStreetMap (High Accuracy)</span>
-          </div>
-        </div>
-      </div>
-
       <div className="flex w-full max-w-sm gap-2 place-self-center">
         <Input type="text" placeholder="Address" />
         <Button variant="secondary" size="icon" className="size-8">
