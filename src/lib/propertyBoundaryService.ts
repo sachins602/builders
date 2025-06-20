@@ -1,9 +1,7 @@
-import { env } from "~/env";
-
 export interface PropertyBoundary {
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
-  source: "osm" | "toronto_open_data" | "google" | "fallback";
-  accuracy: "high" | "medium" | "low";
+  source: "osm";
+  accuracy: "high";
   properties: {
     osmId?: string;
     osmType?: "way" | "relation";
@@ -31,40 +29,6 @@ interface OSMElement {
 
 interface OSMOverpassResponse {
   elements: OSMElement[];
-}
-
-// Type definitions for Google Geocoding API
-interface GoogleBounds {
-  southwest: { lat: number; lng: number };
-  northeast: { lat: number; lng: number };
-}
-
-interface GoogleGeometry {
-  bounds?: GoogleBounds;
-}
-
-interface GoogleGeocodingResult {
-  formatted_address: string;
-  place_id: string;
-  geometry: GoogleGeometry;
-  types: string[];
-}
-
-interface GoogleGeocodingResponse {
-  results: GoogleGeocodingResult[];
-  status: string;
-}
-
-// Type definitions for Toronto Open Data API
-interface TorontoDataRecord {
-  address: string;
-  // Add other fields as needed
-}
-
-interface TorontoDataResponse {
-  result?: {
-    records: TorontoDataRecord[];
-  };
 }
 
 // OSM Overpass API queries for building boundaries
@@ -178,169 +142,21 @@ const getOSMBuildingBoundary = async (
   }
 };
 
-// Toronto Open Data API for property parcels
-const getTorontoPropertyParcel = async (
-  lat: number,
-  lng: number,
-): Promise<PropertyBoundary | null> => {
-  try {
-    // Toronto's Address Points API endpoint
-    const response = await fetch(
-      `https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search_sql?sql=SELECT * FROM "4ef7e8e0-821a-486c-82b8-2fa5b4b23bbb" WHERE ST_Contains(geometry, ST_GeomFromText('POINT(${lng} ${lat})', 4326)) LIMIT 1`,
-    );
-
-    if (!response.ok) {
-      throw new Error(`Toronto Open Data API error: ${response.status}`);
-    }
-
-    const data = (await response.json()) as TorontoDataResponse;
-
-    if (!data.result?.records || data.result.records.length === 0) {
-      return null;
-    }
-
-    const record = data.result.records[0];
-    if (!record) {
-      return null;
-    }
-
-    // Note: This is a simplified approach. For actual property boundaries,
-    // you would need to use the Property Data Map or similar services
-    // For now, we'll create a buffer around the address point
-    return createBufferBoundary(lat, lng, "toronto_open_data", {
-      address: record.address,
-      propertyType: "residential", // This would come from actual property data
-    });
-  } catch (error) {
-    console.error("Error fetching Toronto property parcel:", error);
-    return null;
-  }
-};
-
-// Enhanced Google Geocoding with property insights
-const getGooglePropertyBoundary = async (
-  lat: number,
-  lng: number,
-): Promise<PropertyBoundary | null> => {
-  try {
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&result_type=premise|subpremise&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
-    );
-
-    if (!response.ok) {
-      throw new Error(`Google Geocoding API error: ${response.status}`);
-    }
-
-    const data = (await response.json()) as GoogleGeocodingResponse;
-
-    if (!data.results || data.results.length === 0) {
-      return null;
-    }
-
-    const result = data.results[0];
-    if (!result) {
-      return null;
-    }
-    const bounds = result.geometry?.bounds;
-
-    if (bounds) {
-      // Convert Google bounds to polygon
-      const coordinates = [
-        [bounds.southwest.lng, bounds.southwest.lat],
-        [bounds.northeast.lng, bounds.southwest.lat],
-        [bounds.northeast.lng, bounds.northeast.lat],
-        [bounds.southwest.lng, bounds.northeast.lat],
-        [bounds.southwest.lng, bounds.southwest.lat],
-      ];
-
-      const geometry: GeoJSON.Polygon = {
-        type: "Polygon",
-        coordinates: [coordinates],
-      };
-
-      return {
-        geometry,
-        source: "google",
-        accuracy: "medium",
-        properties: {
-          address: result.formatted_address,
-          propertyType: inferPropertyTypeFromAddress(result),
-          placeId: result.place_id,
-        },
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error fetching Google property boundary:", error);
-    return null;
-  }
-};
-
-// Fallback: Create a reasonable building-sized boundary
-const createBufferBoundary = (
-  lat: number,
-  lng: number,
-  source: PropertyBoundary["source"] = "fallback",
-  properties: Record<string, unknown> = {},
-): PropertyBoundary => {
-  // Create a small buffer around the point (approximately 20m x 20m)
-  const latBuffer = 0.0001; // ~11m at Toronto's latitude
-  const lngBuffer = 0.0001; // ~8m at Toronto's latitude
-
-  const coordinates = [
-    [lng - lngBuffer, lat - latBuffer],
-    [lng + lngBuffer, lat - latBuffer],
-    [lng + lngBuffer, lat + latBuffer],
-    [lng - lngBuffer, lat + latBuffer],
-    [lng - lngBuffer, lat - latBuffer],
-  ];
-
-  const geometry: GeoJSON.Polygon = {
-    type: "Polygon",
-    coordinates: [coordinates],
-  };
-
-  return {
-    geometry,
-    source,
-    accuracy: "low",
-    properties: {
-      ...properties,
-      buildingArea: calculatePolygonArea(geometry),
-    },
-  };
-};
-
-// Main function to get property boundary with fallbacks
+// Main function to get property boundary
 export const getPropertyBoundary = async (
   lat: number,
   lng: number,
-): Promise<PropertyBoundary> => {
-  // Try OSM first (most detailed building outlines)
-  let boundary = await getOSMBuildingBoundary(lat, lng);
+): Promise<PropertyBoundary | null> => {
+  // Try OSM (most detailed building outlines)
+  const boundary = await getOSMBuildingBoundary(lat, lng);
   if (boundary) {
     console.log("Using OSM boundary data");
     return boundary;
   }
 
-  // Try Toronto Open Data
-  boundary = await getTorontoPropertyParcel(lat, lng);
-  if (boundary) {
-    console.log("Using Toronto Open Data");
-    return boundary;
-  }
-
-  // Try Google enhanced geocoding
-  boundary = await getGooglePropertyBoundary(lat, lng);
-  if (boundary) {
-    console.log("Using Google boundary data");
-    return boundary;
-  }
-
-  // Fallback to buffer
-  console.log("Using fallback boundary");
-  return createBufferBoundary(lat, lng);
+  // If no boundary is found, return null
+  console.log("No OSM boundary found at this location.");
+  return null;
 };
 
 // Helper functions
@@ -377,18 +193,6 @@ const formatOSMAddress = (
   if (tags["addr:city"]) parts.push(tags["addr:city"]);
 
   return parts.length > 0 ? parts.join(" ") : undefined;
-};
-
-const inferPropertyTypeFromAddress = (
-  result: GoogleGeocodingResult,
-): string => {
-  const types = result.types || [];
-
-  if (types.includes("premise")) return "residential";
-  if (types.includes("establishment")) return "commercial";
-  if (types.includes("subpremise")) return "residential";
-
-  return "unknown";
 };
 
 const calculatePolygonArea = (polygon: GeoJSON.Polygon): number => {

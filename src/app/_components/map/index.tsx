@@ -207,30 +207,7 @@ export default function MapComponent() {
             }
 
             // Fallback to rectangle for parcels without proper boundary data
-            return (
-              <Rectangle
-                key={parcel.id}
-                bounds={[
-                  [(parcel.lat ?? 0) + 0.0001, (parcel.lng ?? 0) + 0.0001],
-                  [(parcel.lat ?? 0) - 0.0001, (parcel.lng ?? 0) - 0.0001],
-                ]}
-                eventHandlers={{
-                  click: () => {
-                    console.log("Fallback parcel click");
-                  },
-                  mouseover: () => {
-                    console.log("Fallback parcel over");
-                  },
-                }}
-                pathOptions={{
-                  color: "#ef4444",
-                  interactive: true,
-                  weight: 2,
-                  opacity: 1,
-                  fillOpacity: 0.3,
-                }}
-              />
-            );
+            return null;
           })}
 
           <MapEvents />
@@ -315,18 +292,6 @@ export default function MapComponent() {
           <div className="flex items-center gap-2">
             <div className="h-3 w-4 border border-green-500 bg-green-200"></div>
             <span>OpenStreetMap (High Accuracy)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-4 border border-blue-500 bg-blue-200"></div>
-            <span>Toronto Open Data</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-4 border border-orange-500 bg-orange-200"></div>
-            <span>Google Maps</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-4 border border-red-500 bg-red-200"></div>
-            <span>Fallback/Estimated</span>
           </div>
         </div>
       </div>

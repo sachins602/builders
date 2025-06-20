@@ -123,6 +123,14 @@ export const responseRouter = createTRPCRouter({
       try {
         // Get enhanced property boundary data
         const propertyBoundary = await getPropertyBoundary(lat, lng);
+
+        if (!propertyBoundary) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No property boundary found at this location.",
+          });
+        }
+
         console.log(
           `Using ${propertyBoundary.source} boundary data with ${propertyBoundary.accuracy} accuracy`,
         );
@@ -217,43 +225,13 @@ export const responseRouter = createTRPCRouter({
         return image;
       } catch (error) {
         console.error("Error in saveStreetViewImageAddress:", error);
-        // Fallback to original functionality if enhanced boundary fails
-        const addressResponse = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
-        );
-        const addressData =
-          (await addressResponse.json()) as GoogleGeocodingResponse;
-        const formattedAddress =
-          addressData.results[0]?.formatted_address ?? "Unknown Address";
-
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(
-            formattedAddress,
-          )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
-        );
-        const imageBuffer = await response.arrayBuffer();
-        const arrayBuffer = new Uint8Array(imageBuffer);
-
-        const fileType = "jpg";
-        const dir = path.resolve(process.cwd(), `public/streetviewimages`);
-        await fs.mkdir(dir, { recursive: true });
-        const filePath = path.join(dir, `${imageName}.${fileType}`);
-        await fs.writeFile(filePath, arrayBuffer);
-
-        const image = await ctx.db.images.create({
-          data: {
-            address: formattedAddress,
-            lat,
-            lng,
-            name: imageName,
-            url: `streetviewimages/${imageName}.${fileType}`,
-            boundarySource: "fallback",
-            boundaryAccuracy: "low",
-            createdBy: { connect: { id: ctx.session.user.id } },
-          },
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred",
         });
-
-        return image;
       }
     }),
 
