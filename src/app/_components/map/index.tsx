@@ -5,7 +5,6 @@ import {
   GeoJSON,
   useMapEvents,
   Popup,
-  Rectangle,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type L from "leaflet";

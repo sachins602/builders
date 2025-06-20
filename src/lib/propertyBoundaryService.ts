@@ -194,26 +194,3 @@ const formatOSMAddress = (
 
   return parts.length > 0 ? parts.join(" ") : undefined;
 };
-
-const calculatePolygonArea = (polygon: GeoJSON.Polygon): number => {
-  // Simplified area calculation (not perfectly accurate for lat/lng)
-  // For production, use a proper geospatial library like Turf.js
-  const coords = polygon.coordinates[0];
-  if (!coords || coords.length < 3) return 0;
-
-  let area = 0;
-
-  for (let i = 0; i < coords.length - 1; i++) {
-    const coord1 = coords[i];
-    const coord2 = coords[i + 1];
-    if (!coord1 || !coord2 || coord1.length < 2 || coord2.length < 2) continue;
-
-    const x1 = coord1[0]!;
-    const y1 = coord1[1]!;
-    const x2 = coord2[0]!;
-    const y2 = coord2[1]!;
-    area += x1 * y2 - x2 * y1;
-  }
-
-  return Math.abs(area / 2) * 111320 * 111320; // Rough conversion to square meters
-};
