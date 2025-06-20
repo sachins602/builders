@@ -6,7 +6,7 @@ export default async function Create() {
   const session = await auth();
   if (!session?.user) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="rounded-lg border bg-white p-8 shadow-lg">
           <h2 className="mb-4 text-xl font-semibold text-gray-800">
             Authentication Required
@@ -21,9 +21,7 @@ export default async function Create() {
 
   return (
     <HydrateClient>
-      <main className="flex h-screen w-full flex-col">
-        <ChatInterface />
-      </main>
+      <ChatInterface />
     </HydrateClient>
   );
 }

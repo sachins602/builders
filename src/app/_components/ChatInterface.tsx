@@ -24,14 +24,14 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex h-[calc(100vh-100px)] w-full">
       <Sidebar
         responseHistory={chatData.responseHistory}
         selectedResponseId={state.selectedResponseId}
         onSelectResponse={actions.selectResponse}
       />
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex w-full flex-col">
         <ChatArea
           lastImage={chatData.lastImage}
           responseChain={state.responseChain}

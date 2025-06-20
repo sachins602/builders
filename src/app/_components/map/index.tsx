@@ -87,8 +87,8 @@ export default function MapComponent() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col space-y-2">
-      <div className="h-[560px] w-full">
+    <div className="flex h-[calc(100vh-100px)] w-full flex-col space-y-2">
+      <div className="h-full w-full">
         <MapContainer
           center={[43.7, -79.42]} // Toronto coordinates
           zoom={11}
