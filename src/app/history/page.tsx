@@ -1,6 +1,7 @@
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
 import { Button } from "../_components/ui/button";
+import { ShareDialog } from "../_components/ShareDialog";
 
 export default async function History() {
   const session = await auth();
@@ -66,9 +67,17 @@ export default async function History() {
                 src={`${response.url}`}
               />
               <div className="space-y-2 space-x-4 px-2 py-1">
-                <h3>{response.prompt}</h3>
-                <Button variant="outline">Share</Button>
-                <Button variant="outline">Continue</Button>
+                <h3 className="line-clamp-2 font-medium">{response.prompt}</h3>
+                <div className="flex gap-2">
+                  <ShareDialog responseId={response.id}>
+                    <Button variant="outline" size="sm">
+                      Share
+                    </Button>
+                  </ShareDialog>
+                  <Button variant="outline" size="sm">
+                    Continue
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
