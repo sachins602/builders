@@ -6,6 +6,35 @@ import {
 } from "~/server/api/trpc";
 
 export const communityRouter = createTRPCRouter({
+  // Search users for sharing
+  searchUsers: protectedProcedure
+    .input(z.object({ query: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const users = await ctx.db.user.findMany({
+        where: {
+          AND: [
+            {
+              OR: [
+                { name: { contains: input.query } },
+                { email: { contains: input.query } },
+              ],
+            },
+            { id: { not: ctx.session.user.id } }, // Exclude current user
+            { deletedAt: null },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        },
+        take: 10,
+      });
+
+      return users;
+    }),
+
   shareResponse: protectedProcedure
     .input(
       z.object({
@@ -13,10 +42,12 @@ export const communityRouter = createTRPCRouter({
         title: z.string().min(1).max(100),
         description: z.string().optional(),
         isPublic: z.boolean().default(true),
+        selectedUserIds: z.array(z.string()).optional(), // For private sharing
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { responseId, title, description, isPublic } = input;
+      const { responseId, title, description, isPublic, selectedUserIds } =
+        input;
 
       // Check if response exists and belongs to user
       const response = await ctx.db.response.findFirst({
@@ -30,6 +61,11 @@ export const communityRouter = createTRPCRouter({
         throw new Error("Response not found or not owned by user");
       }
 
+      // Validate private sharing requirements
+      if (!isPublic && (!selectedUserIds || selectedUserIds.length === 0)) {
+        throw new Error("Please select at least one user for private sharing");
+      }
+
       // Create shared chain
       const sharedChain = await ctx.db.sharedChain.create({
         data: {
@@ -40,6 +76,16 @@ export const communityRouter = createTRPCRouter({
           sharedById: ctx.session.user.id,
         },
       });
+
+      // If private sharing, create SharedChainUser records
+      if (!isPublic && selectedUserIds && selectedUserIds.length > 0) {
+        await ctx.db.sharedChainUser.createMany({
+          data: selectedUserIds.map((userId) => ({
+            sharedChainId: sharedChain.id,
+            userId,
+          })),
+        });
+      }
 
       return sharedChain;
     }),
@@ -53,12 +99,30 @@ export const communityRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const { limit, cursor } = input;
+      const currentUserId = ctx.session?.user?.id;
+
+      // Build where clause to include both public posts and private posts shared to the current user
+      const whereClause = {
+        deletedAt: null,
+        OR: [
+          { isPublic: true },
+          ...(currentUserId
+            ? [
+                {
+                  isPublic: false,
+                  sharedToUsers: {
+                    some: {
+                      userId: currentUserId,
+                    },
+                  },
+                },
+              ]
+            : []),
+        ],
+      };
 
       const sharedChains = await ctx.db.sharedChain.findMany({
-        where: {
-          isPublic: true,
-          deletedAt: null,
-        },
+        where: whereClause,
         include: {
           response: {
             include: {
@@ -101,12 +165,35 @@ export const communityRouter = createTRPCRouter({
   getSharedPost: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
+      const currentUserId = ctx.session?.user?.id;
+
+      // Build where clause to check access permissions
+      const whereClause = {
+        id: input.id,
+        deletedAt: null,
+        OR: [
+          { isPublic: true },
+          ...(currentUserId
+            ? [
+                {
+                  isPublic: false,
+                  sharedToUsers: {
+                    some: {
+                      userId: currentUserId,
+                    },
+                  },
+                },
+                {
+                  isPublic: false,
+                  sharedById: currentUserId, // Owner can always see their own private posts
+                },
+              ]
+            : []),
+        ],
+      };
+
       const sharedChain = await ctx.db.sharedChain.findFirst({
-        where: {
-          id: input.id,
-          isPublic: true,
-          deletedAt: null,
-        },
+        where: whereClause,
         include: {
           response: {
             include: {
@@ -147,7 +234,7 @@ export const communityRouter = createTRPCRouter({
       });
 
       if (!sharedChain) {
-        throw new Error("Shared post not found");
+        throw new Error("Shared post not found or access denied");
       }
 
       // Update view count
