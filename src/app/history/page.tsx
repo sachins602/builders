@@ -1,5 +1,6 @@
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
+import { Button } from "../_components/ui/button";
 
 export default async function History() {
   const session = await auth();
@@ -61,13 +62,13 @@ export default async function History() {
             >
               <img
                 alt="Generated Art"
-                className="h-60 w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
-                src={`/${response.url}`}
+                className="h-60 w-full object-cover"
+                src={`${response.url}`}
               />
-              <div className="absolute inset-0 bg-black/70 p-4 opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100">
-                <h3 className="text-lg font-semibold text-white">
-                  {response.prompt}
-                </h3>
+              <div className="space-y-2 space-x-4 px-2 py-1">
+                <h3>{response.prompt}</h3>
+                <Button variant="outline">Share</Button>
+                <Button variant="outline">Continue</Button>
               </div>
             </div>
           ))}
