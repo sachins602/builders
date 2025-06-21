@@ -101,7 +101,10 @@ export const communityRouter = createTRPCRouter({
       const { limit, cursor } = input;
       const currentUserId = ctx.session?.user?.id;
 
-      // Build where clause to include both public posts and private posts shared to the current user
+      // Build where clause to include:
+      // 1. All public posts
+      // 2. Private posts shared TO the current user by others
+      // 3. Private posts shared BY the current user to others
       const whereClause = {
         deletedAt: null,
         OR: [
@@ -115,6 +118,10 @@ export const communityRouter = createTRPCRouter({
                       userId: currentUserId,
                     },
                   },
+                },
+                {
+                  isPublic: false,
+                  sharedById: currentUserId, // Posts shared BY the current user
                 },
               ]
             : []),
@@ -134,6 +141,16 @@ export const communityRouter = createTRPCRouter({
               id: true,
               name: true,
               image: true,
+            },
+          },
+          sharedToUsers: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           _count: {

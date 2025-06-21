@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, MessageCircle, Eye, User } from "lucide-react";
+import { Heart, MessageCircle, Eye, User, Lock, Globe } from "lucide-react";
 import { api } from "~/trpc/react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
@@ -14,6 +14,7 @@ interface CommunityPostProps {
     id: string;
     title: string;
     description?: string | null;
+    isPublic: boolean;
     viewCount: number;
     likeCount: number;
     commentCount: number;
@@ -31,6 +32,12 @@ interface CommunityPostProps {
       name?: string | null;
       image?: string | null;
     };
+    sharedToUsers?: Array<{
+      user: {
+        id: string;
+        name?: string | null;
+      };
+    }>;
     comments?: Array<{
       id: string;
       content: string;
@@ -47,9 +54,14 @@ interface CommunityPostProps {
     };
   };
   userLikes?: string[];
+  currentUserId?: string;
 }
 
-export function CommunityPost({ post, userLikes = [] }: CommunityPostProps) {
+export function CommunityPost({
+  post,
+  userLikes = [],
+  currentUserId,
+}: CommunityPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [isLiked, setIsLiked] = useState(userLikes.includes(post.id));
@@ -103,11 +115,30 @@ export function CommunityPost({ post, userLikes = [] }: CommunityPostProps) {
             )}
           </Avatar>
           <div className="flex-1">
-            <p className="text-sm font-semibold">
-              {post.sharedBy.name ?? "Anonymous"}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold">
+                {post.sharedBy.name ?? "Anonymous"}
+              </p>
+              {post.isPublic ? (
+                <div title="Public post">
+                  <Globe className="h-3 w-3 text-blue-500" />
+                </div>
+              ) : (
+                <div title="Private post">
+                  <Lock className="h-3 w-3 text-amber-500" />
+                </div>
+              )}
+            </div>
             <p className="text-muted-foreground text-xs">
               {new Date(post.createdAt).toLocaleDateString()}
+              {!post.isPublic &&
+                post.sharedToUsers &&
+                post.sharedBy.id === currentUserId && (
+                  <span className="ml-2">
+                    • Shared with {post.sharedToUsers.length} user
+                    {post.sharedToUsers.length !== 1 ? "s" : ""}
+                  </span>
+                )}
             </p>
           </div>
         </div>

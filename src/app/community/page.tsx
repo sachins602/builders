@@ -5,12 +5,14 @@ import { api } from "~/trpc/react";
 import { CommunityPost } from "../_components/CommunityPost";
 import { Button } from "../_components/ui/button";
 import { Loader2 } from "lucide-react";
+import { auth } from "~/server/auth";
 
 // Type for shared posts from the API
 type SharedPost = {
   id: string;
   title: string;
   description?: string | null;
+  isPublic: boolean;
   viewCount: number;
   likeCount: number;
   commentCount: number;
@@ -28,6 +30,12 @@ type SharedPost = {
     name?: string | null;
     image?: string | null;
   };
+  sharedToUsers?: Array<{
+    user: {
+      id: string;
+      name?: string | null;
+    };
+  }>;
   comments?: Array<{
     id: string;
     content: string;
@@ -44,7 +52,13 @@ type SharedPost = {
   };
 };
 
-export default function CommunityPage() {
+export default async function CommunityPage() {
+  const session = await auth();
+  if (!session) {
+    return <div>not Authenticated</div>;
+  }
+  const currentUserId = session.user.id;
+
   const [posts, setPosts] = useState<SharedPost[]>([]);
   const [userLikes, setUserLikes] = useState<string[]>([]);
 
@@ -65,7 +79,7 @@ export default function CommunityPage() {
   // Get user likes for all visible posts
   const { data: likes } = api.community.getUserLikes.useQuery(
     { sharedChainIds: posts.map((post) => post.id) },
-    { enabled: posts.length > 0 },
+    { enabled: posts.length > 0 && !!session },
   );
 
   useEffect(() => {
@@ -129,7 +143,12 @@ export default function CommunityPage() {
         ) : (
           <div className="space-y-6">
             {posts.map((post) => (
-              <CommunityPost key={post.id} post={post} userLikes={userLikes} />
+              <CommunityPost
+                key={post.id}
+                post={post}
+                userLikes={userLikes}
+                currentUserId={currentUserId}
+              />
             ))}
 
             {hasNextPage && (
