@@ -7,8 +7,10 @@ import { TRPCReactProvider } from "~/trpc/react";
 import Header from "./_components/header";
 import Footer from "./_components/footer";
 
+import { Toaster } from "sonner";
+
 export const metadata: Metadata = {
-  title: "The Missing Middle",
+  title: "Our Missing Middle",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -24,6 +26,7 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable}`}>
       <body className="h-screen bg-white text-black">
         <TRPCReactProvider>
+          <Toaster position="top-center" visibleToasts={1} duration={10000}/>
           <div className="flex h-full flex-col">
             {/* Fixed Header */}
             <Header />
