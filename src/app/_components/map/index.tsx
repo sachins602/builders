@@ -1,3 +1,9 @@
+// React and hooks
+import { useState } from "react";
+// Leaflet types
+import type L from "leaflet";
+import type { LeafletMouseEvent } from "leaflet";
+// React-Leaflet components
 import {
   MapContainer,
   Polygon,
@@ -6,19 +12,29 @@ import {
   useMapEvents,
   Popup,
 } from "react-leaflet";
+// Leaflet CSS
 import "leaflet/dist/leaflet.css";
-import type L from "leaflet";
-import type { LeafletMouseEvent } from "leaflet";
-import TorontoTopoJSON from "public/toronto_crs84.json";
-import { useState } from "react";
 
+// TopoJSON data for Toronto
+import TorontoTopoJSON from "public/toronto_crs84.json";
+
+// Toronto city boundary polygon
+import { torontoBoundary } from "./torontoBoundary";
+
+// Environment variables
+import { env } from "~/env";
+
+// tRPC API hooks
+import { api } from "~/trpc/react";
+
+// UI components
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Search, Hammer, Edit } from "lucide-react";
-import { torontoBoundary } from "./torontoBoundary";
-import { env } from "~/env";
 import { Skeleton } from "../ui/skeleton";
-import { api } from "~/trpc/react";
+import { toast } from "sonner";
+
+// Icon components
+import { Search, Hammer, Edit } from "lucide-react";
 
 const outerBounds: [number, number][][] = [
   [
@@ -29,6 +45,30 @@ const outerBounds: [number, number][][] = [
   ],
 ];
 
+// Toast state for managing notifications
+let toastState = "";
+const zoomLimit = 18;
+
+function mapToast(zoom: number) {
+  // Show a toast notification based on the zoom level
+  // This prevents multiple toasts from showing when zooming in and out
+
+  if (zoom < zoomLimit) {
+    if (toastState != "zoomed out") {
+      toast("Click on the map to zoom in and get a street view image");
+      toastState = "zoomed out";
+    }
+  } else {
+    if (toastState != "zoomed in") {
+      toast("Click on a residential parcel to get a street view image");
+      toastState = "zoomed in";
+    }
+  }
+}
+
+// Search bar state
+let searchExpanded = false;
+
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
 export default function MapComponent() {
@@ -36,6 +76,9 @@ export default function MapComponent() {
   const [clickedPosition, setClickedPosition] = useState<
     [number, number] | null
   >(null);
+
+  // Show the initial toast
+  mapToast(currentZoom);
 
   const utils = api.useUtils();
 
@@ -63,8 +106,11 @@ export default function MapComponent() {
     const map = useMapEvents({
       click(e) {
         if (map.getZoom() < 18) {
+          
           map.flyTo(e.latlng, map.getZoom() + 1);
         } else {
+
+          
           setClickedPosition([e.latlng.lat, e.latlng.lng]);
           image.mutate({
             lat: e.latlng.lat,
@@ -78,16 +124,23 @@ export default function MapComponent() {
       },
       moveend() {
         setCurrentZoom(map.getZoom());
+        
         if (map.getZoom() < 18) {
           setClickedPosition(null);
+          mapToast(map.getZoom());
+        }
+        else {
+          mapToast(map.getZoom());
         }
       },
     });
+
+
     return null;
   }
 
   return (
-    <div className="flex h-[calc(100vh-100px)] w-full flex-col space-y-2">
+    <div className="flex h-[calc(100vh-300px)] w-full flex-col space-y-2">
       <div className="h-full w-full">
         <MapContainer
           center={[43.7, -79.42]} // Toronto coordinates
@@ -257,19 +310,85 @@ export default function MapComponent() {
               </div>
             </Popup>
           )}
+
+
         </MapContainer>
       </div>
-      {currentZoom < 18 ? (
-        <p>Zoom in more to be able to select a location</p>
-      ) : (
-        <p>Select a location to get a street view image</p>
-      )}
 
-      <div className="flex w-full max-w-sm gap-2 place-self-center">
-        <Input type="text" placeholder="Address" />
-        <Button variant="secondary" size="icon" className="size-8">
-          <Search />
+      <div className="flex w-full  place-self-center">
+
+        {/* Search Bar */}
+
+        <div id="search-bar" className="hidden flex w-full flex-row">
+          <Input type="text" placeholder="Address" className="m-2" />
+          <Button variant="secondary" size="icon" className="m-2">
+            <Search />
+          </Button>
+        </div>
+
+
+        {/* Search Button */}
+      <div id="tool-bar" className="flex w-full flex-row justify-center">
+        <Button 
+          variant="secondary"
+          onClick={() => {
+            searchExpanded = !searchExpanded;
+            if (searchExpanded) {
+              toast("Search bar expanded");
+              const searchBar = document.getElementById("search-bar");
+              if (searchBar) {
+                searchBar.classList.remove("hidden");
+              }
+              const toolBar = document.getElementById("tool-bar");
+              if (toolBar) {
+                toolBar.classList.add("hidden");
+              }
+            } else {
+              toast("Search bar collapsed");
+              const searchBar = document.getElementById("search-bar");
+              if (searchBar) {
+                searchBar.classList.add("hidden");
+              }
+              const toolBar = document.getElementById("tool-bar");
+              if (toolBar) {
+                toolBar.classList.remove("hidden");
+              }
+            }
+          }}
+          className="m-2"
+        >
+
+          <Search className="h-6 w-6" />
+          {searchExpanded ? "Collapse Search" : "Expand Search"}
         </Button>
+
+        {/* Build Button */}
+
+          <Button
+            variant="secondary"
+            onClick={() => {
+              window.location.href = "/create";
+            }}
+            className="m-2"
+          >
+            <Hammer className="h-6 w-6" />
+            Build
+          </Button>
+
+          {/* Edit Button */}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              window.location.href = "/edit";
+            }}
+            className="m-2"
+          >
+            <Edit className="h-6 w-6" />
+            Edit
+          </Button>
+        </div>
+
+
       </div>
     </div>
   );
