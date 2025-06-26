@@ -206,7 +206,7 @@ export default function MapComponent() {
                     alt="Street view"
                   />
                 ) : (
-                  <p>Failed to load image</p>
+                  <p> {image.error?.message}</p>
                 )}
                 <div className="mx-auto flex flex-row gap-2">
                   <Button
