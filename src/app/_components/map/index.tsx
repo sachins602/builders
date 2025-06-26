@@ -93,7 +93,7 @@ export default function MapComponent() {
           center={[43.7, -79.42]} // Toronto coordinates
           zoom={11}
           scrollWheelZoom={true}
-          style={{ height: "500px", width: "100%" }}
+          style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
             url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
