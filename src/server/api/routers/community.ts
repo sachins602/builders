@@ -360,4 +360,19 @@ export const communityRouter = createTRPCRouter({
 
       return likes.map((like) => like.sharedChainId);
     }),
+
+  getUserLikedResponses: protectedProcedure.query(async ({ ctx }) => {
+    const likes = await ctx.db.like.findMany({
+      where: {
+        userId: ctx.session.user.id,
+      },
+      include: {
+        sharedChain: true,
+      },
+    });
+
+    const responses = likes.map((like) => like.sharedChain);
+
+    return responses;
+  }),
 });
