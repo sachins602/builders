@@ -1,6 +1,7 @@
 import { Marker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { api } from "~/trpc/react";
+import { getImageUrl } from "~/lib/image-utils";
 
 // Define the expected shape of the image data from the API
 interface ImageDataFromApi {
@@ -45,7 +46,7 @@ export default function ImagePopup() {
       <Marker key={image.id} position={[image.lat, image.lng]}>
         <Tooltip permanent={false} direction="top" offset={[0, -10]}>
           <img
-            src={`/${image.url}`}
+            src={getImageUrl(image.url)}
             alt={image.name ?? "Street View Image"}
             className="block h-auto w-full"
             style={{ maxWidth: "150px" }}

@@ -3,6 +3,7 @@
 import React from "react";
 import { Image as ImageIcon, Sparkles } from "lucide-react";
 import type { ResponseWithImage, Image } from "~/types/chat";
+import { getImageUrl } from "~/lib/image-utils";
 
 interface ChatAreaProps {
   lastImage: Image | null;
@@ -35,7 +36,7 @@ export function ChatArea({
               </span>
             </div>
             <img
-              src={originalImage.url}
+              src={getImageUrl(originalImage.url)}
               alt={
                 responseChain.length > 0 ? "Original image" : "Reference image"
               }
@@ -62,7 +63,7 @@ export function ChatArea({
               </div>
               <div className="max-w-xl rounded-2xl rounded-bl-none border bg-white p-2">
                 <img
-                  src={response.url}
+                  src={getImageUrl(response.url)}
                   alt={`AI generated image`}
                   className="max-h-80 rounded-lg object-contain"
                 />

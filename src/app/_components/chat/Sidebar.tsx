@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { ResponseWithImage } from "~/types/chat";
+import { getImageUrl } from "~/lib/image-utils";
 
 interface SidebarProps {
   responseHistory: ResponseWithImage[];
@@ -32,7 +33,7 @@ export function Sidebar({
             onClick={() => onSelectResponse(response.id)}
           >
             <img
-              src={response.url}
+              src={getImageUrl(response.url)}
               alt="Previously generated image"
               className="mb-2 w-full rounded-md object-cover"
             />

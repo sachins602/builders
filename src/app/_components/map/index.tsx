@@ -19,6 +19,7 @@ import { torontoBoundary } from "./torontoBoundary";
 import { env } from "~/env";
 import { Skeleton } from "../ui/skeleton";
 import { api } from "~/trpc/react";
+import { getImageUrl } from "~/lib/image-utils";
 
 const outerBounds: [number, number][][] = [
   [
@@ -93,7 +94,7 @@ export default function MapComponent() {
           center={[43.7, -79.42]} // Toronto coordinates
           zoom={11}
           scrollWheelZoom={true}
-          style={{ height: "500px", width: "100%" }}
+          style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
             url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
@@ -202,11 +203,11 @@ export default function MapComponent() {
                 ) : image.isSuccess && image.data ? (
                   <img
                     className="h-48 w-64"
-                    src={`/${image.data.url}`}
+                    src={getImageUrl(image.data.url)}
                     alt="Street view"
                   />
                 ) : (
-                  <p>Failed to load image</p>
+                  <p> {image.error?.message}</p>
                 )}
                 <div className="mx-auto flex flex-row gap-2">
                   <Button
@@ -239,7 +240,7 @@ export default function MapComponent() {
                         >
                           <img
                             className="h-10 w-12"
-                            src={`/${image.url}`}
+                            src={getImageUrl(image.url)}
                             alt="there will be a image here"
                           />
                           <div className="relative flex overflow-x-hidden">
