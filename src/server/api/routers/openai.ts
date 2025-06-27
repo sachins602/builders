@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { StorageService } from "~/lib/storage";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -26,20 +27,41 @@ export const openaiRouter = createTRPCRouter({
         throw new Error("No image provided");
       }
 
-      // Get the full path to the image
-      const imagePath = path.join(process.cwd(), "public", input.imageUrl);
+      // Handle both local and cloud storage for OpenAI API
+      let imageFile: Parameters<typeof openai.images.edit>[0]["image"];
 
-      // Check if the file exists
-      if (!fs.existsSync(imagePath)) {
-        throw new Error("Image file not found");
+      if (env.ENVIRONMENT === "cloud") {
+        // For cloud URLs, fetch the image as buffer
+        const imageResponse = await fetch(input.imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to fetch cloud image: ${imageResponse.status}`,
+          );
+        }
+
+        // Get the image as buffer and convert to File
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const imageBuffer = Buffer.from(arrayBuffer);
+        imageFile = await toFile(imageBuffer, "image.jpg", {
+          type: "image/jpeg",
+        });
+      } else {
+        // Get the full path to the local image
+        const imagePath = path.join(process.cwd(), "public", input.imageUrl);
+
+        // Check if the file exists
+        if (!fs.existsSync(imagePath)) {
+          throw new Error("Image file not found");
+        }
+
+        const imageStream = fs.createReadStream(imagePath);
+        imageFile = await toFile(imageStream, null, { type: "image/jpeg" });
       }
 
       // Use the images.generate API with the enhanced prompt
       const response = await openai.images.edit({
         model: "gpt-image-1",
-        image: await toFile(fs.createReadStream(imagePath), null, {
-          type: "image/jpeg",
-        }),
+        image: imageFile,
         prompt: input.prompt,
         n: 1,
         quality: "low",
@@ -48,34 +70,25 @@ export const openaiRouter = createTRPCRouter({
         throw new Error("No image generated");
       }
 
-      // save the image to the local filesystem at /public/generatedimages and save the path to the database
-      const imageName = String(Math.floor(Math.random() * 1000));
-      const fileType = "jpg";
-      // Ensure the directory exists
-      const generatedImagesDir = path.join(
-        process.cwd(),
-        "public",
-        "generatedimages",
-      );
-      if (!fs.existsSync(generatedImagesDir)) {
-        fs.mkdirSync(generatedImagesDir, { recursive: true });
-      }
-      const filePath = path.join(
-        generatedImagesDir,
-        `${imageName}.${fileType}`,
-      );
-
-      // Check if b64_json exists before writing to file
+      // Check if b64_json exists before processing
       const imageData = response.data[0]?.b64_json;
       if (!imageData) {
         throw new Error("No image data received from OpenAI");
       }
 
-      // Write the file using Buffer to properly handle base64 data
-      fs.writeFileSync(filePath, Buffer.from(imageData, "base64"));
+      // Use StorageService to save the image (local or cloud based on environment)
+      const imageName = String(Math.floor(Math.random() * 1000));
+      const uploadResult = await StorageService.saveBase64Image(
+        imageData,
+        imageName,
+        "generated",
+      );
 
-      // save the path to the database
-      const imagePathDb = `/generatedimages/${imageName}.${fileType}`;
+      if (!uploadResult.success) {
+        throw new Error(`Failed to save image: ${uploadResult.error}`);
+      }
+
+      const imagePathDb = uploadResult.url;
 
       // Create response data based on whether this is a new generation or a follow-up
       const responseData = {
@@ -126,24 +139,45 @@ export const openaiRouter = createTRPCRouter({
         throw new Error("Previous response not found");
       }
 
-      // Get the full path to the previous image
-      const imagePath = path.join(
-        process.cwd(),
-        "public",
-        previousResponse.url,
-      );
+      // Handle both local and cloud storage for previous response image
+      let imageFile: Parameters<typeof openai.images.edit>[0]["image"];
 
-      // Check if the file exists
-      if (!fs.existsSync(imagePath)) {
-        throw new Error("Previous image file not found");
+      if (env.ENVIRONMENT === "cloud") {
+        // For cloud URLs, fetch the previous image as buffer
+        const imageResponse = await fetch(previousResponse.url);
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to fetch previous cloud image: ${imageResponse.status}`,
+          );
+        }
+
+        // Get the image as buffer and convert to File
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const imageBuffer = Buffer.from(arrayBuffer);
+        imageFile = await toFile(imageBuffer, "image.jpg", {
+          type: "image/jpeg",
+        });
+      } else {
+        // Get the full path to the local previous image
+        const imagePath = path.join(
+          process.cwd(),
+          "public",
+          previousResponse.url,
+        );
+
+        // Check if the file exists
+        if (!fs.existsSync(imagePath)) {
+          throw new Error("Previous image file not found");
+        }
+
+        const imageStream = fs.createReadStream(imagePath);
+        imageFile = await toFile(imageStream, null, { type: "image/jpeg" });
       }
 
       // Use the images.generate API with the new prompt
       const response = await openai.images.edit({
         model: "gpt-image-1",
-        image: await toFile(fs.createReadStream(imagePath), null, {
-          type: "image/jpeg",
-        }),
+        image: imageFile,
         prompt: input.prompt,
         n: 1,
         quality: "low",
@@ -153,33 +187,26 @@ export const openaiRouter = createTRPCRouter({
         throw new Error("No image generated");
       }
 
-      // Save the new image
-      const imageName = String(Math.floor(Math.random() * 1000));
-      const fileType = "jpg";
-      const generatedImagesDir = path.join(
-        process.cwd(),
-        "public",
-        "generatedimages",
-      );
-      if (!fs.existsSync(generatedImagesDir)) {
-        fs.mkdirSync(generatedImagesDir, { recursive: true });
-      }
-      const filePath = path.join(
-        generatedImagesDir,
-        `${imageName}.${fileType}`,
-      );
-
-      // Check if b64_json exists before writing to file
+      // Check if b64_json exists before processing
       const imageData = response.data[0]?.b64_json;
       if (!imageData) {
         throw new Error("No image data received from OpenAI");
       }
 
-      // Write the file using Buffer to properly handle base64 data
-      fs.writeFileSync(filePath, Buffer.from(imageData, "base64"));
+      // Use StorageService to save the image (local or cloud based on environment)
+      const imageName = String(Math.floor(Math.random() * 1000));
+      const uploadResult = await StorageService.saveBase64Image(
+        imageData,
+        imageName,
+        "generated",
+      );
+
+      if (!uploadResult.success) {
+        throw new Error(`Failed to save image: ${uploadResult.error}`);
+      }
 
       // Save the path to the database
-      const imagePathDb = `/generatedimages/${imageName}.${fileType}`;
+      const imagePathDb = uploadResult.url;
 
       // Create a new response that links to the previous one
       return ctx.db.response.create({

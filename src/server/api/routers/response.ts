@@ -1,8 +1,9 @@
-import { promises as fs } from "fs";
-import path from "path";
+// import { promises as fs } from "fs";
+// import path from "path";
 import { z } from "zod";
 import { env } from "~/env";
 import { getPropertyBoundary } from "~/lib/propertyBoundaryService";
+import { StorageService } from "~/lib/storage";
 
 import { TRPCError } from "@trpc/server";
 import {
@@ -79,14 +80,19 @@ export const responseRouter = createTRPCRouter({
         });
       }
 
-      const arrayBuffer = new Uint8Array(imageBuffer);
+      // Use StorageService to save the image (local or cloud based on environment)
+      const uploadResult = await StorageService.saveBufferImage(
+        imageBuffer,
+        imageName,
+        "streetview",
+      );
 
-      const fileType = "jpg";
-      const dir = path.resolve(`./public/streetviewimages`);
-      await fs.mkdir(dir, { recursive: true });
-      const filePath = path.join(dir, `${imageName}.${fileType}`);
-
-      await fs.writeFile(filePath, arrayBuffer);
+      if (!uploadResult.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save image: ${uploadResult.error}`,
+        });
+      }
 
       // write the file path to the database and return the file path
       const image = await ctx.db.images.create({
@@ -94,7 +100,7 @@ export const responseRouter = createTRPCRouter({
           lat: lat,
           lng: lng,
           name: imageName,
-          url: `streetviewimages/${imageName}.${fileType}`,
+          url: uploadResult.url,
           createdBy: { connect: { id: ctx.session.user.id } },
         },
       });
@@ -187,14 +193,20 @@ export const responseRouter = createTRPCRouter({
           message: "Failed to fetch image data",
         });
       }
-      const arrayBuffer = new Uint8Array(imageBuffer);
 
-      const fileType = "jpg";
-      const dir = path.resolve(process.cwd(), `public/streetviewimages`);
-      await fs.mkdir(dir, { recursive: true });
-      const filePath = path.join(dir, `${imageName}.${fileType}`);
+      // Use StorageService to save the image (local or cloud based on environment)
+      const uploadResult = await StorageService.saveBufferImage(
+        imageBuffer,
+        imageName,
+        "streetview",
+      );
 
-      await fs.writeFile(filePath, arrayBuffer);
+      if (!uploadResult.success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save image: ${uploadResult.error}`,
+        });
+      }
 
       // Create enhanced image record with property boundary data
       const image = await ctx.db.images.create({
@@ -203,7 +215,7 @@ export const responseRouter = createTRPCRouter({
           lat,
           lng,
           name: imageName,
-          url: `streetviewimages/${imageName}.${fileType}`,
+          url: uploadResult.url,
 
           // OSM building data
           osmBuildingId: propertyBoundary.properties.osmId,
