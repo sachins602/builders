@@ -14,7 +14,7 @@ import { useState } from "react";
 
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Search, Hammer, Edit } from "lucide-react";
+import { Search, Hammer, Edit, HammerIcon } from "lucide-react";
 import { torontoBoundary } from "./torontoBoundary";
 import { env } from "~/env";
 import { Skeleton } from "../ui/skeleton";
@@ -37,6 +37,7 @@ export default function MapComponent() {
   const [clickedPosition, setClickedPosition] = useState<
     [number, number] | null
   >(null);
+  const [searchClicked, setSearchClicked] = useState(false);
 
   const utils = api.useUtils();
 
@@ -88,8 +89,8 @@ export default function MapComponent() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-100px)] w-full flex-col space-y-2">
-      <div className="h-full w-full">
+    <div className="flex h-full w-full flex-col space-y-2">
+      <div className="h-[50vh] w-full">
         <MapContainer
           center={[43.7, -79.42]} // Toronto coordinates
           zoom={11}
@@ -261,16 +262,29 @@ export default function MapComponent() {
         </MapContainer>
       </div>
       {currentZoom < 18 ? (
-        <p>Zoom in more to be able to select a location</p>
+        <div className="">
+          <p>Zoom in more to be able to select a location</p>
+        </div>
       ) : (
         <p>Select a location to get a street view image</p>
       )}
 
-      <div className="flex w-full max-w-sm gap-2 place-self-center">
-        <Input type="text" placeholder="Address" />
-        <Button variant="secondary" size="icon" className="size-8">
-          <Search />
-        </Button>
+      <div className="flex flex-row items-center justify-center gap-12">
+        {searchClicked ? (
+          <div className="flex w-72 gap-2 place-self-center">
+            <Input type="text" placeholder="Address" />
+            <Button variant="secondary" size="icon" className="size-8">
+              <Search />
+            </Button>
+          </div>
+        ) : (
+          <Search
+            className="h-10 w-10"
+            onClick={() => setSearchClicked(true)}
+          />
+        )}
+        {/* Build icon */}
+        <HammerIcon className="h-10 w-10" />
       </div>
     </div>
   );
