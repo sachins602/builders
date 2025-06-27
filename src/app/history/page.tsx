@@ -2,6 +2,7 @@ import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
 import { Button } from "../_components/ui/button";
 import { ShareDialog } from "../_components/ShareDialog";
+import { getImageUrl } from "~/lib/image-utils";
 
 export default async function History() {
   const session = await auth();
@@ -64,7 +65,7 @@ export default async function History() {
               <img
                 alt="Generated Art"
                 className="h-60 w-full object-cover"
-                src={`${response.url}`}
+                src={getImageUrl(response.url)}
               />
               <div className="space-y-2 space-x-4 px-2 py-1">
                 <h3 className="line-clamp-2 font-medium">{response.prompt}</h3>

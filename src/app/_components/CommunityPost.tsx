@@ -8,6 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
 import { Avatar } from "./ui/avatar";
 import { Input } from "./ui/input";
 import { cn } from "~/lib/utils";
+import { getImageUrl } from "~/lib/image-utils";
 
 interface CommunityPostProps {
   post: {
@@ -157,7 +158,7 @@ export function CommunityPost({
 
           <div className="relative overflow-hidden rounded-lg">
             <img
-              src={post.response.url}
+              src={getImageUrl(post.response.url)}
               alt={post.title}
               className="h-64 w-full object-cover"
             />

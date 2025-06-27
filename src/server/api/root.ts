@@ -2,6 +2,7 @@ import { responseRouter } from "~/server/api/routers/response";
 import { openaiRouter } from "~/server/api/routers/openai";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { communityRouter } from "./routers/community";
+import { adminRouter } from "./routers/admin";
 
 /**
  * This is the primary router for your server.
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   response: responseRouter,
   openai: openaiRouter,
   community: communityRouter,
+  admin: adminRouter,
 });
 
 // export type definition of API
