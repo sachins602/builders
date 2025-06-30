@@ -1,12 +1,8 @@
 // React and hooks
-import { useState,
-  useRef,
-  useEffect,
- } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // Leaflet types
-import L from "leaflet";
-// import type L from "leaflet";
+import type L from "leaflet";
 import type { LeafletMouseEvent } from "leaflet";
 
 // React-Leaflet components
@@ -17,7 +13,6 @@ import {
   GeoJSON,
   useMapEvents,
   Popup,
-  useMap,
 } from "react-leaflet";
 
 // Leaflet CSS
@@ -54,7 +49,7 @@ type NominatimResult = {
   lat: string;
   lon: string;
   [key: string]: string;
-}
+};
 
 const outerBounds: [number, number][][] = [
   [
@@ -71,18 +66,14 @@ const zoomLimit = 18;
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
 export default function MapComponent() {
-
   // State for managing the current zoom level and clicked position
   const [currentZoom, setCurrentZoom] = useState(11);
   const [clickedPosition, setClickedPosition] = useState<
     [number, number] | null
   >(null);
-  
+
   // Map Reference
   const mapRef = useRef<L.Map | null>(null);
-
-  // Search bar state
-  const [searchExpanded, setSearchExpanded] = useState(false);
 
   // Ref for the search button and search bar to toggle the search bar state
   const searchBarRef = useRef(null);
@@ -93,80 +84,71 @@ export default function MapComponent() {
 
   // Search functionality
   const [searchValue, setSearchValue] = useState("");
-  /*const [geocoderInstance, setGeocoderInstance] = useState<any>(null);
 
-  // Effect to initialize the geocoder instance
-  useEffect(() => {
-    // Create a geocoder instance without adding it to the map
-    const geocoder = LCG.geocoder({
-      defaultMarkGeocode: false,
-    });
-    setGeocoderInstance(geocoder);
-  }, []);*/
+  async function performSearch(address: string): Promise<boolean> {
+    if (!mapRef.current || !address.trim()) return false;
 
-async function performSearch(address: string): Promise<boolean> {
-  if (!mapRef.current || !address.trim()) return false;
+    try {
+      // Use Nominatim API to search for the address
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+      );
 
+      // Check if the response is ok
+      const results = (await response.json()) as NominatimResult[];
 
+      if (results && results.length > 0) {
+        const result = results[0];
+        if (result?.lat !== undefined && result?.lon !== undefined) {
+          const lat = parseFloat(result.lat);
+          const lng = parseFloat(result.lon);
 
-  try {
-    // Use Nominatim API to search for the address
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
-    );
-    
-    // Check if the response is ok
-    const results = await response.json() as NominatimResult[];
-    
-    if (results && results.length > 0) {
-      const result = results[0];
+          mapRef.current?.setView([lat, lng], 16);
+          toast(`Address found!`);
 
-      const lat = parseFloat(result.lat);
-      const lng = parseFloat(result.lon);
-      
-      mapRef.current?.setView([lat, lng], 16);
-      toast(`Address found!`);
+          // Hide the search bar and show the toolbar
+          setSearchBarVisible(false);
+          setToolBarVisible(true);
 
-      // Hide the search bar and show the toolbar
-      setSearchBarVisible(false);
-      setToolBarVisible(true);
+          // Set the clicked position to the result's center
+          setClickedPosition([lat, lng]);
 
-      // Set the clicked position to the result's center
-      setClickedPosition([lat, lng]);
-      
-      return true;
-    } else {
-      toast("Location not found");
+          return true;
+        } else {
+          toast("Location not found");
+          return false;
+        }
+      } else {
+        toast("Location not found");
+        return false;
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      toast("Search failed. Please try again.");
       return false;
     }
-  } catch (error) {
-    console.error("Search error:", error);
-    toast("Search failed. Please try again.");
-    return false;
   }
-}
 
   // Toast state for managing notifications
   const [toastState, setToastState] = useState("");
 
   // Page Buttons
   function searchButton() {
-    return (<Button
-      variant="secondary"
+    return (
+      <Button
+        variant="secondary"
+        //ref={searchButton}
 
-      //ref={searchButton}
-
-      onClick= {() => {
-        setSearchBarVisible(true);
-        setToolBarVisible(false);}
-      }
-
-      className="m-2 h-24 w-24 flex flex-col p-2"
-    >
-
-      <Search className="h-32 w-32 scale-250 m-2" />
-      <span>Search</span>
-    </Button>)
+        onClick={() => {
+          setSearchBarVisible(true);
+          setToolBarVisible(false);
+        }}
+        className="m-2 flex h-24 w-24 flex-col p-2"
+      >
+        <Search className="m-2 h-32 w-32 scale-250" />
+        <span>Search</span>
+      </Button>
+    );
   }
 
   function buildButton() {
@@ -176,25 +158,26 @@ async function performSearch(address: string): Promise<boolean> {
         onClick={() => {
           window.location.href = "/create";
         }}
-        className="m-2 h-24 w-24 flex flex-col p-2"
+        className="m-2 flex h-24 w-24 flex-col p-2"
       >
-        <Hammer className="h-32 w-32 scale-250 m-2" />
+        <Hammer className="m-2 h-32 w-32 scale-250" />
         <p>Build</p>
       </Button>
     );
   }
 
   function editButton() {
-    return (          <Button
-            variant="secondary"
-            onClick={() => {
-              window.location.href = "/edit";
-            }}
-            className="m-2 h-24 w-24 flex flex-col p-2"
-          >
-            <Edit className="h-32 w-32 scale-250 m-2" />
-            <p>Edit</p>
-          </Button>
+    return (
+      <Button
+        variant="secondary"
+        onClick={() => {
+          window.location.href = "/edit";
+        }}
+        className="m-2 flex h-24 w-24 flex-col p-2"
+      >
+        <Edit className="m-2 h-32 w-32 scale-250" />
+        <p>Edit</p>
+      </Button>
     );
   }
 
@@ -202,7 +185,7 @@ async function performSearch(address: string): Promise<boolean> {
     return (
       <Button
         variant="secondary"
-        className="m-2 h-24 w-32 flex flex-col  p-2"
+        className="m-2 flex h-24 w-32 flex-col p-2"
         onClick={() => {
           window.location.href = "/community";
         }}
@@ -210,28 +193,31 @@ async function performSearch(address: string): Promise<boolean> {
         <TrendingUp className="h-16 w-16 scale-250" />
         <span className="text-lg">Community</span>
       </Button>
-    )
+    );
   }
 
   function popularButton() {
     return (
-              <Button
-          variant="secondary"
-          className="m-2 h-24 w-32 flex flex-col  p-2"
-          onClick={() => {
-            window.location.href = "/popular";
-          }}
-        >
-          <TrendingUp className="h-16 w-16 scale-250" />
-          <span className="text-lg">Popular</span>
-        </Button>
+      <Button
+        variant="secondary"
+        className="m-2 flex h-24 w-32 flex-col p-2"
+        onClick={() => {
+          window.location.href = "/popular";
+        }}
+      >
+        <TrendingUp className="h-16 w-16 scale-250" />
+        <span className="text-lg">Popular</span>
+      </Button>
     );
   }
 
   function searchBar() {
     return (
-      <div id="search-bar" ref={searchBarRef} className="flex w-full flex-row h-24">
-
+      <div
+        id="search-bar"
+        ref={searchBarRef}
+        className="flex h-24 w-full flex-row"
+      >
         <Input
           type="text"
           placeholder="Search for an address..."
@@ -239,14 +225,17 @@ async function performSearch(address: string): Promise<boolean> {
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onKeyUp={async (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === "Enter") {
               await performSearch(searchValue);
             }
           }}
         />
 
         {/*Search Button*/}
-        <Button variant="secondary" size="icon" className="m-2"
+        <Button
+          variant="secondary"
+          size="icon"
+          className="m-2"
           onClick={async () => {
             await performSearch(searchValue);
           }}
@@ -255,19 +244,24 @@ async function performSearch(address: string): Promise<boolean> {
         </Button>
 
         {/* Close Button */}
-        <Button variant="secondary" size="icon" className="m-2" onClick={() => {
-          setSearchBarVisible(false);
-          setToolBarVisible(true);
-        }}>
+        <Button
+          variant="secondary"
+          size="icon"
+          className="m-2"
+          onClick={() => {
+            setSearchBarVisible(false);
+            setToolBarVisible(true);
+          }}
+        >
           <X />
         </Button>
       </div>
-    )
+    );
   }
 
   // Toast Logic
   function mapToast(zoom: number) {
-  // Show a toast notification based on the zoom level
+    // Show a toast notification based on the zoom level
     // This prevents multiple toasts from showing when zooming in and out
 
     if (zoom < zoomLimit) {
@@ -311,11 +305,8 @@ async function performSearch(address: string): Promise<boolean> {
     const map = useMapEvents({
       click(e) {
         if (map.getZoom() < 18) {
-
           map.flyTo(e.latlng, map.getZoom() + 1);
         } else {
-
-
           setClickedPosition([e.latlng.lat, e.latlng.lng]);
           image.mutate({
             lat: e.latlng.lat,
@@ -325,7 +316,6 @@ async function performSearch(address: string): Promise<boolean> {
             lat: e.latlng.lat,
             lng: e.latlng.lng,
           });
-
 
           // Show the search bar and hide the toolbar
           setSearchBarVisible(false);
@@ -338,8 +328,7 @@ async function performSearch(address: string): Promise<boolean> {
         if (map.getZoom() < 18) {
           setClickedPosition(null);
           mapToast(map.getZoom());
-        }
-        else {
+        } else {
           mapToast(map.getZoom());
         }
       },
@@ -354,12 +343,11 @@ async function performSearch(address: string): Promise<boolean> {
   }
 
   // Page load functions
-  mapToast(currentZoom);      // Show the initial toast
+  mapToast(currentZoom); // Show the initial toast
 
   return (
-    
     <div id="mainContainer" className="flex h-full w-full flex-col space-y-2">
-    {/* ^ Main container for the map and toolbar */}
+      {/* ^ Main container for the map and toolbar */}
 
       {/*Map Container*/}
       <div id="mapDiv" className="h-[calc(100vh-400px)] w-full">
@@ -369,7 +357,6 @@ async function performSearch(address: string): Promise<boolean> {
           scrollWheelZoom={true}
           style={{ height: "100%", width: "100%" }}
         >
-
           <TileLayer
             url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
             attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -477,6 +464,8 @@ async function performSearch(address: string): Promise<boolean> {
                   <Skeleton className="h-48 w-64 rounded-xl" />
                 ) : image.isSuccess && image.data ? (
                   <Image
+                    width={64}
+                    height={48}
                     className="h-48 w-64"
                     src={getImageUrl(image.data.url)}
                     alt="Street view"
@@ -484,9 +473,7 @@ async function performSearch(address: string): Promise<boolean> {
                 ) : (
                   <p> {image.error?.message}</p>
                 )}
-                <div className="mx-auto flex flex-row gap-2">
-
-                </div>
+                <div className="mx-auto flex flex-row gap-2"></div>
                 <div>
                   <p>Previous Builds Nearby</p>
                   <div className="flex flex-row gap-4">
@@ -503,6 +490,10 @@ async function performSearch(address: string): Promise<boolean> {
                         >
                           <Image
                             className="h-10 w-12"
+                            height={10}
+                            width={12}
+                            src={`/${image.url}`}
+                            alt={image.address ?? "Nearby Image"}
                             src={getImageUrl(image.url)}
                             alt="there will be a image here"
                           />
@@ -521,38 +512,31 @@ async function performSearch(address: string): Promise<boolean> {
               </div>
             </Popup>
           )}
-
-
         </MapContainer>
       </div>
 
       {/* Toolbar for search, build, and edit buttons */}
-      <div className="flex w-full  place-self-center">
-
+      <div className="flex w-full place-self-center">
         {/* Search Bar */}
         {searchBarVisible && searchBar()}
 
         {/* Tool Bar */}
         {toolBarVisible && (
-        <div id="tool-bar" className="flex w-full flex-row justify-center">
+          <div id="tool-bar" className="flex w-full flex-row justify-center">
+            {/* Search Button */}
+            {searchButton()}
 
-          {/* Search Button */}
-          {searchButton()}
-          
-          {/* Build Button */}
-          {buildButton()}
+            {/* Build Button */}
+            {buildButton()}
 
-          {/* Edit Button */}
-          {editButton()}
-
-        </div>
+            {/* Edit Button */}
+            {editButton()}
+          </div>
         )}
       </div>
 
       {/* Nearby Builds */}
-      <div className="flex w-full flex-row justify-center flex-grow">
-        
-      </div>
+      <div className="flex w-full flex-grow flex-row justify-center"></div>
 
       {/* Popular and Community Buttons */}
 
@@ -562,11 +546,7 @@ async function performSearch(address: string): Promise<boolean> {
 
         {/*Community Button*/}
         {communityButton()}
-
       </div>
-
-
-
-      </div>
+    </div>
   );
 }
