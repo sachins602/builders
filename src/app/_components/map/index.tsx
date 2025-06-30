@@ -156,7 +156,7 @@ export default function MapComponent() {
       <Button
         variant="secondary"
         onClick={() => {
-          window.location.href = "/create";
+          window.location.href = "/create2";
         }}
         className="m-2 flex h-24 w-24 flex-col p-2"
       >
@@ -485,7 +485,7 @@ export default function MapComponent() {
                           key={image.id}
                           className="h-16 w-14 rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
                           onClick={() => {
-                            window.location.href = `/create/${image.id}`;
+                            window.location.href = `/create`;
                           }}
                         >
                           <Image
@@ -494,8 +494,6 @@ export default function MapComponent() {
                             width={12}
                             src={`/${image.url}`}
                             alt={image.address ?? "Nearby Image"}
-                            src={getImageUrl(image.url)}
-                            alt="there will be a image here"
                           />
                           <div className="relative flex overflow-x-hidden">
                             <p className="animate-marquee whitespace-nowrap">
