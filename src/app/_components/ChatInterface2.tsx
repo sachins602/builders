@@ -40,7 +40,7 @@ export function ChatInterface2() {
                     src={typeof chatData.lastImage === "string" ? chatData.lastImage : "/placeholder-image.png"}
                     alt="Current Image"
                     fill={true}
-                    objectFit="cover"
+                    objectFit=""
                     className="rounded-lg shadow-lg"
                 />
             </div>
