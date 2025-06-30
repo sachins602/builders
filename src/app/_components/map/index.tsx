@@ -5,8 +5,7 @@ import { useState,
  } from "react";
 
 // Leaflet types
-import L from "leaflet";
-// import type L from "leaflet";
+import type L from "leaflet";
 import type { LeafletMouseEvent } from "leaflet";
 
 // React-Leaflet components
@@ -17,7 +16,6 @@ import {
   GeoJSON,
   useMapEvents,
   Popup,
-  useMap,
 } from "react-leaflet";
 
 // Leaflet CSS
@@ -80,9 +78,6 @@ export default function MapComponent() {
   // Map Reference
   const mapRef = useRef<L.Map | null>(null);
 
-  // Search bar state
-  const [searchExpanded, setSearchExpanded] = useState(false);
-
   // Ref for the search button and search bar to toggle the search bar state
   const searchBarRef = useRef(null);
 
@@ -92,58 +87,50 @@ export default function MapComponent() {
 
   // Search functionality
   const [searchValue, setSearchValue] = useState("");
-  /*const [geocoderInstance, setGeocoderInstance] = useState<any>(null);
 
-  // Effect to initialize the geocoder instance
-  useEffect(() => {
-    // Create a geocoder instance without adding it to the map
-    const geocoder = LCG.geocoder({
-      defaultMarkGeocode: false,
-    });
-    setGeocoderInstance(geocoder);
-  }, []);*/
+  async function performSearch(address: string): Promise<boolean> {
+    if (!mapRef.current || !address.trim()) return false;
 
-async function performSearch(address: string): Promise<boolean> {
-  if (!mapRef.current || !address.trim()) return false;
+    try {
+      // Use Nominatim API to search for the address
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+      );
 
+      // Check if the response is ok
+      const results = await response.json() as NominatimResult[];
 
+      if (results && results.length > 0) {
+        const result = results[0];
+        if (result?.lat !== undefined && result?.lon !== undefined) {
+          const lat = parseFloat(result.lat);
+          const lng = parseFloat(result.lon);
 
-  try {
-    // Use Nominatim API to search for the address
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
-    );
-    
-    // Check if the response is ok
-    const results = await response.json() as NominatimResult[];
-    
-    if (results && results.length > 0) {
-      const result = results[0];
+          mapRef.current?.setView([lat, lng], 16);
+          toast(`Address found!`);
 
-      const lat = parseFloat(result.lat);
-      const lng = parseFloat(result.lon);
-      
-      mapRef.current?.setView([lat, lng], 16);
-      toast(`Address found!`);
+          // Hide the search bar and show the toolbar
+          setSearchBarVisible(false);
+          setToolBarVisible(true);
 
-      // Hide the search bar and show the toolbar
-      setSearchBarVisible(false);
-      setToolBarVisible(true);
+          // Set the clicked position to the result's center
+          setClickedPosition([lat, lng]);
 
-      // Set the clicked position to the result's center
-      setClickedPosition([lat, lng]);
-      
-      return true;
-    } else {
-      toast("Location not found");
+          return true;
+        } else {
+          toast("Location not found");
+          return false;
+        }
+      } else {
+        toast("Location not found");
+        return false;
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      toast("Search failed. Please try again.");
       return false;
     }
-  } catch (error) {
-    console.error("Search error:", error);
-    toast("Search failed. Please try again.");
-    return false;
   }
-}
 
   // Toast state for managing notifications
   const [toastState, setToastState] = useState("");
@@ -476,6 +463,8 @@ async function performSearch(address: string): Promise<boolean> {
                   <Skeleton className="h-48 w-64 rounded-xl" />
                 ) : image.isSuccess && image.data ? (
                   <Image
+                    width={64}
+                    height={48}
                     className="h-48 w-64"
                     src={`/${image.data.url}`}
                     alt="Street view"
@@ -502,8 +491,10 @@ async function performSearch(address: string): Promise<boolean> {
                         >
                           <Image
                             className="h-10 w-12"
+                            height={10}
+                            width={12}
                             src={`/${image.url}`}
-                            alt="there will be a image here"
+                            alt={image.address ?? "Nearby Image"}
                           />
                           <div className="relative flex overflow-x-hidden">
                             <p className="animate-marquee whitespace-nowrap">
