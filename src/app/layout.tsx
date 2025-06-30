@@ -26,14 +26,20 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable}`}>
       <body className="h-screen bg-white text-black">
         <TRPCReactProvider>
+
+          {/* Sonner Toast Notifications */}
           <Toaster position="top-center" visibleToasts={1} duration={10000}/>
+
+          {/* Main container for the layout */}
           <div className="flex h-full flex-col">
+
             {/* Fixed Header */}
             <Header />
 
-            {/* Scrollable Main content area */}
-            <main className="flex-1 overflow-y-auto">
-              <div className="container mx-auto px-12 py-2">{children}</div>
+            {/* Non-Scrollable Main content area */}
+
+            <main className="container mx-auto px-12 py-2 flex-1 coverflow-y-auto">
+              {children}
             </main>
 
             {/* Fixed Footer */}

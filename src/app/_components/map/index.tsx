@@ -1,8 +1,14 @@
 // React and hooks
-import { useState } from "react";
+import { useState,
+  useRef,
+  useEffect,
+ } from "react";
+
 // Leaflet types
-import type L from "leaflet";
+import L from "leaflet";
+// import type L from "leaflet";
 import type { LeafletMouseEvent } from "leaflet";
+
 // React-Leaflet components
 import {
   MapContainer,
@@ -11,9 +17,14 @@ import {
   GeoJSON,
   useMapEvents,
   Popup,
+  useMap,
 } from "react-leaflet";
+
 // Leaflet CSS
 import "leaflet/dist/leaflet.css";
+
+// Image
+import Image from "next/image";
 
 // TopoJSON data for Toronto
 import TorontoTopoJSON from "public/toronto_crs84.json";
@@ -34,7 +45,15 @@ import { Skeleton } from "../ui/skeleton";
 import { toast } from "sonner";
 
 // Icon components
-import { Search, Hammer, Edit } from "lucide-react";
+import { Search, Hammer, Edit, X, TrendingUp } from "lucide-react";
+
+// Types
+
+type NominatimResult = {
+  lat: string;
+  lon: string;
+  [key: string]: string;
+}
 
 const outerBounds: [number, number][][] = [
   [
@@ -45,43 +64,228 @@ const outerBounds: [number, number][][] = [
   ],
 ];
 
-// Toast state for managing notifications
-let toastState = "";
+// Zoom limit for showing different toasts
 const zoomLimit = 18;
-
-function mapToast(zoom: number) {
-  // Show a toast notification based on the zoom level
-  // This prevents multiple toasts from showing when zooming in and out
-
-  if (zoom < zoomLimit) {
-    if (toastState != "zoomed out") {
-      toast("Click on the map to zoom in and get a street view image");
-      toastState = "zoomed out";
-    }
-  } else {
-    if (toastState != "zoomed in") {
-      toast("Click on a residential parcel to get a street view image");
-      toastState = "zoomed in";
-    }
-  }
-}
-
-// Search bar state
-let searchExpanded = false;
 
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
 export default function MapComponent() {
+
+  // State for managing the current zoom level and clicked position
   const [currentZoom, setCurrentZoom] = useState(11);
   const [clickedPosition, setClickedPosition] = useState<
     [number, number] | null
   >(null);
+  
+  // Map Reference
+  const mapRef = useRef<L.Map | null>(null);
 
-  // Show the initial toast
-  mapToast(currentZoom);
+  // Search bar state
+  const [searchExpanded, setSearchExpanded] = useState(false);
 
+  // Ref for the search button and search bar to toggle the search bar state
+  const searchBarRef = useRef(null);
+
+  // Variables for search button and search bar visibility
+  const [searchBarVisible, setSearchBarVisible] = useState(true);
+  const [toolBarVisible, setToolBarVisible] = useState(false);
+
+  // Search functionality
+  const [searchValue, setSearchValue] = useState("");
+  /*const [geocoderInstance, setGeocoderInstance] = useState<any>(null);
+
+  // Effect to initialize the geocoder instance
+  useEffect(() => {
+    // Create a geocoder instance without adding it to the map
+    const geocoder = LCG.geocoder({
+      defaultMarkGeocode: false,
+    });
+    setGeocoderInstance(geocoder);
+  }, []);*/
+
+async function performSearch(address: string): Promise<boolean> {
+  if (!mapRef.current || !address.trim()) return false;
+
+
+
+  try {
+    // Use Nominatim API to search for the address
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+    );
+    
+    // Check if the response is ok
+    const results = await response.json() as NominatimResult[];
+    
+    if (results && results.length > 0) {
+      const result = results[0];
+
+      const lat = parseFloat(result.lat);
+      const lng = parseFloat(result.lon);
+      
+      mapRef.current?.setView([lat, lng], 16);
+      toast(`Address found!`);
+
+      // Hide the search bar and show the toolbar
+      setSearchBarVisible(false);
+      setToolBarVisible(true);
+
+      // Set the clicked position to the result's center
+      setClickedPosition([lat, lng]);
+      
+      return true;
+    } else {
+      toast("Location not found");
+      return false;
+    }
+  } catch (error) {
+    console.error("Search error:", error);
+    toast("Search failed. Please try again.");
+    return false;
+  }
+}
+
+  // Toast state for managing notifications
+  const [toastState, setToastState] = useState("");
+
+  // Page Buttons
+  function searchButton() {
+    return (<Button
+      variant="secondary"
+
+      //ref={searchButton}
+
+      onClick= {() => {
+        setSearchBarVisible(true);
+        setToolBarVisible(false);}
+      }
+
+      className="m-2 h-24 w-24 flex flex-col p-2"
+    >
+
+      <Search className="h-32 w-32 scale-250 m-2" />
+      <span>Search</span>
+    </Button>)
+  }
+
+  function buildButton() {
+    return (
+      <Button
+        variant="secondary"
+        onClick={() => {
+          window.location.href = "/create";
+        }}
+        className="m-2 h-24 w-24 flex flex-col p-2"
+      >
+        <Hammer className="h-32 w-32 scale-250 m-2" />
+        <p>Build</p>
+      </Button>
+    );
+  }
+
+  function editButton() {
+    return (          <Button
+            variant="secondary"
+            onClick={() => {
+              window.location.href = "/edit";
+            }}
+            className="m-2 h-24 w-24 flex flex-col p-2"
+          >
+            <Edit className="h-32 w-32 scale-250 m-2" />
+            <p>Edit</p>
+          </Button>
+    );
+  }
+
+  function communityButton() {
+    return (
+      <Button
+        variant="secondary"
+        className="m-2 h-24 w-32 flex flex-col  p-2"
+        onClick={() => {
+          window.location.href = "/community";
+        }}
+      >
+        <TrendingUp className="h-16 w-16 scale-250" />
+        <span className="text-lg">Community</span>
+      </Button>
+    )
+  }
+
+  function popularButton() {
+    return (
+              <Button
+          variant="secondary"
+          className="m-2 h-24 w-32 flex flex-col  p-2"
+          onClick={() => {
+            window.location.href = "/popular";
+          }}
+        >
+          <TrendingUp className="h-16 w-16 scale-250" />
+          <span className="text-lg">Popular</span>
+        </Button>
+    );
+  }
+
+  function searchBar() {
+    return (
+      <div id="search-bar" ref={searchBarRef} className="flex w-full flex-row h-24">
+
+        <Input
+          type="text"
+          placeholder="Search for an address..."
+          className="m-2"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onKeyUp={async (e) => {
+            if (e.key === 'Enter') {
+              await performSearch(searchValue);
+            }
+          }}
+        />
+
+        {/*Search Button*/}
+        <Button variant="secondary" size="icon" className="m-2"
+          onClick={async () => {
+            await performSearch(searchValue);
+          }}
+        >
+          <Search />
+        </Button>
+
+        {/* Close Button */}
+        <Button variant="secondary" size="icon" className="m-2" onClick={() => {
+          setSearchBarVisible(false);
+          setToolBarVisible(true);
+        }}>
+          <X />
+        </Button>
+      </div>
+    )
+  }
+
+  // Toast Logic
+  function mapToast(zoom: number) {
+  // Show a toast notification based on the zoom level
+    // This prevents multiple toasts from showing when zooming in and out
+
+    if (zoom < zoomLimit) {
+      if (toastState != "zoomed out") {
+        toast("Click on the map to zoom in and get a street view image");
+        setToastState("zoomed out");
+      }
+    } else {
+      if (toastState != "zoomed in") {
+        toast("Click on a residential parcel to get a street view image");
+        setToastState("zoomed in");
+      }
+    }
+  }
+
+  // tRPC API hooks
   const utils = api.useUtils();
 
+  // Fetch parcel data with enhanced information
   const parcelData = api.response.getEnhancedParcelData.useQuery();
 
   const image = api.response.saveStreetViewImageAddress.useMutation({
@@ -106,11 +310,11 @@ export default function MapComponent() {
     const map = useMapEvents({
       click(e) {
         if (map.getZoom() < 18) {
-          
+
           map.flyTo(e.latlng, map.getZoom() + 1);
         } else {
 
-          
+
           setClickedPosition([e.latlng.lat, e.latlng.lng]);
           image.mutate({
             lat: e.latlng.lat,
@@ -120,11 +324,16 @@ export default function MapComponent() {
             lat: e.latlng.lat,
             lng: e.latlng.lng,
           });
+
+
+          // Show the search bar and hide the toolbar
+          setSearchBarVisible(false);
+          setToolBarVisible(true);
         }
       },
       moveend() {
         setCurrentZoom(map.getZoom());
-        
+
         if (map.getZoom() < 18) {
           setClickedPosition(null);
           mapToast(map.getZoom());
@@ -135,19 +344,31 @@ export default function MapComponent() {
       },
     });
 
+    // Instantiate the geocoder control
+    useEffect(() => {
+      mapRef.current = map;
+    }, [map]);
 
     return null;
   }
 
+  // Page load functions
+  mapToast(currentZoom);      // Show the initial toast
+
   return (
-    <div className="flex h-[calc(100vh-300px)] w-full flex-col space-y-2">
-      <div className="h-full w-full">
+    
+    <div id="mainContainer" className="flex h-full w-full flex-col space-y-2">
+    {/* ^ Main container for the map and toolbar */}
+
+      {/*Map Container*/}
+      <div id="mapDiv" className="h-[calc(100vh-400px)] w-full">
         <MapContainer
           center={[43.7, -79.42]} // Toronto coordinates
           zoom={11}
           scrollWheelZoom={true}
           style={{ height: "100%", width: "100%" }}
         >
+
           <TileLayer
             url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
             attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -245,6 +466,7 @@ export default function MapComponent() {
             return null;
           })}
 
+          {/* Map events for handling clicks and zoom changes */}
           <MapEvents />
 
           {clickedPosition && (
@@ -253,7 +475,7 @@ export default function MapComponent() {
                 {image.isPending ? (
                   <Skeleton className="h-48 w-64 rounded-xl" />
                 ) : image.isSuccess && image.data ? (
-                  <img
+                  <Image
                     className="h-48 w-64"
                     src={`/${image.data.url}`}
                     alt="Street view"
@@ -262,19 +484,7 @@ export default function MapComponent() {
                   <p>Failed to load image</p>
                 )}
                 <div className="mx-auto flex flex-row gap-2">
-                  <Button
-                    onClick={() => {
-                      window.location.href = "/create";
-                    }}
-                    variant="secondary"
-                  >
-                    <Hammer className="h-10 w-12" />
-                    Build
-                  </Button>
-                  <Button variant="secondary">
-                    <Edit className="h-10 w-12" />
-                    Edit
-                  </Button>
+
                 </div>
                 <div>
                   <p>Previous Builds Nearby</p>
@@ -290,7 +500,7 @@ export default function MapComponent() {
                             window.location.href = `/create/${image.id}`;
                           }}
                         >
-                          <img
+                          <Image
                             className="h-10 w-12"
                             src={`/${image.url}`}
                             alt="there will be a image here"
@@ -315,81 +525,47 @@ export default function MapComponent() {
         </MapContainer>
       </div>
 
+      {/* Toolbar for search, build, and edit buttons */}
       <div className="flex w-full  place-self-center">
 
         {/* Search Bar */}
+        {searchBarVisible && searchBar()}
 
-        <div id="search-bar" className="hidden flex w-full flex-row">
-          <Input type="text" placeholder="Address" className="m-2" />
-          <Button variant="secondary" size="icon" className="m-2">
-            <Search />
-          </Button>
-        </div>
+        {/* Tool Bar */}
+        {toolBarVisible && (
+        <div id="tool-bar" className="flex w-full flex-row justify-center">
 
-
-        {/* Search Button */}
-      <div id="tool-bar" className="flex w-full flex-row justify-center">
-        <Button 
-          variant="secondary"
-          onClick={() => {
-            searchExpanded = !searchExpanded;
-            if (searchExpanded) {
-              toast("Search bar expanded");
-              const searchBar = document.getElementById("search-bar");
-              if (searchBar) {
-                searchBar.classList.remove("hidden");
-              }
-              const toolBar = document.getElementById("tool-bar");
-              if (toolBar) {
-                toolBar.classList.add("hidden");
-              }
-            } else {
-              toast("Search bar collapsed");
-              const searchBar = document.getElementById("search-bar");
-              if (searchBar) {
-                searchBar.classList.add("hidden");
-              }
-              const toolBar = document.getElementById("tool-bar");
-              if (toolBar) {
-                toolBar.classList.remove("hidden");
-              }
-            }
-          }}
-          className="m-2"
-        >
-
-          <Search className="h-6 w-6" />
-          {searchExpanded ? "Collapse Search" : "Expand Search"}
-        </Button>
-
-        {/* Build Button */}
-
-          <Button
-            variant="secondary"
-            onClick={() => {
-              window.location.href = "/create";
-            }}
-            className="m-2"
-          >
-            <Hammer className="h-6 w-6" />
-            Build
-          </Button>
+          {/* Search Button */}
+          {searchButton()}
+          
+          {/* Build Button */}
+          {buildButton()}
 
           {/* Edit Button */}
-          <Button
-            variant="secondary"
-            onClick={() => {
-              window.location.href = "/edit";
-            }}
-            className="m-2"
-          >
-            <Edit className="h-6 w-6" />
-            Edit
-          </Button>
+          {editButton()}
+
         </div>
+        )}
+      </div>
+
+      {/* Nearby Builds */}
+      <div className="flex w-full flex-row justify-center flex-grow">
+        
+      </div>
+
+      {/* Popular and Community Buttons */}
+
+      {/*Popular Button*/}
+      <div className="flex w-full flex-row justify-between">
+        {popularButton()}
+
+        {/*Community Button*/}
+        {communityButton()}
+
+      </div>
+
 
 
       </div>
-    </div>
   );
 }
