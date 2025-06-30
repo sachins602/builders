@@ -160,7 +160,7 @@ export default function MapComponent() {
       <Button
         variant="secondary"
         onClick={() => {
-          window.location.href = "/create";
+          window.location.href = "/create2";
         }}
         className="m-2 h-24 w-24 flex flex-col p-2"
       >
@@ -486,7 +486,7 @@ export default function MapComponent() {
                           key={image.id}
                           className="h-16 w-14 rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
                           onClick={() => {
-                            window.location.href = `/create/${image.id}`;
+                            window.location.href = `/create`;
                           }}
                         >
                           <Image
