@@ -62,7 +62,7 @@ export const responseRouter = createTRPCRouter({
       const imageName = String(lat + lng);
 
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=${heading}&pitch=-0.76&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=${heading}&pitch=-0.76&key=${env.GOOGLE_API_KEY}`,
       );
       if (!response.ok) {
         throw new TRPCError({
@@ -154,7 +154,7 @@ export const responseRouter = createTRPCRouter({
 
       // Get address information from Google (for street view image)
       const addressResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${env.GOOGLE_API_KEY}`,
       );
       if (!addressResponse.ok) {
         throw new TRPCError({
@@ -176,7 +176,7 @@ export const responseRouter = createTRPCRouter({
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/streetview?parameters&size=640x640&fov=50&location=${encodeURIComponent(
           formattedAddress,
-        )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`,
+        )}&key=${env.GOOGLE_API_KEY}`,
       );
       if (!response.ok) {
         throw new TRPCError({
@@ -304,7 +304,7 @@ export const responseRouter = createTRPCRouter({
       const { address } = input;
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
         `${address}, Toronto`,
-      )}&key=${env.NEXT_PUBLIC_GOOGLE_API_KEY}`;
+      )}&key=${env.GOOGLE_API_KEY}`;
 
       const response = (await (
         await fetch(url)
