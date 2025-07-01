@@ -53,4 +53,5 @@ yarn-error.log*
 # geojson
 *.geojson
 
-
+# test results
+/test-results

@@ -1,24 +1,9 @@
+import { UTApi } from "uploadthing/server";
+
 interface UploadResult {
   url: string;
   success: boolean;
   error?: string;
-}
-
-// UploadThing API interface - to be implemented when properly configured
-class UTApi {
-  async uploadFiles(_file: File): Promise<{
-    data?: { url: string };
-    error?: { message: string };
-  }> {
-    // This is a placeholder for the actual UploadThing implementation
-    // You'll need to configure this with your UploadThing app
-    return {
-      error: {
-        message:
-          "UploadThing not configured. Please set up your UploadThing app and replace this implementation.",
-      },
-    };
-  }
 }
 
 export class StorageService {
