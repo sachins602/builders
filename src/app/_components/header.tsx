@@ -1,5 +1,6 @@
 // External libraries
 import Image from "next/image";
+import Link from "next/link";
 
 // Internal modules
 import { auth } from "~/server/auth";
@@ -72,7 +73,9 @@ export default async function Header() {
 
       {/*Logo*/}
       <div>
-        <Image src="/omm-logo.png" alt="Our Missing Middle Logo" width="50" height="50" className="h-10 w-10"/>
+        <Link href="/">
+          <Image src="/omm-logo.png" alt="Our Missing Middle Logo" width="50" height="50" className="h-10 w-10"/>
+        </Link>
       </div>
     </header>
   );

@@ -1,8 +1,6 @@
 import { z } from "zod";
 import OpenAI, { toFile } from "openai";
 import { env } from "~/env";
-import path from "path";
-import fs from "fs";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { StorageService } from "~/lib/storage";
@@ -27,36 +25,18 @@ export const openaiRouter = createTRPCRouter({
         throw new Error("No image provided");
       }
 
-      // Handle both local and cloud storage for OpenAI API
-      let imageFile: Parameters<typeof openai.images.edit>[0]["image"];
-
-      if (env.ENVIRONMENT === "cloud") {
-        // For cloud URLs, fetch the image as buffer
-        const imageResponse = await fetch(input.imageUrl);
-        if (!imageResponse.ok) {
-          throw new Error(
-            `Failed to fetch cloud image: ${imageResponse.status}`,
-          );
-        }
-
-        // Get the image as buffer and convert to File
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        const imageBuffer = Buffer.from(arrayBuffer);
-        imageFile = await toFile(imageBuffer, "image.jpg", {
-          type: "image/jpeg",
-        });
-      } else {
-        // Get the full path to the local image
-        const imagePath = path.join(process.cwd(), "public", input.imageUrl);
-
-        // Check if the file exists
-        if (!fs.existsSync(imagePath)) {
-          throw new Error("Image file not found");
-        }
-
-        const imageStream = fs.createReadStream(imagePath);
-        imageFile = await toFile(imageStream, null, { type: "image/jpeg" });
+      // Fetch the image from UploadThing URL
+      const imageResponse = await fetch(input.imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
       }
+
+      // Get the image as buffer and convert to File
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+      const imageFile = await toFile(imageBuffer, "image.jpg", {
+        type: "image/jpeg",
+      });
 
       // Use the images.generate API with the enhanced prompt
       const response = await openai.images.edit({
@@ -81,7 +61,6 @@ export const openaiRouter = createTRPCRouter({
       const uploadResult = await StorageService.saveBase64Image(
         imageData,
         imageName,
-        "generated",
       );
 
       if (!uploadResult.success) {
@@ -139,40 +118,20 @@ export const openaiRouter = createTRPCRouter({
         throw new Error("Previous response not found");
       }
 
-      // Handle both local and cloud storage for previous response image
-      let imageFile: Parameters<typeof openai.images.edit>[0]["image"];
-
-      if (env.ENVIRONMENT === "cloud") {
-        // For cloud URLs, fetch the previous image as buffer
-        const imageResponse = await fetch(previousResponse.url);
-        if (!imageResponse.ok) {
-          throw new Error(
-            `Failed to fetch previous cloud image: ${imageResponse.status}`,
-          );
-        }
-
-        // Get the image as buffer and convert to File
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        const imageBuffer = Buffer.from(arrayBuffer);
-        imageFile = await toFile(imageBuffer, "image.jpg", {
-          type: "image/jpeg",
-        });
-      } else {
-        // Get the full path to the local previous image
-        const imagePath = path.join(
-          process.cwd(),
-          "public",
-          previousResponse.url,
+      // Fetch the previous image from UploadThing URL
+      const imageResponse = await fetch(previousResponse.url);
+      if (!imageResponse.ok) {
+        throw new Error(
+          `Failed to fetch previous image: ${imageResponse.status}`,
         );
-
-        // Check if the file exists
-        if (!fs.existsSync(imagePath)) {
-          throw new Error("Previous image file not found");
-        }
-
-        const imageStream = fs.createReadStream(imagePath);
-        imageFile = await toFile(imageStream, null, { type: "image/jpeg" });
       }
+
+      // Get the image as buffer and convert to File
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+      const imageFile = await toFile(imageBuffer, "image.jpg", {
+        type: "image/jpeg",
+      });
 
       // Use the images.generate API with the new prompt
       const response = await openai.images.edit({
@@ -198,7 +157,6 @@ export const openaiRouter = createTRPCRouter({
       const uploadResult = await StorageService.saveBase64Image(
         imageData,
         imageName,
-        "generated",
       );
 
       if (!uploadResult.success) {
