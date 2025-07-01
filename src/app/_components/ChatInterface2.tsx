@@ -9,11 +9,11 @@ import { useChat } from "~/lib/use-chat";
 // Components
 import { MessageInput2 } from "./chat/MessageInput2";
 
-// Next.js Image component
-import Image from "next/image";
+
 
 // Icon components
 import { ArrowLeft, ArrowRight, Rocket, Share, Trash2 } from "lucide-react";
+import { getImageUrl } from "~/lib/image-utils";
 
 export function ChatInterface2() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -53,18 +53,11 @@ export function ChatInterface2() {
         </button>
 
         {/*Image Container*/}
-        <div className="w-90vw h-full">
-          <Image
-            src={
-              typeof chatData.lastImage === "string"
-                ? chatData.lastImage
-                : "/placeholder-image.png"
-            }
+        <div>
+          <img
+            src={getImageUrl(chatData.lastImage?.url ?? "")}
             alt="Current Image"
-            fill={true}
-            sizes={"100vw"}
-            objectFit="contain"
-            className="rounded-lg shadow-lg"
+            className="h-96 w-full rounded-lg shadow-lg"
           />
         </div>
 
