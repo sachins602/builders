@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { env } from "~/env";
-import { UTApi } from "uploadthing/server";
 
 interface UploadResult {
   url: string;
@@ -11,10 +10,10 @@ interface UploadResult {
 }
 
 export class StorageService {
-  private static utapi = env.UPLOADTHING_TOKEN ? new UTApi() : null;
-
   private static isCloudEnvironment(): boolean {
-    return env.ENVIRONMENT === "cloud";
+    // For now, always use local storage to avoid UploadThing dependency issues
+    return false;
+    // return env.ENVIRONMENT === "cloud";
   }
 
   /**
@@ -78,31 +77,10 @@ export class StorageService {
     fileName: string,
     type: "streetview" | "generated",
   ): Promise<UploadResult> {
-    if (!this.utapi) {
-      throw new Error("UploadThing not configured - UPLOADTHING_TOKEN missing");
-    }
-
-    // Convert base64 to buffer
-    const buffer = Buffer.from(base64Data, "base64");
-
-    // Create File object from buffer
-    const file = new File([buffer], `${fileName}.jpg`, { type: "image/jpeg" });
-
-    const response = await this.utapi.uploadFiles(file);
-
-    if (response.data) {
-      return {
-        url: response.data.url,
-        success: true,
-        storageType: "cloud",
-      };
-    }
-
-    if (response.error) {
-      throw new Error(`UploadThing error: ${response.error.message}`);
-    }
-
-    throw new Error("Failed to upload to UploadThing");
+    // Cloud storage is disabled for now
+    throw new Error(
+      "Cloud storage is currently disabled. Using local storage instead.",
+    );
   }
 
   private static async saveBufferToUploadThing(
@@ -110,31 +88,10 @@ export class StorageService {
     fileName: string,
     type: "streetview" | "generated",
   ): Promise<UploadResult> {
-    if (!this.utapi) {
-      throw new Error("UploadThing not configured - UPLOADTHING_TOKEN missing");
-    }
-
-    // Convert ArrayBuffer to File
-    const uint8Array = new Uint8Array(buffer);
-    const file = new File([uint8Array], `${fileName}.jpg`, {
-      type: "image/jpeg",
-    });
-
-    const response = await this.utapi.uploadFiles(file);
-
-    if (response.data) {
-      return {
-        url: response.data.url,
-        success: true,
-        storageType: "cloud",
-      };
-    }
-
-    if (response.error) {
-      throw new Error(`UploadThing error: ${response.error.message}`);
-    }
-
-    throw new Error("Failed to upload to UploadThing");
+    // Cloud storage is disabled for now
+    throw new Error(
+      "Cloud storage is currently disabled. Using local storage instead.",
+    );
   }
 
   private static async saveLocally(
