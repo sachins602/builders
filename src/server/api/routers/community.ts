@@ -375,4 +375,345 @@ export const communityRouter = createTRPCRouter({
 
     return responses;
   }),
+
+  // Organization Management Endpoints
+
+  createOrganization: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(100),
+        description: z.string().min(1).max(250),
+        email: z.string().email().optional(),
+        website: z.string().url().optional(),
+        phone: z.string().optional(),
+        avatar: z.string().url().optional(),
+        address: z.string().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+        neighbourhood: z.string().optional(),
+        borough: z.string().optional(),
+        city: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organization = await ctx.db.organization.create({
+        data: {
+          ...input,
+          createdById: ctx.session.user.id,
+        },
+      });
+
+      // Automatically make the creator a member with "owner" role
+      await ctx.db.organizationMember.create({
+        data: {
+          organizationId: organization.id,
+          userId: ctx.session.user.id,
+          role: "owner",
+        },
+      });
+
+      return organization;
+    }),
+
+  getOrganizations: publicProcedure
+    .input(
+      z.object({
+        userLat: z.number().optional(),
+        userLng: z.number().optional(),
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userLat, userLng, limit, cursor } = input;
+      const currentUserId = ctx.session?.user?.id;
+
+      const organizations = await ctx.db.organization.findMany({
+        where: {
+          deletedAt: null,
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          _count: {
+            select: {
+              members: {
+                where: {
+                  leftAt: null, // Only count active members
+                },
+              },
+            },
+          },
+          ...(currentUserId && {
+            members: {
+              where: {
+                userId: currentUserId,
+                leftAt: null,
+              },
+              select: {
+                id: true,
+                role: true,
+                joinedAt: true,
+              },
+            },
+          }),
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+      });
+
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (organizations.length > limit) {
+        const nextItem = organizations.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      // Group organizations by location if user coordinates are provided
+      const groupedOrganizations =
+        userLat && userLng
+          ? {
+              neighbourhood: [] as typeof organizations,
+              borough: [] as typeof organizations,
+              city: [] as typeof organizations,
+              other: [] as typeof organizations,
+            }
+          : null;
+
+      if (groupedOrganizations && userLat && userLng) {
+        organizations.forEach((org) => {
+          if (org.lat && org.lng) {
+            // Calculate distance (simple approximation)
+            const distance = Math.sqrt(
+              Math.pow(org.lat - userLat, 2) + Math.pow(org.lng - userLng, 2),
+            );
+
+            // Group by proximity (these thresholds can be adjusted)
+            if (distance < 0.01) {
+              // ~1km
+              groupedOrganizations.neighbourhood.push(org);
+            } else if (distance < 0.05) {
+              // ~5km
+              groupedOrganizations.borough.push(org);
+            } else if (distance < 0.1) {
+              // ~10km
+              groupedOrganizations.city.push(org);
+            } else {
+              groupedOrganizations.other.push(org);
+            }
+          } else {
+            groupedOrganizations.other.push(org);
+          }
+        });
+      }
+
+      return {
+        items: organizations,
+        grouped: groupedOrganizations,
+        nextCursor,
+      };
+    }),
+
+  getOrganization: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const currentUserId = ctx.session?.user?.id;
+
+      const organization = await ctx.db.organization.findFirst({
+        where: {
+          id: input.id,
+          deletedAt: null,
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          members: {
+            where: {
+              leftAt: null,
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+            orderBy: {
+              joinedAt: "asc",
+            },
+          },
+          _count: {
+            select: {
+              members: {
+                where: {
+                  leftAt: null,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!organization) {
+        throw new Error("Organization not found");
+      }
+
+      // Check if current user is a member
+      const currentUserMembership = currentUserId
+        ? organization.members.find((m) => m.userId === currentUserId)
+        : null;
+
+      return {
+        ...organization,
+        currentUserMembership,
+      };
+    }),
+
+  joinOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { organizationId } = input;
+      const userId = ctx.session.user.id;
+
+      // Check if organization exists
+      const organization = await ctx.db.organization.findFirst({
+        where: {
+          id: organizationId,
+          deletedAt: null,
+        },
+      });
+
+      if (!organization) {
+        throw new Error("Organization not found");
+      }
+
+      // Check if user is already a member (and hasn't left)
+      const existingMembership = await ctx.db.organizationMember.findFirst({
+        where: {
+          organizationId,
+          userId,
+          leftAt: null,
+        },
+      });
+
+      if (existingMembership) {
+        throw new Error("User is already a member of this organization");
+      }
+
+      // Check if user was previously a member but left
+      const previousMembership = await ctx.db.organizationMember.findFirst({
+        where: {
+          organizationId,
+          userId,
+          leftAt: { not: null },
+        },
+      });
+
+      if (previousMembership) {
+        // Rejoin by clearing the leftAt timestamp
+        await ctx.db.organizationMember.update({
+          where: { id: previousMembership.id },
+          data: {
+            leftAt: null,
+            joinedAt: new Date(), // Update join date
+          },
+        });
+      } else {
+        // Create new membership
+        await ctx.db.organizationMember.create({
+          data: {
+            organizationId,
+            userId,
+            role: "member",
+          },
+        });
+      }
+
+      return { success: true };
+    }),
+
+  leaveOrganization: protectedProcedure
+    .input(z.object({ organizationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { organizationId } = input;
+      const userId = ctx.session.user.id;
+
+      // Check if user is a member
+      const membership = await ctx.db.organizationMember.findFirst({
+        where: {
+          organizationId,
+          userId,
+          leftAt: null,
+        },
+      });
+
+      if (!membership) {
+        throw new Error("User is not a member of this organization");
+      }
+
+      // Prevent owner from leaving (they need to transfer ownership first)
+      if (membership.role === "owner") {
+        throw new Error(
+          "Organization owner cannot leave. Please transfer ownership first.",
+        );
+      }
+
+      // Mark as left
+      await ctx.db.organizationMember.update({
+        where: { id: membership.id },
+        data: { leftAt: new Date() },
+      });
+
+      return { success: true };
+    }),
+
+  getUserOrganizations: protectedProcedure.query(async ({ ctx }) => {
+    const memberships = await ctx.db.organizationMember.findMany({
+      where: {
+        userId: ctx.session.user.id,
+        leftAt: null,
+      },
+      include: {
+        organization: {
+          include: {
+            _count: {
+              select: {
+                members: {
+                  where: {
+                    leftAt: null,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        joinedAt: "desc",
+      },
+    });
+
+    return memberships.map((m) => ({
+      membership: {
+        id: m.id,
+        role: m.role,
+        joinedAt: m.joinedAt,
+      },
+      organization: m.organization,
+    }));
+  }),
 });

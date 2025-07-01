@@ -72,6 +72,10 @@ model User {
     comments        Comment[]
     sharedToMe      SharedChainUser[] // Chains shared specifically to this user
     
+    // Community Organization relations
+    createdOrganizations Organization[] @relation(name: "OrganizationCreator")
+    organizationMemberships OrganizationMember[]
+    
     @@index([email])
     @@index([deletedAt])
 }
@@ -253,4 +257,63 @@ model Comment {
     @@index([authorId])
     @@index([deletedAt])
     @@index([createdAt])
+}
+
+// Community Organization models
+model Organization {
+    id          String   @id @default(cuid())
+    name        String
+    description String   @db.Text // 250 character description
+    email       String?
+    website     String?
+    phone       String?
+    avatar      String?  // URL to organization avatar/logo
+    
+    // Location information
+    address     String?
+    lat         Float?
+    lng         Float?
+    neighbourhood String? // Derived from coordinates
+    borough     String?   // Derived from coordinates  
+    city        String?   // Derived from coordinates
+    
+    // Timestamps and soft delete
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    deletedAt   DateTime? // Soft delete
+    
+    // Relations
+    createdBy   User     @relation(name: "OrganizationCreator", fields: [createdById], references: [id])
+    createdById String
+    members     OrganizationMember[]
+    
+    @@index([name])
+    @@index([lat, lng])
+    @@index([neighbourhood])
+    @@index([borough])
+    @@index([city])
+    @@index([createdById])
+    @@index([deletedAt])
+}
+
+model OrganizationMember {
+    id             String       @id @default(cuid())
+    
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    organizationId String
+    
+    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId         String
+    
+    // Member role (could be: member, admin, owner)
+    role           String       @default("member")
+    
+    // Timestamps
+    joinedAt       DateTime     @default(now())
+    leftAt         DateTime?    // For tracking when someone left
+    
+    @@unique([organizationId, userId])
+    @@index([organizationId])
+    @@index([userId])
+    @@index([leftAt])
 }
