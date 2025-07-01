@@ -9,8 +9,7 @@ import { useChat } from "~/lib/use-chat";
 // Components
 import { MessageInput2 } from "./chat/MessageInput2";
 
-// Next.js Image component
-import Image from "next/image";
+
 
 // Icon components
 import { ArrowLeft, ArrowRight, Rocket, Share, Trash2 } from "lucide-react";
