@@ -10,7 +10,6 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed",
     "dev": "next dev --turbo",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
@@ -21,9 +20,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
+
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
     "@heroicons/react": "^2.2.0",
@@ -44,6 +41,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "leaflet": "^1.9.4",
+    "leaflet-control-geocoder": "^3.2.0",
     "lucide-react": "^0.511.0",
     "next": "^15.2.3",
     "next-auth": "5.0.0-beta.25",
@@ -52,6 +50,7 @@
     "react-dom": "19.0.0-rc.1",
     "react-leaflet": "5.0.0-rc.2",
     "server-only": "^0.0.1",
+    "sonner": "^2.0.5",
     "superjson": "^2.2.1",
     "tailwind-merge": "^3.3.0",
     "uploadthing": "^7.7.3",

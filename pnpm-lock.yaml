@@ -65,6 +65,9 @@ importers:
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
+      leaflet-control-geocoder:
+        specifier: ^3.2.0
+        version: 3.2.0(leaflet@1.9.4)
       lucide-react:
         specifier: ^0.511.0
         version: 0.511.0(react@19.0.0-rc.1)
@@ -89,6 +92,9 @@ importers:
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
+      sonner:
+        specifier: ^2.0.5
+        version: 2.0.5(react-dom@19.0.0-rc.1(react@19.0.0-rc.1))(react@19.0.0-rc.1)
       superjson:
         specifier: ^2.2.1
         version: 2.2.2
@@ -2104,6 +2110,11 @@ packages:
     resolution: {integrity: sha512-MbjN408fEndfiQXbFQ1vnd+1NoLDsnQW41410oQBXiyXDMYH5z505juWa4KUE1LqxRC7DgOgZDbKLxHIwm27hA==}
     engines: {node: '>=0.10'}
 
+  leaflet-control-geocoder@3.2.0:
+    resolution: {integrity: sha512-4izW1bDWUTJ5As4zlVMZvx08EswAEURYiaau5JK6iXIQ2T9isn/70M5x+rglf0vGtw1zpC+7fKsj2E/nBjQPgg==}
+    peerDependencies:
+      leaflet: ^1.6.0 || ^2.0.0
+
   leaflet@1.9.4:
     resolution: {integrity: sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==}
 
@@ -2352,6 +2363,9 @@ packages:
   object.values@1.2.1:
     resolution: {integrity: sha512-gXah6aZrcUxjWg2zR2MwouP2eHlCBzdV4pygudehaKXSGW4v2AsRQUK+lwwXhii6KFZcunEnmSUoYp5CXibxtA==}
     engines: {node: '>= 0.4'}
+
+  open-location-code@1.0.3:
+    resolution: {integrity: sha512-DBm14BSn40Ee241n80zIFXIT6+y8Tb0I+jTdosLJ8Sidvr2qONvymwqymVbHV2nS+1gkDZ5eTNpnOIVV0Kn2fw==}
 
   openai@4.103.0:
     resolution: {integrity: sha512-eWcz9kdurkGOFDtd5ySS5y251H2uBgq9+1a2lTBnjMMzlexJ40Am5t6Mu76SSE87VvitPa0dkIAp75F+dZVC0g==}
@@ -2674,6 +2688,12 @@ packages:
 
   simple-swizzle@0.2.2:
     resolution: {integrity: sha512-JA//kQgZtbuY83m+xT+tXJkmJncGMTFT+C+g2h2R9uxkYIrE2yy9sgmcLhCnw57/WSD+Eh3J97FPEDFnbXnDUg==}
+
+  sonner@2.0.5:
+    resolution: {integrity: sha512-YwbHQO6cSso3HBXlbCkgrgzDNIhws14r4MO87Ofy+cV2X7ES4pOoAK3+veSmVTvqNx1BWUxlhPmZzP00Crk2aQ==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+      react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -4862,6 +4882,12 @@ snapshots:
     dependencies:
       language-subtag-registry: 0.3.23
 
+  leaflet-control-geocoder@3.2.0(leaflet@1.9.4):
+    dependencies:
+      leaflet: 1.9.4
+    optionalDependencies:
+      open-location-code: 1.0.3
+
   leaflet@1.9.4: {}
 
   levn@0.4.1:
@@ -5076,6 +5102,9 @@ snapshots:
       call-bound: 1.0.4
       define-properties: 1.2.1
       es-object-atoms: 1.1.1
+
+  open-location-code@1.0.3:
+    optional: true
 
   openai@4.103.0(zod@3.25.17):
     dependencies:
@@ -5387,6 +5416,11 @@ snapshots:
     dependencies:
       is-arrayish: 0.3.2
     optional: true
+
+  sonner@2.0.5(react-dom@19.0.0-rc.1(react@19.0.0-rc.1))(react@19.0.0-rc.1):
+    dependencies:
+      react: 19.0.0-rc.1
+      react-dom: 19.0.0-rc.1(react@19.0.0-rc.1)
 
   source-map-js@1.2.1: {}
 
