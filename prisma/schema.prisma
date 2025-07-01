@@ -91,9 +91,6 @@ model Images {
     lat       Float?
     lng       Float?
     
-    // Storage information
-    storageType String? @default("local") // "local" or "cloud"
-    
     // OSM building data
     osmBuildingId String?     // OSM building ID
     propertyBoundary Json?    // Building boundary geometry
@@ -120,9 +117,6 @@ model Response {
     id        Int      @id @default(autoincrement())
     prompt    String   @db.Text
     url       String
-    
-    // Storage information
-    storageType String? @default("local") // "local" or "cloud"
     
     // Timestamps and soft delete
     createdAt DateTime @default(now())
