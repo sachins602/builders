@@ -1,3 +1,4 @@
+import { getImageUrl } from "~/lib/image-utils";
 import { Skeleton } from "../ui/skeleton";
 import type { NearbyImage } from "./types";
 
@@ -23,7 +24,7 @@ export function PropertyPopup({
       ) : imageData ? (
         <img
           className="h-48 w-64"
-          src={`/${imageData.url}`}
+          src={getImageUrl(imageData.url)}
           alt="Street view"
         />
       ) : (
@@ -48,7 +49,7 @@ export function PropertyPopup({
               >
                 <img
                   className="h-10 w-12"
-                  src={`/${image.url}`}
+                  src={getImageUrl(image.url)}
                   alt={image.address ?? "Nearby Image"}
                 />
                 <div className="relative flex overflow-x-hidden">
