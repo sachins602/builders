@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "../ui/button";
-import { Plus, Send } from "lucide-react";
+import { Send } from "lucide-react";
 
 interface MessageInputProps {
   prompt: string;
@@ -41,70 +41,68 @@ export function MessageInput2({
       : "Describe how you want to transform the image...";
   };
 
-//   const prePrompts = [
-//     "Remove trees",
-//     "Remove cars",
-//     "Isolate the building",
-//     "Make it 5 storeys taller",
-//     "Make the facade more home-like",
-//     "Add dormers",
-//     "Make it look more victorian",
-//   ];
+  //   const prePrompts = [
+  //     "Remove trees",
+  //     "Remove cars",
+  //     "Isolate the building",
+  //     "Make it 5 storeys taller",
+  //     "Make the facade more home-like",
+  //     "Add dormers",
+  //     "Make it look more victorian",
+  //   ];
 
-  const prePromptsJSON =
-  {
-    "buildingFormAndMassing": [
+  const prePromptsJSON = {
+    buildingFormAndMassing: [
       "Replace the house with a duplex",
       "Add a second story",
       "Convert this into a fourplex",
       "Add a laneway house in the backyard",
       "Extend the building to the lot line",
-      "Add a row of townhomes"
+      "Add a row of townhomes",
     ],
-    "architecturalStyle": [
+    architecturalStyle: [
       "Make it look more Victorian",
       "Give it a modern minimalist look",
       "Add Craftsman-style details",
       "Make it look like a mid-century building",
-      "Use brick and stone materials"
+      "Use brick and stone materials",
     ],
-    "landscapingAndStreetscape": [
+    landscapingAndStreetscape: [
       "Add trees and greenery",
       "Include a front garden",
       "Add a bike lane and wider sidewalk",
       "Replace the driveway with permeable pavers",
-      "Add a community bench or parklet"
+      "Add a community bench or parklet",
     ],
-    "facadeAndFeatures": [
+    facadeAndFeatures: [
       "Add balconies",
       "Add dormers",
       "Make the facade more home-like",
       "Add large windows",
-      "Include a front porch"
+      "Include a front porch",
     ],
-    "siteCleanupAndPrep": [
+    siteCleanupAndPrep: [
       "Remove cars from the driveway",
       "Remove objects in front of the house",
       "Isolate the building",
-      "Clear the lot for redevelopment"
+      "Clear the lot for redevelopment",
     ],
-    "communityFeel": [
+    communityFeel: [
       "Add people walking and biking",
       "Show a family on the porch",
       "Add a small café or corner store",
-      "Make it look like a co-housing community"
-    ]
-  }
+      "Make it look like a co-housing community",
+    ],
+  };
 
   const prePromptsFriendlyNames = {
-    "buildingFormAndMassing": "🏠 Building Form and Massing",
-    "architecturalStyle": "🎨 Architectural Style",
-    "landscapingAndStreetscape": "🌳 Landscaping and Streetscape",
-    "facadeAndFeatures": "🪟 Facade and Features",
-    "siteCleanupAndPrep": "🧹 Site Cleanup and Preparation",
-    "communityFeel": "👥 Community Feel"
-  }
-
+    buildingFormAndMassing: "🏠 Building Form and Massing",
+    architecturalStyle: "🎨 Architectural Style",
+    landscapingAndStreetscape: "🌳 Landscaping and Streetscape",
+    facadeAndFeatures: "🪟 Facade and Features",
+    siteCleanupAndPrep: "🧹 Site Cleanup and Preparation",
+    communityFeel: "👥 Community Feel",
+  };
 
   return (
     <div className="flex-shrink-0 border-t bg-white p-4">
@@ -115,33 +113,35 @@ export function MessageInput2({
               Quick prompts
             </span>
           </div>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(prePromptsJSON).map(([category, prompts]) => (
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(prePromptsJSON).map(([category, prompts]) => (
               <div key={category} className="w-full">
                 <select
-                className="w-full rounded border px-2 py-1 text-sm"
-                disabled={isGenerating}
-                defaultValue=""
-                onChange={e => {
-                  const value = e.target.value;
-                  if (value) {
-                  onPromptChange(prompt ? `${prompt} ${value}` : value);
-                  e.target.selectedIndex = 0; // reset dropdown
-                  }
-                }}
+                  className="w-full rounded border px-2 py-1 text-sm"
+                  disabled={isGenerating}
+                  defaultValue=""
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value) {
+                      onPromptChange(prompt ? `${prompt} ${value}` : value);
+                      e.target.selectedIndex = 0; // reset dropdown
+                    }
+                  }}
                 >
-                <option value="" disabled>
-                  {prePromptsFriendlyNames[category as keyof typeof prePromptsFriendlyNames] ?? `Select a prompt for ${category}`}
-                </option>
-                {(prompts).map(prePrompt => (
-                  <option key={prePrompt} value={prePrompt}>
-                  {prePrompt}
+                  <option value="" disabled>
+                    {prePromptsFriendlyNames[
+                      category as keyof typeof prePromptsFriendlyNames
+                    ] ?? `Select a prompt for ${category}`}
                   </option>
-                ))}
+                  {prompts.map((prePrompt) => (
+                    <option key={prePrompt} value={prePrompt}>
+                      {prePrompt}
+                    </option>
+                  ))}
                 </select>
               </div>
-              ))}
-            </div>
+            ))}
+          </div>
         </div>
       )}
 

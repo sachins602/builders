@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { useMap } from 'react-leaflet';
-import * as LCG from 'leaflet-control-geocoder';
+import type React from "react";
+import { useEffect } from "react";
+import { useMap } from "react-leaflet";
+import * as LCG from "leaflet-control-geocoder";
 
 const GeocoderControl: React.FC = () => {
   const map = useMap();
@@ -11,7 +12,7 @@ const GeocoderControl: React.FC = () => {
     const geocoder = LCG.geocoder({
       defaultMarkGeocode: true,
       collapsed: true,
-      placeholder: 'Search for a location...',
+      placeholder: "Search for a location...",
     });
 
     geocoder.addTo(map);

@@ -80,11 +80,10 @@ export const responseRouter = createTRPCRouter({
         });
       }
 
-      // Use StorageService to save the image (local or cloud based on environment)
+      // Use StorageService to save the image
       const uploadResult = await StorageService.saveBufferImage(
         imageBuffer,
         imageName,
-        "streetview",
       );
 
       if (!uploadResult.success) {
@@ -194,11 +193,10 @@ export const responseRouter = createTRPCRouter({
         });
       }
 
-      // Use StorageService to save the image (local or cloud based on environment)
+      // Use StorageService to save the image
       const uploadResult = await StorageService.saveBufferImage(
         imageBuffer,
         imageName,
-        "streetview",
       );
 
       if (!uploadResult.success) {
