@@ -7,8 +7,6 @@ import React, { useRef, useEffect } from "react";
 import { useChat } from "~/lib/use-chat";
 
 // Components
-import { Sidebar } from "./chat/Sidebar";
-import { ChatArea } from "./chat/ChatArea";
 import { MessageInput2 } from "./chat/MessageInput2";
 
 // Next.js Image component
@@ -18,9 +16,8 @@ import Image from "next/image";
 import { ArrowLeft, ArrowRight, Rocket, Share, Trash2 } from "lucide-react";
 
 export function ChatInterface2() {
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { state, chatData, actions, isLoading } = useChat();
-    const [currentImage, setCurrentImage] = React.useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { state, chatData, actions, isLoading } = useChat();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -42,82 +39,86 @@ export function ChatInterface2() {
   //      [user input box]
   //      [toolbar: delete, share, publish]
 
-    return (
-        <div className="flex h-full w-full flex-col">
+  return (
+    <div className="flex h-full w-full flex-col">
+      {/* Main Image Div */}
 
-            {/* Main Image Div */}
-            
-            <div className="flex w-full flex-grow-1 items-center justify-center relative flex-row">
-            {/* Left Arrow */}
-            <button
-                className="absolute left-0 z-10 p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors m-2"
-                onClick={() => actions.selectResponse(0)}
-            >
-                <ArrowLeft className="h-6 w-6 text-gray-700" />
-            </button>
+      <div className="relative flex w-full flex-grow-1 flex-row items-center justify-center">
+        {/* Left Arrow */}
+        <button
+          className="absolute left-0 z-10 m-2 rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300"
+          onClick={() => actions.selectResponse(0)}
+        >
+          <ArrowLeft className="h-6 w-6 text-gray-700" />
+        </button>
 
-                { /*Image Container*/}
-                <div className="w-90vw h-full">
-                    <Image
-                        src={typeof chatData.lastImage === "string" ? chatData.lastImage : "/placeholder-image.png"}
-                        alt="Current Image"
-                        fill={true}
-                        sizes={"100vw"}
-                        objectFit="contain"
-                        className="rounded-lg shadow-lg"
-                    />
-                </div>
-
-            {/* Right Arrow */}
-            <button
-                className="absolute right-0 z-10 p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors m-2"
-                onClick={() => actions.selectResponse(chatData.responseHistory.length - 1)}
-            >
-                <ArrowRight className="h-6 w-6 text-gray-700" />
-            </button>
-            </div>
-
-            {/* User Input Box */}
-
-            <MessageInput2
-                prompt={state.prompt}
-                onPromptChange={actions.setPrompt}
-                onGenerate={actions.generateImage}
-                onReset={actions.resetSelection}
-                isGenerating={state.isGenerating}
-                canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
-                hasActiveConversation={state.responseChain.length > 0}
-            />
-
-            {/* Toolbar: delete, share, publish */}
-
-            <div className="flex justify-between p-4 bg-gray-100 border-t">
-                <button
-                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex flex-col items-center"
-                    onClick={actions.resetSelection}
-                >
-                    <Trash2 className="h-4 w-4 inline-block m-2" />
-                    <span>Delete</span>
-                </button>
-                <button
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex flex-col items-center"
-                    onClick={() => alert("Share functionality not implemented yet.")}
-                >
-                    <Share className="h-4 w-4 inline-block m-2" />
-                    <span>Share</span>
-                </button>
-                <button
-                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex flex-col items-center"
-                    onClick={() => alert("Publish functionality not implemented yet.")}
-                >
-                    <Rocket className="h-4 w-4 inline-block m-2" />
-                    <span>Publish</span>
-                </button>
-            </div>
-
+        {/*Image Container*/}
+        <div className="w-90vw h-full">
+          <Image
+            src={
+              typeof chatData.lastImage === "string"
+                ? chatData.lastImage
+                : "/placeholder-image.png"
+            }
+            alt="Current Image"
+            fill={true}
+            sizes={"100vw"}
+            objectFit="contain"
+            className="rounded-lg shadow-lg"
+          />
         </div>
-    );
-    /*
+
+        {/* Right Arrow */}
+        <button
+          className="absolute right-0 z-10 m-2 rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300"
+          onClick={() =>
+            actions.selectResponse(chatData.responseHistory.length - 1)
+          }
+        >
+          <ArrowRight className="h-6 w-6 text-gray-700" />
+        </button>
+      </div>
+
+      {/* User Input Box */}
+
+      <MessageInput2
+        prompt={state.prompt}
+        onPromptChange={actions.setPrompt}
+        onGenerate={actions.generateImage}
+        onReset={actions.resetSelection}
+        isGenerating={state.isGenerating}
+        canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
+        hasActiveConversation={state.responseChain.length > 0}
+      />
+
+      {/* Toolbar: delete, share, publish */}
+
+      <div className="flex justify-between border-t bg-gray-100 p-4">
+        <button
+          className="flex flex-col items-center rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+          onClick={actions.resetSelection}
+        >
+          <Trash2 className="m-2 inline-block h-4 w-4" />
+          <span>Delete</span>
+        </button>
+        <button
+          className="flex flex-col items-center rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          onClick={() => alert("Share functionality not implemented yet.")}
+        >
+          <Share className="m-2 inline-block h-4 w-4" />
+          <span>Share</span>
+        </button>
+        <button
+          className="flex flex-col items-center rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+          onClick={() => alert("Publish functionality not implemented yet.")}
+        >
+          <Rocket className="m-2 inline-block h-4 w-4" />
+          <span>Publish</span>
+        </button>
+      </div>
+    </div>
+  );
+  /*
       return (
         <div className="flex h-[calc(100vh-100px)] w-full">
           <Sidebar

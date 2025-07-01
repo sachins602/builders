@@ -6,7 +6,7 @@ const f = createUploadthing();
 export const ourFileRouter = {
   // Street view images
   streetViewImage: f({ image: { maxFileSize: "4MB" } })
-    .middleware(async ({ req }) => {
+    .middleware(async ({ req: _req }) => {
       const session = await auth();
       if (!session?.user) throw new Error("Unauthorized");
       return { userId: session.user.id };
@@ -17,7 +17,7 @@ export const ourFileRouter = {
 
   // Generated images from OpenAI
   generatedImage: f({ image: { maxFileSize: "4MB" } })
-    .middleware(async ({ req }) => {
+    .middleware(async ({ req: _req }) => {
       const session = await auth();
       if (!session?.user) throw new Error("Unauthorized");
       return { userId: session.user.id };

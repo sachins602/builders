@@ -1,5 +1,3 @@
-import { env } from "~/env";
-
 interface UploadResult {
   url: string;
   success: boolean;
@@ -8,7 +6,7 @@ interface UploadResult {
 
 // UploadThing API interface - to be implemented when properly configured
 class UTApi {
-  async uploadFiles(file: File): Promise<{
+  async uploadFiles(_file: File): Promise<{
     data?: { url: string };
     error?: { message: string };
   }> {
