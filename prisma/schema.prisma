@@ -42,6 +42,8 @@ model Session {
     userId       String
     expires      DateTime
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade )
+    
+    @@index([userId])
 }
 
 model User {
@@ -181,6 +183,7 @@ model SharedChain {
     comments    Comment[]
     sharedToUsers SharedChainUser[] // For private sharing to specific users
     
+    @@index([responseId])
     @@index([sharedById])
     @@index([isPublic])
     @@index([deletedAt])
