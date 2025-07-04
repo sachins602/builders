@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Heart, MessageCircle, Eye, User, Lock, Globe } from "lucide-react";
 import { api } from "~/trpc/react";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
-import { Avatar } from "./ui/avatar";
-import { Input } from "./ui/input";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "../ui/card";
+import { Avatar } from "../ui/avatar";
+import { Input } from "../ui/input";
 import { cn } from "~/lib/utils";
 import { getImageUrl } from "~/lib/image-utils";
 

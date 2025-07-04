@@ -122,32 +122,32 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
     isLoading: isLoadingDetail,
     refetch: refetchOrgDetail,
   } = api.community.getOrganization.useQuery(
-    { id: selectedOrg?.id! },
+    { id: selectedOrg?.id ?? "" },
     { enabled: !!selectedOrg?.id },
   );
 
   const createOrgMutation = api.community.createOrganization.useMutation({
     onSuccess: () => {
       setIsCreateDialogOpen(false);
-      refetchOrganizations();
+      void refetchOrganizations();
     },
   });
 
   const joinOrgMutation = api.community.joinOrganization.useMutation({
     onSuccess: () => {
-      refetchOrganizations();
-      refetchOrgDetail();
+      void refetchOrganizations();
+      void refetchOrgDetail();
     },
   });
 
   const leaveOrgMutation = api.community.leaveOrganization.useMutation({
     onSuccess: () => {
-      refetchOrganizations();
-      refetchOrgDetail();
+      void refetchOrganizations();
+      void refetchOrgDetail();
     },
   });
 
-  const organizations = organizationsData?.items || [];
+  const organizations = organizationsData?.items ?? [];
   const groupedOrgs = organizationsData?.grouped;
 
   const handleCreateOrganization = (formData: FormData) => {
