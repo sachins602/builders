@@ -5,7 +5,7 @@ import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import Header from "./_components/header";
-import Footer from "./_components/footer";
+import Footer from "./_components/footer/footer";
 
 import { Toaster } from "sonner";
 
@@ -26,19 +26,17 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable}`}>
       <body className="h-screen bg-white text-black">
         <TRPCReactProvider>
-
           {/* Sonner Toast Notifications */}
-          <Toaster position="top-center" visibleToasts={1} duration={10000}/>
+          <Toaster position="top-center" visibleToasts={1} duration={10000} />
 
           {/* Main container for the layout */}
           <div className="flex h-full flex-col">
-
             {/* Fixed Header */}
             <Header />
 
             {/* Non-Scrollable Main content area */}
 
-            <main className="container mx-auto px-12 py-2 flex-1 coverflow-y-auto">
+            <main className="coverflow-y-auto container mx-auto flex-1 px-12 py-2">
               {children}
             </main>
 
