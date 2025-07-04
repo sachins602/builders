@@ -24,31 +24,23 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-100px)] w-full">
-      <Sidebar
-        responseHistory={chatData.responseHistory}
-        selectedResponseId={state.selectedResponseId}
-        onSelectResponse={actions.selectResponse}
+    <div className="flex h-[calc(100vh-100px)] w-full flex-col">
+      <ChatArea
+        lastImage={chatData.lastImage}
+        responseChain={state.responseChain}
+        isGenerating={state.isGenerating}
+        messagesEndRef={messagesEndRef}
       />
 
-      <div className="flex w-full flex-col">
-        <ChatArea
-          lastImage={chatData.lastImage}
-          responseChain={state.responseChain}
-          isGenerating={state.isGenerating}
-          messagesEndRef={messagesEndRef}
-        />
-
-        <MessageInput
-          prompt={state.prompt}
-          onPromptChange={actions.setPrompt}
-          onGenerate={actions.generateImage}
-          onReset={actions.resetSelection}
-          isGenerating={state.isGenerating}
-          canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
-          hasActiveConversation={state.responseChain.length > 0}
-        />
-      </div>
+      <MessageInput
+        prompt={state.prompt}
+        onPromptChange={actions.setPrompt}
+        onGenerate={actions.generateImage}
+        onReset={actions.resetSelection}
+        isGenerating={state.isGenerating}
+        canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
+        hasActiveConversation={state.responseChain.length > 0}
+      />
     </div>
   );
 }

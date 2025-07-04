@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { api } from "~/trpc/react";
-import { CommunityPost } from "../_components/CommunityPost";
 import { Button } from "../_components/ui/button";
 import { Loader2 } from "lucide-react";
+import { CommunityPost } from "./CommunityPost/CommunityPost";
 type SharedPost = {
   id: string;
   title: string;
