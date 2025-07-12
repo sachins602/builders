@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
 import { useChat } from "~/lib/use-chat";
 import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
@@ -16,13 +15,7 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { state, chatData, actions, isLoading } = useChat(continueFromResponse);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.responseChain, state.isGenerating]);
 
   if (isLoading) {
     return (
@@ -38,7 +31,6 @@ export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
         lastImage={chatData.lastImage}
         responseChain={state.responseChain}
         isGenerating={state.isGenerating}
-        messagesEndRef={messagesEndRef}
       />
 
       <MessageInput
