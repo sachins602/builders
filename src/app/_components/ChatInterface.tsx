@@ -4,6 +4,7 @@ import { useChat } from "~/lib/use-chat";
 import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
 import ResponseAction from "./chat/ResponseAction";
+import { api } from "~/trpc/react";
 
 interface ChatInterfaceProps {
   continueFromResponse?: {
@@ -16,6 +17,16 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
   const { state, chatData, actions, isLoading } = useChat(continueFromResponse);
+
+  const { mutate: deleteResponse } = api.response.deleteResponse.useMutation({
+    onSuccess: () => {
+      window.location.reload();
+    },
+    onError: (error) => {
+      console.error(error);
+      alert("Failed to delete response, please try again.");
+    },
+  });
 
   if (isLoading) {
     return (
@@ -43,7 +54,11 @@ export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
         hasActiveConversation={state.responseChain.length > 0}
       />
       <ResponseAction
-        onDelete={() => alert("Delete functionality not implemented yet.")}
+        onDelete={() => {
+          if (state.selectedResponseId) {
+            deleteResponse({ id: state.selectedResponseId });
+          }
+        }}
         onPublish={() => alert("Publish functionality not implemented yet.")}
       />
     </div>
