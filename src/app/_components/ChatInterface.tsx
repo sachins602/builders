@@ -6,9 +6,18 @@ import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
 import ResponseAction from "./chat/ResponseAction";
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  continueFromResponse?: {
+    id: number;
+    prompt: string;
+    url: string;
+    sourceImageId: number | null;
+  };
+}
+
+export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { state, chatData, actions, isLoading } = useChat();
+  const { state, chatData, actions, isLoading } = useChat(continueFromResponse);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

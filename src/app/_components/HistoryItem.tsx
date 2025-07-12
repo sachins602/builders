@@ -5,6 +5,7 @@ import { ShareDialog } from "./ShareDialog";
 import { getImageUrl } from "~/lib/image-utils";
 import { Trash2 } from "lucide-react";
 import { api } from "~/trpc/react";
+import Link from "next/link";
 
 interface HistoryItemProps {
   response: {
@@ -37,9 +38,11 @@ export function HistoryItem({ response }: HistoryItemProps) {
               Share
             </Button>
           </ShareDialog>
-          <Button variant="outline" size="sm">
-            Continue
-          </Button>
+          <Link href={`/create/${response.id}`}>
+            <Button variant="outline" size="sm">
+              Continue
+            </Button>
+          </Link>
           <Button
             onClick={() => {
               deleteResponse.mutate({ id: response.id });
