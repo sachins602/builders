@@ -406,4 +406,14 @@ export const responseRouter = createTRPCRouter({
         },
       });
     }),
+
+  deleteResponse: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const { id } = input;
+      return ctx.db.response.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
+    }),
 });
