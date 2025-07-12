@@ -1,6 +1,6 @@
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
-import { HistoryItem } from "./HistoryItem";
+import { HistoryItem } from "../_components/HistoryItem";
 
 export default async function History() {
   const session = await auth();

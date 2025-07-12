@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "../_components/ui/button";
-import { ShareDialog } from "../_components/ShareDialog";
+import { Button } from "./ui/button";
+import { ShareDialog } from "./ShareDialog";
 import { getImageUrl } from "~/lib/image-utils";
 import { Trash2 } from "lucide-react";
 import { api } from "~/trpc/react";
