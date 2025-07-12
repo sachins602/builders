@@ -5,6 +5,7 @@ import { useChat } from "~/lib/use-chat";
 import { Sidebar } from "./chat/Sidebar";
 import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
+import ResponseAction from "./chat/ResponseAction";
 
 export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -40,6 +41,10 @@ export function ChatInterface() {
         isGenerating={state.isGenerating}
         canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
         hasActiveConversation={state.responseChain.length > 0}
+      />
+      <ResponseAction
+        onDelete={() => alert("Delete functionality not implemented yet.")}
+        onPublish={() => alert("Publish functionality not implemented yet.")}
       />
     </div>
   );
