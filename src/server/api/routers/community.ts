@@ -54,6 +54,7 @@ export const communityRouter = createTRPCRouter({
         where: {
           id: responseId,
           createdById: ctx.session.user.id,
+          deletedAt: null,
         },
       });
 
@@ -367,11 +368,15 @@ export const communityRouter = createTRPCRouter({
         userId: ctx.session.user.id,
       },
       include: {
-        sharedChain: true,
+        sharedChain: {
+          where: { deletedAt: null }, // Filter out deleted shared chains
+        },
       },
     });
 
-    const responses = likes.map((like) => like.sharedChain);
+    const responses = likes
+      .map((like) => like.sharedChain)
+      .filter((chain) => chain !== null);
 
     return responses;
   }),

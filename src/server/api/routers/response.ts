@@ -238,6 +238,7 @@ export const responseRouter = createTRPCRouter({
         lat: true,
         lng: true,
       },
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" }, // Optional: order by creation date
     });
   }),
@@ -245,7 +246,7 @@ export const responseRouter = createTRPCRouter({
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
     const image = await ctx.db.images.findFirst({
       orderBy: { createdAt: "desc" },
-      where: { createdBy: { id: ctx.session.user.id } },
+      where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
     });
     return image ?? null;
   }),
@@ -253,7 +254,7 @@ export const responseRouter = createTRPCRouter({
   getResponseHistory: protectedProcedure.query(async ({ ctx }) => {
     const responses = await ctx.db.response.findMany({
       orderBy: { createdAt: "desc" },
-      where: { createdBy: { id: ctx.session.user.id } },
+      where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
     });
     return responses;
   }),
@@ -263,11 +264,11 @@ export const responseRouter = createTRPCRouter({
     const [lastImage, responseHistory] = await Promise.all([
       ctx.db.images.findFirst({
         orderBy: { createdAt: "desc" },
-        where: { createdBy: { id: ctx.session.user.id } },
+        where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
       }),
       ctx.db.response.findMany({
         orderBy: { createdAt: "desc" },
-        where: { createdBy: { id: ctx.session.user.id } },
+        where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
         include: {
           sourceImage: true, // Include the original image data
         },
@@ -284,7 +285,7 @@ export const responseRouter = createTRPCRouter({
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       const response = await ctx.db.response.findUnique({
-        where: { id: input.id },
+        where: { id: input.id, deletedAt: null },
       });
       return response;
     }),
@@ -293,7 +294,7 @@ export const responseRouter = createTRPCRouter({
     .input(z.object({ imageId: z.number() }))
     .query(async ({ ctx, input }) => {
       const response = await ctx.db.response.findFirst({
-        where: { sourceImageId: input.imageId },
+        where: { sourceImageId: input.imageId, deletedAt: null },
       });
       return response;
     }),
@@ -376,6 +377,7 @@ export const responseRouter = createTRPCRouter({
         buildingType: true,
         buildingArea: true,
       },
+      where: { deletedAt: null },
     });
 
     // Parse the JSON boundary data for frontend use
