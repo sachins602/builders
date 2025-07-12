@@ -31,13 +31,13 @@ export default async function CreateWithResponsePage({
 
   const responseId = parseInt(params.responseId);
   if (isNaN(responseId)) {
-    notFound();
+    return <div>The Response you are looking for is not available</div>;
   }
 
   // Fetch the response to ensure it exists and belongs to the user
   const response = await api.response.getResponseById({ id: responseId });
   if (!response || response.createdById !== session.user.id) {
-    notFound();
+    return <div>The Response you are looking for is not available</div>;
   }
 
   return (
