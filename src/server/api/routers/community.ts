@@ -130,7 +130,12 @@ export const communityRouter = createTRPCRouter({
       };
 
       const sharedChains = await ctx.db.sharedChain.findMany({
-        where: whereClause,
+        where: {
+          ...whereClause,
+          response: {
+            deletedAt: null, // Filter out shared chains with deleted responses
+          },
+        },
         include: {
           response: {
             include: {
@@ -211,7 +216,12 @@ export const communityRouter = createTRPCRouter({
       };
 
       const sharedChain = await ctx.db.sharedChain.findFirst({
-        where: whereClause,
+        where: {
+          ...whereClause,
+          response: {
+            deletedAt: null, // Filter out shared chains with deleted responses
+          },
+        },
         include: {
           response: {
             include: {
@@ -369,7 +379,12 @@ export const communityRouter = createTRPCRouter({
       },
       include: {
         sharedChain: {
-          where: { deletedAt: null }, // Filter out deleted shared chains
+          where: {
+            deletedAt: null, // Filter out deleted shared chains
+            response: {
+              deletedAt: null, // Filter out shared chains with deleted responses
+            },
+          },
         },
       },
     });
