@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from "react";
 import { useChat } from "~/lib/use-chat";
-import { Sidebar } from "./chat/Sidebar";
 import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
 import ResponseAction from "./chat/ResponseAction";

@@ -20,7 +20,7 @@ export function ToolBar({ onSearchClick }: ToolBarProps) {
       <Button
         variant="secondary"
         onClick={() => {
-          window.location.href = "/create2";
+          window.location.href = "/create";
         }}
         className="m-2 flex h-24 w-24 flex-col p-2"
       >
