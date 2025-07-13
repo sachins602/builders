@@ -23,11 +23,12 @@ import { getImageUrl } from "~/lib/image-utils";
 import { Skeleton } from "../ui/skeleton";
 
 type Response = {
-  id: number;
-  prompt: string;
+  id: string | number;
+  type: "source" | "response";
+  prompt: string | null;
   url: string;
   sourceImage?: {
-    id: string;
+    id: number;
     url: string;
     address?: string | null;
   } | null;
@@ -106,14 +107,10 @@ export function CommunityPost({
 
   useEffect(() => {
     if (responseChain) {
-      const initialIndex = responseChain.findIndex(
-        (r) => r.id === post.response.id,
-      );
-      if (initialIndex !== -1) {
-        setCurrentResponseIndex(initialIndex);
-      }
+      // Start with the original image (first in chain)
+      setCurrentResponseIndex(0);
     }
-  }, [responseChain, post.response.id]);
+  }, [responseChain]);
 
   const currentResponse = responseChain?.[currentResponseIndex];
 
@@ -160,8 +157,8 @@ export function CommunityPost({
   };
 
   const imageUrl = showSourceImage
-    ? getImageUrl(currentResponse?.sourceImage?.url)
-    : getImageUrl(currentResponse?.url);
+    ? getImageUrl(currentResponse?.sourceImage?.url || "")
+    : getImageUrl(currentResponse?.url || "");
 
   const imageAlt = showSourceImage
     ? `Source image for ${post.title}`
@@ -226,17 +223,14 @@ export function CommunityPost({
           </div>
 
           {!responseChain ? (
-            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-[500px] w-full" />
           ) : currentResponse ? (
             <div className="relative overflow-hidden rounded-lg">
               <img
                 src={imageUrl}
                 alt={imageAlt}
-                className="h-64 w-full object-cover"
+                className="h-[500px] w-full object-cover"
               />
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 transform rounded-full bg-black/50 px-3 py-1 text-xs text-white">
-                {showSourceImage ? "Source Image" : "Generated Image"}
-              </div>
 
               {/* Navigation Arrows */}
               {responseChain && responseChain.length > 1 && (
@@ -246,7 +240,7 @@ export function CommunityPost({
                     size="icon"
                     onClick={handlePrev}
                     disabled={currentResponseIndex === 0}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
+                    className="absolute top-1/2 left-2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
                     aria-label="previous response"
                   >
                     <ChevronLeft className="h-8 w-8" />
@@ -256,12 +250,12 @@ export function CommunityPost({
                     size="icon"
                     onClick={handleNext}
                     disabled={currentResponseIndex === responseChain.length - 1}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
+                    className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
                     aria-label="next response"
                   >
                     <ChevronRight className="h-8 w-8" />
                   </Button>
-                  <div className="absolute bottom-2 right-2 transform rounded-full bg-black/50 px-3 py-1 text-xs text-white">
+                  <div className="absolute right-2 bottom-2 transform rounded-full bg-black/50 px-3 py-1 text-xs text-white">
                     {currentResponseIndex + 1} / {responseChain.length}
                   </div>
                 </>
@@ -273,8 +267,12 @@ export function CommunityPost({
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowSourceImage(!showSourceImage)}
-                  className="absolute right-2 top-2 transform rounded-full bg-black/50 text-white hover:bg-black/75"
-                  aria-label={showSourceImage ? "Show generated image" : "Show source image"}
+                  className="absolute top-2 right-2 transform rounded-full bg-black/50 text-white hover:bg-black/75"
+                  aria-label={
+                    showSourceImage
+                      ? "Show generated image"
+                      : "Show source image"
+                  }
                 >
                   {showSourceImage ? (
                     <RefreshCw className="h-5 w-5" />
@@ -288,10 +286,20 @@ export function CommunityPost({
 
           {currentResponse && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Prompt:</p>
-              <p className="text-muted-foreground rounded-lg bg-gray-50 p-3 text-sm">
-                {currentResponse.prompt}
-              </p>
+              {currentResponse.type === "response" &&
+                currentResponse.prompt && (
+                  <>
+                    <p className="text-sm font-medium">Prompt:</p>
+                    <p className="text-muted-foreground rounded-lg bg-gray-50 p-3 text-sm">
+                      {currentResponse.prompt}
+                    </p>
+                  </>
+                )}
+              {currentResponse.type === "source" && (
+                <p className="text-sm font-medium text-blue-600">
+                  Original Image
+                </p>
+              )}
               {currentResponse.sourceImage?.address && (
                 <p className="text-muted-foreground text-xs">
                   Location: {currentResponse.sourceImage.address}

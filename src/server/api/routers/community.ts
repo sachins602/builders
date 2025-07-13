@@ -24,8 +24,9 @@ async function getFullResponseChain(
   }
 
   const chain: Array<{
-    id: number;
-    prompt: string;
+    id: string | number;
+    type: "source" | "response";
+    prompt: string | null;
     url: string;
     previousResponseId: number | null;
     sourceImageId: number | null;
@@ -43,8 +44,10 @@ async function getFullResponseChain(
   while (currentResponse && !visitedIds.has(currentResponse.id)) {
     visitedIds.add(currentResponse.id);
 
+    // Add the current response to the chain
     chain.unshift({
       id: currentResponse.id,
+      type: "response",
       prompt: currentResponse.prompt,
       url: currentResponse.url,
       previousResponseId: currentResponse.previousResponseId,
@@ -70,6 +73,23 @@ async function getFullResponseChain(
     } else {
       break; // Reached the start of the chain
     }
+  }
+
+  // Add the original source image at the beginning if it exists
+  if (startResponse.sourceImage) {
+    chain.unshift({
+      id: `source-${startResponse.sourceImage.id}`,
+      type: "source",
+      prompt: null,
+      url: startResponse.sourceImage.url,
+      previousResponseId: null,
+      sourceImageId: null,
+      sourceImage: {
+        id: startResponse.sourceImage.id,
+        url: startResponse.sourceImage.url,
+        address: startResponse.sourceImage.address,
+      },
+    });
   }
 
   return chain;
