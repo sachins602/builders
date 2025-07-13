@@ -280,6 +280,23 @@ export const communityRouter = createTRPCRouter({
               },
             },
           },
+          comments: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              author: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
           _count: {
             select: {
               likes: true,

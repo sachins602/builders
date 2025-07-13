@@ -125,6 +125,11 @@ export function CommunityPost({
     }
   }, [responseChain]);
 
+  // Update like state when userLikes changes
+  useEffect(() => {
+    setIsLiked(userLikes.includes(post.id));
+  }, [userLikes, post.id]);
+
   const currentResponse = responseChain?.[currentResponseIndex];
 
   const handlePrev = () => {
