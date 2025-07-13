@@ -3,6 +3,12 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search, X } from "lucide-react";
 
+interface NominatimSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
 interface SearchBarProps {
   onSearch: (address: string) => Promise<boolean>;
   onClose: () => void;
@@ -13,7 +19,7 @@ export function SearchBar({ onSearch, onClose }: SearchBarProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch suggestions from Nominatim
   const fetchSuggestions = async (query: string) => {
@@ -33,8 +39,8 @@ export function SearchBar({ onSearch, onClose }: SearchBarProps) {
           },
         },
       );
-      const data = await res.json();
-      setSuggestions(data.map((item: any) => item.display_name) as string[]);
+      const data = (await res.json()) as NominatimSuggestion[];
+      setSuggestions(data.map((item) => item.display_name));
     } catch (e) {
       setSuggestions([]);
     } finally {
@@ -49,7 +55,7 @@ export function SearchBar({ onSearch, onClose }: SearchBarProps) {
     setShowSuggestions(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      fetchSuggestions(value);
+      void fetchSuggestions(value);
     }, 300);
   };
 
