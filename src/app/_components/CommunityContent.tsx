@@ -97,16 +97,38 @@ export default function CommunityPageContent({
   }, [postsData]);
 
   // Get user likes for all visible posts
-  const { data: likes } = api.community.getUserLikes.useQuery(
-    { sharedChainIds: posts.map((post) => post.id) },
-    { enabled: posts.length > 0 && !!session },
+  const { data: likes, isLoading: likesLoading } =
+    api.community.getUserLikes.useQuery(
+      { sharedChainIds: posts.map((post) => post.id) },
+      {
+        enabled: posts.length > 0 && !!session,
+        refetchOnWindowFocus: false,
+      },
+    );
+
+  console.log(
+    "Session available:",
+    !!session,
+    "Posts count:",
+    posts.length,
+    "Likes enabled:",
+    posts.length > 0 && !!session,
   );
 
   useEffect(() => {
     if (likes) {
-      setUserLikes(likes.filter((like): like is string => like !== null));
+      const filteredLikes = likes.filter(
+        (like): like is string => like !== null,
+      );
+      setUserLikes(filteredLikes);
+      console.log(
+        "User likes loaded:",
+        filteredLikes,
+        "for posts:",
+        posts.map((p) => p.id),
+      );
     }
-  }, [likes]);
+  }, [likes, posts]);
 
   if (isLoading) {
     return (

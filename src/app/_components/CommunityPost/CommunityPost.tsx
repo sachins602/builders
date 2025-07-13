@@ -93,7 +93,7 @@ export function CommunityPost({
 }: CommunityPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [isLiked, setIsLiked] = useState(userLikes.includes(post.id));
+  const [isLiked, setIsLiked] = useState(false); // Start with false, will be updated when userLikes loads
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [currentResponseIndex, setCurrentResponseIndex] = useState(0);
   const [showSourceImage, setShowSourceImage] = useState(false);
@@ -127,7 +127,14 @@ export function CommunityPost({
 
   // Update like state when userLikes changes
   useEffect(() => {
-    setIsLiked(userLikes.includes(post.id));
+    const isPostLiked = userLikes.includes(post.id);
+    setIsLiked(isPostLiked);
+    console.log(
+      `Post ${post.id} like state:`,
+      isPostLiked,
+      "userLikes:",
+      userLikes,
+    );
   }, [userLikes, post.id]);
 
   const currentResponse = responseChain?.[currentResponseIndex];
