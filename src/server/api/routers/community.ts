@@ -4,6 +4,76 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import type { Prisma } from "@prisma/client";
+
+// Helper function to get the full response chain for a given response
+async function getFullResponseChain(
+  db: Prisma.TransactionClient,
+  responseId: number,
+) {
+  // Get the starting response
+  const startResponse = await db.response.findUnique({
+    where: { id: responseId },
+    include: {
+      sourceImage: true,
+    },
+  });
+
+  if (!startResponse) {
+    return [];
+  }
+
+  const chain: Array<{
+    id: number;
+    prompt: string;
+    url: string;
+    previousResponseId: number | null;
+    sourceImageId: number | null;
+    sourceImage: {
+      id: number;
+      url: string;
+      address: string | null;
+    } | null;
+  }> = [];
+
+  // Build the chain backwards (from the final response to the original)
+  let currentResponse = startResponse;
+  const visitedIds = new Set<number>();
+
+  while (currentResponse && !visitedIds.has(currentResponse.id)) {
+    visitedIds.add(currentResponse.id);
+
+    chain.unshift({
+      id: currentResponse.id,
+      prompt: currentResponse.prompt,
+      url: currentResponse.url,
+      previousResponseId: currentResponse.previousResponseId,
+      sourceImageId: currentResponse.sourceImageId,
+      sourceImage: currentResponse.sourceImage
+        ? {
+            id: currentResponse.sourceImage.id,
+            url: currentResponse.sourceImage.url,
+            address: currentResponse.sourceImage.address,
+          }
+        : null,
+    });
+
+    // Move to the previous response in the chain
+    if (currentResponse.previousResponseId) {
+      const nextResponse = await db.response.findUnique({
+        where: { id: currentResponse.previousResponseId },
+        include: {
+          sourceImage: true,
+        },
+      });
+      currentResponse = nextResponse;
+    } else {
+      break; // Reached the start of the chain
+    }
+  }
+
+  return chain;
+}
 
 export const communityRouter = createTRPCRouter({
   // Search users for sharing
@@ -179,8 +249,21 @@ export const communityRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
+      const itemsWithFullChain = await Promise.all(
+        sharedChains.map(async (post) => {
+          const responseChain = await getFullResponseChain(
+            ctx.db,
+            post.responseId,
+          );
+          return {
+            ...post,
+            responseChain,
+          };
+        }),
+      );
+
       return {
-        items: sharedChains,
+        items: itemsWithFullChain,
         nextCursor,
       };
     }),
@@ -271,7 +354,15 @@ export const communityRouter = createTRPCRouter({
         data: { viewCount: { increment: 1 } },
       });
 
-      return sharedChain;
+      const responseChain = await getFullResponseChain(
+        ctx.db,
+        sharedChain.responseId,
+      );
+
+      return {
+        ...sharedChain,
+        responseChain,
+      };
     }),
 
   toggleLike: protectedProcedure

@@ -5,6 +5,7 @@ import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
 import { Loader2 } from "lucide-react";
 import { CommunityPost } from "./CommunityPost/CommunityPost";
+
 type SharedPost = {
   id: string;
   title: string;
@@ -47,6 +48,7 @@ type SharedPost = {
     likes: number;
     comments: number;
   };
+  responseChain: any[];
 };
 
 export default function CommunityPageContent({
@@ -71,18 +73,18 @@ export default function CommunityPageContent({
     },
   );
 
-  // Get user likes for all visible posts
-  const { data: likes } = api.community.getUserLikes.useQuery(
-    { sharedChainIds: posts.map((post) => post.id) },
-    { enabled: posts.length > 0 && !!session },
-  );
-
   useEffect(() => {
     if (postsData) {
       const allPosts = postsData.pages.flatMap((page) => page.items);
       setPosts(allPosts);
     }
   }, [postsData]);
+
+  // Get user likes for all visible posts
+  const { data: likes } = api.community.getUserLikes.useQuery(
+    { sharedChainIds: posts.map((post) => post.id) },
+    { enabled: posts.length > 0 && !!session },
+  );
 
   useEffect(() => {
     if (likes) {
