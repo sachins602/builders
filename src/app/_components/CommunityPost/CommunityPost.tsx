@@ -50,14 +50,10 @@ interface CommunityPostProps {
       prompt: string;
       url: string;
       sourceImage?: {
-        id: string;
+        id: number;
         url: string;
         address?: string | null;
       } | null;
-      images: {
-        id: string;
-        url: string;
-      }[];
     };
     sharedBy: {
       id: string;
@@ -174,8 +170,8 @@ export function CommunityPost({
   };
 
   const imageUrl = showSourceImage
-    ? getImageUrl(currentResponse?.sourceImage?.url || "")
-    : getImageUrl(currentResponse?.url || "");
+    ? getImageUrl(currentResponse?.sourceImage?.url ?? "")
+    : getImageUrl(currentResponse?.url ?? "");
 
   const imageAlt = showSourceImage
     ? `Source image for ${post.title}`

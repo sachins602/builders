@@ -6,6 +6,20 @@ import { Button } from "../_components/ui/button";
 import { Loader2 } from "lucide-react";
 import { CommunityPost } from "./CommunityPost/CommunityPost";
 
+type ResponseChainItem = {
+  id: string | number;
+  type: "source" | "response";
+  prompt: string | null;
+  url: string;
+  previousResponseId: number | null;
+  sourceImageId: number | null;
+  sourceImage: {
+    id: number;
+    url: string;
+    address: string | null;
+  } | null;
+};
+
 type SharedPost = {
   id: string;
   title: string;
@@ -20,6 +34,8 @@ type SharedPost = {
     prompt: string;
     url: string;
     sourceImage?: {
+      id: number;
+      url: string;
       address?: string | null;
     } | null;
   };
@@ -48,7 +64,7 @@ type SharedPost = {
     likes: number;
     comments: number;
   };
-  responseChain: any[];
+  responseChain: ResponseChainItem[];
 };
 
 export default function CommunityPageContent({
