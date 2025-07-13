@@ -105,6 +105,23 @@ export function CommunityPost({
   const { responseChain } = post;
   const utils = api.useUtils();
 
+  // Debug logging
+  console.log(
+    "CommunityPost received responseChain:",
+    responseChain?.length,
+    "items",
+  );
+  if (responseChain && responseChain.length > 0) {
+    console.log(
+      "Response chain items:",
+      responseChain.map((item) => ({
+        id: item.id,
+        type: item.type,
+        prompt: item.prompt?.substring(0, 50),
+      })),
+    );
+  }
+
   useEffect(() => {
     if (responseChain) {
       // Start with the original image (first in chain)

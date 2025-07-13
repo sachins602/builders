@@ -75,6 +75,9 @@ async function getFullResponseChain(
     }
   }
 
+  console.log(`Start response sourceImage:`, startResponse.sourceImage);
+  console.log(`Chain before adding source:`, chain.length, "items");
+
   // Add the original source image at the beginning if it exists
   if (startResponse.sourceImage) {
     chain.unshift({
@@ -91,6 +94,45 @@ async function getFullResponseChain(
       },
     });
   }
+
+  // If no source image was found, try to find the original image by looking at the first response in the chain
+  if (chain.length > 0 && !chain[0].type.includes("source")) {
+    const firstResponse = chain[0];
+    console.log(`First response sourceImageId:`, firstResponse.sourceImageId);
+    if (firstResponse.sourceImageId) {
+      // Try to fetch the original image
+      const originalImage = await db.images.findUnique({
+        where: { id: firstResponse.sourceImageId },
+      });
+
+      console.log(`Found original image:`, originalImage);
+      if (originalImage) {
+        chain.unshift({
+          id: `source-${originalImage.id}`,
+          type: "source",
+          prompt: null,
+          url: originalImage.url,
+          previousResponseId: null,
+          sourceImageId: null,
+          sourceImage: {
+            id: originalImage.id,
+            url: originalImage.url,
+            address: originalImage.address,
+          },
+        });
+      }
+    }
+  }
+
+  console.log(`Built chain for response ${responseId}:`, chain.length, "items");
+  console.log(
+    "Chain items:",
+    chain.map((item) => ({
+      id: item.id,
+      type: item.type,
+      prompt: item.prompt?.substring(0, 50),
+    })),
+  );
 
   return chain;
 }
@@ -274,6 +316,11 @@ export const communityRouter = createTRPCRouter({
           const responseChain = await getFullResponseChain(
             ctx.db,
             post.responseId,
+          );
+          console.log(
+            `Response chain for post ${post.id}:`,
+            responseChain.length,
+            "items",
           );
           return {
             ...post,
