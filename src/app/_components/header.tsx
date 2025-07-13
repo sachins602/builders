@@ -18,63 +18,90 @@ import {
 import { Bars4Icon } from "@heroicons/react/24/outline";
 
 export default async function Header() {
-
   const session = await auth();
   return (
-    <header className="flex flex-row items-center justify-between text-black p-1">
-      <div className="flex flex-row items-center justify-between w-26">
-      <NavigationMenu className="z-[10000]">
+    <header className="flex flex-row items-center justify-between p-1 text-black">
+      <div className="flex flex-row items-center justify-between">
+        <NavigationMenu className="z-[10000]">
           <NavigationMenuList>
             <NavigationMenuItem>
-
               {/* Hamburger Menu Icon*/}
               <NavigationMenuTrigger>
                 <Bars4Icon className="h-full" />
               </NavigationMenuTrigger>
 
-              <NavigationMenuContent className="w-[300px]">
-
+              <NavigationMenuContent>
                 {/* Navigation Links */}
-                <NavigationMenuLink className="w-[300px]">My Builds & Remixes</NavigationMenuLink>
-                <NavigationMenuLink>My Likes</NavigationMenuLink>
-                <NavigationMenuLink>Manage Community Organizations</NavigationMenuLink>
-
-                {/*Check for user status - user profile*/}
-                {session && (
-                    <NavigationMenuLink href="/profile">
-                        Edit Profile
-                    </NavigationMenuLink>
-                )}
+                <Link
+                  href="/create"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Create AI Image
+                </Link>
+                <Link
+                  href="/history"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  My Builds & Remixes
+                </Link>
+                <Link
+                  href="/likes"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  My Likes
+                </Link>
+                <Link
+                  href="/community"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Community
+                </Link>
+                <Link
+                  href="/communities"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Manage Community Organizations
+                </Link>
+                <Link
+                  href="/about"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  About
+                </Link>
 
                 {/* Check for user status - login/logout */}
-                <NavigationMenuLink href={session ? "/api/auth/signout" : "/api/auth/signin"}>
-                  {session ? (
-                      "Logout - " + session.user.name
-                  ) : (
-                      "Log in"
-                  )}
-
-                </NavigationMenuLink>
+                <Link
+                  href={session ? "/api/auth/signout" : "/api/auth/signin"}
+                  className="block bg-red-500 px-4 py-2 text-sm hover:bg-red-400"
+                >
+                  {session ? "Logout - " + session.user.name : "Log in"}
+                </Link>
               </NavigationMenuContent>
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
         {/*User Icon*/}
         {session && (
-            <Avatar>
-                <AvatarImage
-                    src={session.user.image ?? undefined}
-                    style={{ filter: "grayscale(100%)" }}
-                />
-                <AvatarFallback>img</AvatarFallback>
-            </Avatar>
+          <Avatar>
+            <AvatarImage
+              src={session.user.image ?? undefined}
+              style={{ filter: "grayscale(100%)" }}
+            />
+            <AvatarFallback>img</AvatarFallback>
+          </Avatar>
         )}
       </div>
 
       {/*Logo*/}
       <div>
         <Link href="/">
-          <Image src="/omm-logo.png" alt="Our Missing Middle Logo" width="50" height="50" className="h-10 w-10"/>
+          <Image
+            src="/omm-logo.png"
+            alt="Our Missing Middle Logo"
+            width="50"
+            height="50"
+            className="h-10 w-10"
+          />
         </Link>
       </div>
     </header>
