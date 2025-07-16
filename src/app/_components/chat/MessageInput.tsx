@@ -37,7 +37,7 @@ export function MessageInput({
       return "Select an image or wait for initial image to load...";
     }
     return hasActiveConversation
-      ? "How would you like to modify this image?"
+      ? "How would you like to modify this building?"
       : "Describe how you want to transform the image...";
   };
 
@@ -50,31 +50,97 @@ export function MessageInput({
     "👥 Community Feel",
   ];
 
+    const prePromptsJSON = {
+    buildingFormAndMassing: [
+      "Replace the house with a duplex",
+      "Add a second story",
+      "Convert this into a fourplex",
+      "Add a laneway house in the backyard",
+      "Extend the building to the lot line",
+      "Add a row of townhomes",
+    ],
+    architecturalStyle: [
+      "Make it look more Victorian",
+      "Give it a modern minimalist look",
+      "Add Craftsman-style details",
+      "Make it look like a mid-century building",
+      "Use brick and stone materials",
+    ],
+    landscapingAndStreetscape: [
+      "Add trees and greenery",
+      "Include a front garden",
+      "Add a bike lane and wider sidewalk",
+      "Replace the driveway with permeable pavers",
+      "Add a community bench or parklet",
+    ],
+    facadeAndFeatures: [
+      "Add balconies",
+      "Add dormers",
+      "Make the facade more home-like",
+      "Add large windows",
+      "Include a front porch",
+    ],
+    siteCleanupAndPrep: [
+      "Remove cars from the driveway",
+      "Remove objects in front of the house",
+      "Isolate the building",
+      "Clear the lot for redevelopment",
+    ],
+    communityFeel: [
+      "Add people walking and biking",
+      "Show a family on the porch",
+      "Add a small café or corner store",
+      "Make it look like a co-housing community",
+    ],
+  };
+
+  const prePromptsFriendlyNames = {
+    buildingFormAndMassing: "🏠 Building Form and Massing",
+    architecturalStyle: "🎨 Architectural Style",
+    landscapingAndStreetscape: "🌳 Landscaping and Streetscape",
+    facadeAndFeatures: "🪟 Facade and Features",
+    siteCleanupAndPrep: "🧹 Site Cleanup and Preparation",
+    communityFeel: "👥 Community Feel",
+  };
+
+  
+
   return (
     <div className="flex-shrink-0 border-t bg-white p-4">
-      {!hasActiveConversation && canGenerate && (
+      {canGenerate && (
         <div className="mb-3">
           <div className="mb-2">
             <span className="text-sm font-medium text-gray-600">
               Quick prompts
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {prePrompts.map((prePrompt) => (
-              <Button
-                key={prePrompt}
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  onPromptChange(prompt ? `${prompt} ${prePrompt}` : prePrompt)
-                }
-                disabled={isGenerating}
-                className="text-sm"
-              >
-                {prePrompt}
-              </Button>
+            <div className="grid grid-cols-2 gap-2">
+            {Object.entries(prePromptsJSON).map(([key, prompts]) => (
+              <div key={key} className="col-span-1">
+                <select
+                  className="w-full rounded border px-2 py-1 text-sm text-gray-800 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  disabled={isGenerating}
+                  onChange={e => {
+                    const value = e.target.value;
+                    if (value) {
+                      onPromptChange(prompt ? `${prompt} ${value}` : value);
+                      e.target.selectedIndex = 0; // Reset dropdown after selection
+                    }
+                  }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    {prePromptsFriendlyNames[key as keyof typeof prePromptsFriendlyNames]}
+                  </option>
+                  {prompts.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
             ))}
-          </div>
+            </div>
         </div>
       )}
 
@@ -97,27 +163,6 @@ export function MessageInput({
         >
           <Send className="h-5 w-5 text-blue-500" />
         </Button>
-      </div>
-
-      <div className="mt-2 flex items-center justify-between">
-        <p className="text-xs text-gray-500">
-          {isGenerating
-            ? "Generating..."
-            : canGenerate
-              ? "Ready"
-              : "Select an image"}
-        </p>
-
-        {hasActiveConversation && (
-          <Button
-            onClick={onReset}
-            variant="ghost"
-            size="sm"
-            className="text-xs font-medium text-blue-600 hover:text-blue-700"
-          >
-            Start New Conversation
-          </Button>
-        )}
       </div>
     </div>
   );
