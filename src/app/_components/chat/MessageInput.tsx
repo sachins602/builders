@@ -4,6 +4,8 @@ import React from "react";
 import { Button } from "../ui/button";
 import { Plus, Send } from "lucide-react";
 
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "../ui/dropdown-menu" 
+
 interface MessageInputProps {
   prompt: string;
   onPromptChange: (prompt: string) => void;
@@ -55,9 +57,7 @@ export function MessageInput({
       "Replace the house with a duplex",
       "Add a second story",
       "Convert this into a fourplex",
-      "Add a laneway house in the backyard",
       "Extend the building to the lot line",
-      "Add a row of townhomes",
     ],
     architecturalStyle: [
       "Make it look more Victorian",
@@ -114,33 +114,68 @@ export function MessageInput({
               Quick prompts
             </span>
           </div>
-            <div className="grid grid-cols-2 gap-2">
-            {Object.entries(prePromptsJSON).map(([key, prompts]) => (
+
+          {/* Quick prompts dropdowns - desktop and tablet only */}
+            <div className="hidden sm:grid grid-cols-2 gap-2">
+              {Object.entries(prePromptsJSON).map(([key, prompts]) => (
               <div key={key} className="col-span-1">
                 <select
-                  className="w-full rounded border px-2 py-1 text-sm text-gray-800 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  disabled={isGenerating}
-                  onChange={e => {
-                    const value = e.target.value;
-                    if (value) {
-                      onPromptChange(prompt ? `${prompt} ${value}` : value);
-                      e.target.selectedIndex = 0; // Reset dropdown after selection
-                    }
-                  }}
-                  defaultValue=""
+                className="w-full rounded border px-2 py-1 text-sm text-gray-800 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                disabled={isGenerating}
+                onChange={e => {
+                  const value = e.target.value;
+                  if (value) {
+                  onPromptChange(prompt ? `${prompt} ${value}` : value);
+                  e.target.selectedIndex = 0; // Reset dropdown after selection
+                  }
+                }}
+                defaultValue=""
                 >
-                  <option value="" disabled>
-                    {prePromptsFriendlyNames[key as keyof typeof prePromptsFriendlyNames]}
+                <option value="" disabled>
+                  {prePromptsFriendlyNames[key as keyof typeof prePromptsFriendlyNames]}
+                </option>
+                {prompts.map((p) => (
+                  <option key={p} value={p}>
+                  {p}
                   </option>
-                  {prompts.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
+                ))}
                 </select>
               </div>
-            ))}
+              ))}
             </div>
+
+          {/* Quick prompts dropdown single dropdown to save vertical space - mobile only */}
+          <div className="sm:hidden">
+            {/* Using shadcn/ui DropdownMenu for mobile quick prompts */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <Plus className="mr-2 h-4 w-4" />
+                Quick prompts
+              </Button>
+              </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="max-h-60">
+              {Object.entries(prePromptsJSON).map(([key, prompts]) => (
+                <React.Fragment key={key}>
+                <DropdownMenuLabel className="font-semibold opacity-80">
+                  {prePromptsFriendlyNames[key as keyof typeof prePromptsFriendlyNames]}
+                </DropdownMenuLabel>
+                {prompts.map((p) => (
+                  <DropdownMenuItem
+                  key={p}
+                  onSelect={() => {
+                    onPromptChange(prompt ? `${prompt} ${p}` : p);
+                  }}
+                  >
+                  {p}
+                  </DropdownMenuItem>
+                ))}
+                </React.Fragment>
+              ))}
+              </DropdownMenuContent>
+              
+            </DropdownMenu>
+          </div>
         </div>
       )}
 
@@ -150,9 +185,10 @@ export function MessageInput({
           onChange={(e) => onPromptChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={getPlaceholderText()}
-          className="w-full resize-none rounded-lg border bg-gray-50 p-3 pr-12 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          className="w-full resize-none rounded-lg border bg-gray-50 p-3 pr-12 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:rows-1"
           disabled={isGenerating || !canGenerate}
           rows={1}
+          style={{ height: '75px' }}
         />
         <Button
           onClick={onGenerate}
@@ -161,7 +197,7 @@ export function MessageInput({
           size="icon"
           disabled={isGenerating || !prompt.trim() || !canGenerate}
         >
-          <Send className="h-5 w-5 text-blue-500" />
+          <Send className="h-5 w-5 text-black" />
         </Button>
       </div>
     </div>

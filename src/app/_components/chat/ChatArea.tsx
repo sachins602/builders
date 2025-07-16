@@ -10,6 +10,8 @@ import {
 import type { ResponseWithImage, Image } from "~/types/chat";
 import { getImageUrl } from "~/lib/image-utils";
 import { Skeleton } from "../ui/skeleton";
+import WelcomeMessage from "./WelcomeMessage";
+import StreetAddress from "../StreetAddress";
 
 
 interface ChatAreaProps {
@@ -68,7 +70,7 @@ export function ChatArea({
     }
   }, [responseChain.length, allImages.length]);
 
-  const showWelcomeMessage = !originalImage && !isGenerating;
+  const showWelcomeMessage = originalImage && !isGenerating;
   const hasMultipleImages = allImages.length > 1;
   const currentImageData = allImages[currentIndex];
 
@@ -81,13 +83,13 @@ export function ChatArea({
   };
 
   return (
-    <div className="h-full flex-1 overflow-y-auto">
+    <div className="h-full flex-1 overflow-y-hidden">
       <div className="mx-auto max-w-4xl">
-        {/* Current Image Display */}
+
         {currentImageData && (
           <div className="bg-white p-4">
 
-            {/* Image Area */}
+
             <div className="flex flex-row items-center justify-center ">
               {/*Left Chevron  */}
               {hasMultipleImages && (
@@ -102,16 +104,18 @@ export function ChatArea({
 
               {/* Image Display */}
               <div>
-                <div
-                  className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md"
-                  style={{ minWidth: 80, textAlign: "center" }}
-                >
-                  {hasMultipleImages && (
-                  <span className="text-sm font-medium text-gray-600">
-                    {currentIndex + 1} of {allImages.length}
-                  </span>
-                  )}
-                </div>
+                {hasMultipleImages && (
+                  <div
+                    className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md"
+                    style={{ minWidth: 80, textAlign: "center" }}
+                  >
+
+                    <span className="text-sm font-medium text-gray-600">
+                      {currentIndex + 1} of {allImages.length}
+                    </span>
+
+                  </div>
+                )}
 
                 {isGenerating ? (
                   <Skeleton className="h-72 w-full rounded-md" />
@@ -123,14 +127,14 @@ export function ChatArea({
                         ? "Original image"
                         : "Generated image"
                     }
-                    className="max-h-72 w-full rounded-md object-contain"
+                    className="max-h-full rounded-md object-contain"
                   />
                 )}
 
                 {/* Address */}
                 {currentImageData.image.address && (
                   <p className="text-center text-xs text-gray-500">
-                    {currentImageData.image.address}
+                    <StreetAddress address={currentImageData.image.address} />
                   </p>
                 )}
               </div>
@@ -146,38 +150,14 @@ export function ChatArea({
                 </button>
               )}
             </div>
-
-            {/* Prompt */}
-          </div>
-        )}
-
-        {/* Loading State */}
-        {isGenerating && (
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-200">
-              <Sparkles className="h-6 w-6 text-gray-600" />
-            </div>
-            <div className="rounded-2xl rounded-bl-none border bg-white p-4">
-              <div className="flex items-center space-x-2">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]"></div>
-                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]"></div>
-                <div className="h-2 w-2 animate-bounce rounded-full bg-blue-500"></div>
-              </div>
-            </div>
           </div>
         )}
 
         {/* Welcome Message */}
         {showWelcomeMessage && (
-          <div className="text-center text-gray-500">
-            <Sparkles className="mx-auto h-12 w-12 text-gray-300" />
-            <h3 className="text-xl font-semibold">Welcome to AI Image Chat</h3>
-            <p className="">
-              Start by selecting an image on the map, or describe how you&apos;d
-              like to transform a previous generation.
-            </p>
-          </div>
+          <WelcomeMessage />
         )}
+
       </div>
     </div>
   );
