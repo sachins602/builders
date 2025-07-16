@@ -1,18 +1,15 @@
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
-import { notFound } from "next/navigation";
 import { HydrateClient } from "~/trpc/server";
 import { ChatInterface } from "../../_components/ChatInterface";
 
-interface CreateWithResponsePageProps {
+interface PageProps {
   params: {
     responseId: string;
   };
 }
 
-export default async function CreateWithResponsePage({
-  params,
-}: CreateWithResponsePageProps) {
+export default async function Page({ params }: PageProps) {
   const session = await auth();
   if (!session?.user) {
     return (
