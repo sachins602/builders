@@ -66,21 +66,21 @@ export default function MapComponent() {
   const handleSearchComplete = useCallback(
     (lat: number, lng: number) => {
       setClickedPosition([lat, lng]);
-      image.mutate({ lat, lng });
+      // image.mutate({ lat, lng });
       setSearchBarVisible(false);
       setToolBarVisible(true);
     },
-    [image],
+    [],
   );
 
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
       setClickedPosition([lat, lng]);
-      image.mutate({ lat, lng });
+      // image.mutate({ lat, lng });
       setSearchBarVisible(false);
       setToolBarVisible(true);
     },
-    [image],
+    [],
   );
 
   const handleZoomChange = useCallback((zoom: number) => {
@@ -165,6 +165,8 @@ export default function MapComponent() {
               <PropertyPopup
                 isLoadingImage={image.isPending}
                 imageData={image.data}
+                onSave={(lat, lng) => image.mutate({ lat, lng })}
+                clickedPosition={clickedPosition}
               />
             </Popup>
           )}

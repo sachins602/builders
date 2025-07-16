@@ -1,4 +1,5 @@
 import { getImageUrl } from "~/lib/image-utils";
+import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 
 interface PropertyPopupProps {
@@ -6,12 +7,20 @@ interface PropertyPopupProps {
   imageData?: {
     url: string;
   };
+  onSave: (lat: number, lng: number) => void;
+  clickedPosition: [number, number];
 }
 
 export function PropertyPopup({
   isLoadingImage,
   imageData,
+  onSave,
+  clickedPosition,
 }: PropertyPopupProps) {
+  const handleSave = () => {
+    onSave(clickedPosition[0], clickedPosition[1]);
+  };
+
   return (
     <div className="flex w-64 flex-col gap-2">
       {isLoadingImage ? (
@@ -23,8 +32,11 @@ export function PropertyPopup({
           alt="Street view"
         />
       ) : (
-        <p>Failed to load image</p>
+        <p>No image available for this location.</p>
       )}
+      <Button onClick={handleSave} disabled={isLoadingImage}>
+        Save
+      </Button>
     </div>
   );
 }
