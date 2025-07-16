@@ -184,7 +184,7 @@ export default function MapComponent() {
         {toolBarVisible && <ToolBar onSearchClick={handleSearchClick} />}
       </div>
 
-      {/* Spacer */}
+      {/* Spacer - Builds to go here */}
       <div className="flex w-full flex-grow flex-row justify-center"></div>
 
       {/* Navigation Buttons */}
