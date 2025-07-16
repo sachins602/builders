@@ -1,22 +1,26 @@
 import { getImageUrl } from "~/lib/image-utils";
+import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
-import type { NearbyImage } from "./types";
 
 interface PropertyPopupProps {
   isLoadingImage: boolean;
   imageData?: {
     url: string;
   };
-  isLoadingNearbyImages: boolean;
-  nearbyImages?: NearbyImage[];
+  onSave: (lat: number, lng: number) => void;
+  clickedPosition: [number, number];
 }
 
 export function PropertyPopup({
   isLoadingImage,
   imageData,
-  isLoadingNearbyImages,
-  nearbyImages,
+  onSave,
+  clickedPosition,
 }: PropertyPopupProps) {
+  const handleSave = () => {
+    onSave(clickedPosition[0], clickedPosition[1]);
+  };
+
   return (
     <div className="flex w-64 flex-col gap-2">
       {isLoadingImage ? (
@@ -28,42 +32,11 @@ export function PropertyPopup({
           alt="Street view"
         />
       ) : (
-        <p>Failed to load image</p>
+        <p>No image available for this location.</p>
       )}
-
-      <div className="mx-auto flex flex-row gap-2"></div>
-
-      <div>
-        <p>Previous Builds Nearby</p>
-        <div className="flex flex-row gap-4">
-          {isLoadingNearbyImages ? (
-            <Skeleton className="h-16 w-14 rounded-xl" />
-          ) : nearbyImages && nearbyImages.length > 0 ? (
-            nearbyImages.map((image) => (
-              <div
-                key={image.id}
-                className="h-16 w-14 cursor-pointer rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
-                onClick={() => {
-                  window.location.href = `/create/${image.id}`;
-                }}
-              >
-                <img
-                  className="h-10 w-12"
-                  src={getImageUrl(image.url)}
-                  alt={image.address ?? "Nearby Image"}
-                />
-                <div className="relative flex overflow-x-hidden">
-                  <p className="animate-marquee whitespace-nowrap">
-                    {image.address}
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p>No nearby images</p>
-          )}
-        </div>
-      </div>
+      <Button onClick={handleSave} disabled={isLoadingImage}>
+        Save
+      </Button>
     </div>
   );
 }

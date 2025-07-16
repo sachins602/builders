@@ -62,28 +62,25 @@ export default function MapComponent() {
     },
   });
 
-  const nearbyImages = api.response.getNearbyImages.useMutation({
-    onError: (error) => {
-      console.error("Error fetching nearby images:", error);
-    },
-  });
-
   // Event handlers
-  const handleSearchComplete = useCallback((lat: number, lng: number) => {
-    setSearchBarVisible(false);
-    setToolBarVisible(true);
-    setClickedPosition([lat, lng]);
-  }, []);
+  const handleSearchComplete = useCallback(
+    (lat: number, lng: number) => {
+      setClickedPosition([lat, lng]);
+      // image.mutate({ lat, lng });
+      setSearchBarVisible(false);
+      setToolBarVisible(true);
+    },
+    [],
+  );
 
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
       setClickedPosition([lat, lng]);
-      image.mutate({ lat, lng });
-      nearbyImages.mutate({ lat, lng });
+      // image.mutate({ lat, lng });
       setSearchBarVisible(false);
       setToolBarVisible(true);
     },
-    [image, nearbyImages],
+    [],
   );
 
   const handleZoomChange = useCallback((zoom: number) => {
@@ -168,8 +165,8 @@ export default function MapComponent() {
               <PropertyPopup
                 isLoadingImage={image.isPending}
                 imageData={image.data}
-                isLoadingNearbyImages={nearbyImages.isPending}
-                nearbyImages={nearbyImages.data}
+                onSave={(lat, lng) => image.mutate({ lat, lng })}
+                clickedPosition={clickedPosition}
               />
             </Popup>
           )}
