@@ -4,12 +4,13 @@ import { HydrateClient } from "~/trpc/server";
 import { ChatInterface } from "../../_components/ChatInterface";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     responseId: string;
-  };
+  }>;
 }
 
 export default async function Page({ params }: PageProps) {
+  const resolvedParams = await params;
   const session = await auth();
   if (!session?.user) {
     return (
@@ -26,7 +27,7 @@ export default async function Page({ params }: PageProps) {
     );
   }
 
-  const responseId = parseInt(params.responseId);
+  const responseId = parseInt(resolvedParams.responseId);
   if (isNaN(responseId)) {
     return <div>The Response you are looking for is not available</div>;
   }
