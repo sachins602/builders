@@ -5,6 +5,21 @@ import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
 import { Loader2 } from "lucide-react";
 import { CommunityPost } from "./CommunityPost/CommunityPost";
+
+type ResponseChainItem = {
+  id: string | number;
+  type: "source" | "response";
+  prompt: string | null;
+  url: string;
+  previousResponseId: number | null;
+  sourceImageId: number | null;
+  sourceImage: {
+    id: number;
+    url: string;
+    address: string | null;
+  } | null;
+};
+
 type SharedPost = {
   id: string;
   title: string;
@@ -19,6 +34,8 @@ type SharedPost = {
     prompt: string;
     url: string;
     sourceImage?: {
+      id: number;
+      url: string;
       address?: string | null;
     } | null;
   };
@@ -47,6 +64,7 @@ type SharedPost = {
     likes: number;
     comments: number;
   };
+  responseChain: ResponseChainItem[];
 };
 
 export default function CommunityPageContent({
@@ -71,12 +89,6 @@ export default function CommunityPageContent({
     },
   );
 
-  // Get user likes for all visible posts
-  const { data: likes } = api.community.getUserLikes.useQuery(
-    { sharedChainIds: posts.map((post) => post.id) },
-    { enabled: posts.length > 0 && !!session },
-  );
-
   useEffect(() => {
     if (postsData) {
       const allPosts = postsData.pages.flatMap((page) => page.items);
@@ -84,11 +96,39 @@ export default function CommunityPageContent({
     }
   }, [postsData]);
 
+  // Get user likes for all visible posts
+  const { data: likes, isLoading: likesLoading } =
+    api.community.getUserLikes.useQuery(
+      { sharedChainIds: posts.map((post) => post.id) },
+      {
+        enabled: posts.length > 0 && !!session,
+        refetchOnWindowFocus: false,
+      },
+    );
+
+  console.log(
+    "Session available:",
+    !!session,
+    "Posts count:",
+    posts.length,
+    "Likes enabled:",
+    posts.length > 0 && !!session,
+  );
+
   useEffect(() => {
     if (likes) {
-      setUserLikes(likes.filter((like): like is string => like !== null));
+      const filteredLikes = likes.filter(
+        (like): like is string => like !== null,
+      );
+      setUserLikes(filteredLikes);
+      console.log(
+        "User likes loaded:",
+        filteredLikes,
+        "for posts:",
+        posts.map((p) => p.id),
+      );
     }
-  }, [likes]);
+  }, [likes, posts]);
 
   if (isLoading) {
     return (

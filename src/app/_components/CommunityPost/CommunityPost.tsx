@@ -1,7 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Heart, MessageCircle, Eye, User, Lock, Globe } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Heart,
+  MessageCircle,
+  Eye,
+  User,
+  Lock,
+  Globe,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  RefreshCw,
+} from "lucide-react";
 import { api } from "~/trpc/react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "../ui/card";
@@ -9,6 +20,20 @@ import { Avatar } from "../ui/avatar";
 import { Input } from "../ui/input";
 import { cn } from "~/lib/utils";
 import { getImageUrl } from "~/lib/image-utils";
+import { Skeleton } from "../ui/skeleton";
+
+type Response = {
+  id: string | number;
+  type: "source" | "response";
+  prompt: string | null;
+  url: string;
+  sourceImage?: {
+    id: number;
+    url: string;
+    address?: string | null;
+  } | null;
+  previousResponseId?: number | null;
+};
 
 interface CommunityPostProps {
   post: {
@@ -25,6 +50,8 @@ interface CommunityPostProps {
       prompt: string;
       url: string;
       sourceImage?: {
+        id: number;
+        url: string;
         address?: string | null;
       } | null;
     };
@@ -53,6 +80,7 @@ interface CommunityPostProps {
       likes: number;
       comments: number;
     };
+    responseChain: Response[];
   };
   userLikes?: string[];
   currentUserId?: string;
@@ -65,10 +93,65 @@ export function CommunityPost({
 }: CommunityPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [isLiked, setIsLiked] = useState(userLikes.includes(post.id));
+  const [isLiked, setIsLiked] = useState(false); // Start with false, will be updated when userLikes loads
   const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [currentResponseIndex, setCurrentResponseIndex] = useState(0);
+  const [showSourceImage, setShowSourceImage] = useState(false);
 
+  const { responseChain } = post;
   const utils = api.useUtils();
+
+  // Debug logging
+  console.log(
+    "CommunityPost received responseChain:",
+    responseChain?.length,
+    "items",
+  );
+  if (responseChain && responseChain.length > 0) {
+    console.log(
+      "Response chain items:",
+      responseChain.map((item) => ({
+        id: item.id,
+        type: item.type,
+        prompt: item.prompt?.substring(0, 50),
+      })),
+    );
+  }
+
+  useEffect(() => {
+    if (responseChain) {
+      // Start with the original image (first in chain)
+      setCurrentResponseIndex(0);
+    }
+  }, [responseChain]);
+
+  // Update like state when userLikes changes
+  useEffect(() => {
+    const isPostLiked = userLikes.includes(post.id);
+    setIsLiked(isPostLiked);
+    console.log(
+      `Post ${post.id} like state:`,
+      isPostLiked,
+      "userLikes:",
+      userLikes,
+    );
+  }, [userLikes, post.id]);
+
+  const currentResponse = responseChain?.[currentResponseIndex];
+
+  const handlePrev = () => {
+    setShowSourceImage(false); // Always show generated image on navigation
+    setCurrentResponseIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNext = () => {
+    setShowSourceImage(false); // Always show generated image on navigation
+    if (responseChain) {
+      setCurrentResponseIndex((prev) =>
+        Math.min(responseChain.length - 1, prev + 1),
+      );
+    }
+  };
 
   const toggleLike = api.community.toggleLike.useMutation({
     onSuccess: (data) => {
@@ -97,6 +180,14 @@ export function CommunityPost({
       content: newComment.trim(),
     });
   };
+
+  const imageUrl = showSourceImage
+    ? getImageUrl(currentResponse?.sourceImage?.url ?? "")
+    : getImageUrl(currentResponse?.url ?? "");
+
+  const imageAlt = showSourceImage
+    ? `Source image for ${post.title}`
+    : post.title;
 
   return (
     <Card className="w-full">
@@ -156,25 +247,91 @@ export function CommunityPost({
             )}
           </div>
 
-          <div className="relative overflow-hidden rounded-lg">
-            <img
-              src={getImageUrl(post.response.url)}
-              alt={post.title}
-              className="h-64 w-full object-cover"
-            />
-          </div>
+          {!responseChain ? (
+            <Skeleton className="h-[500px] w-full" />
+          ) : currentResponse ? (
+            <div className="relative overflow-hidden rounded-lg">
+              <img
+                src={imageUrl}
+                alt={imageAlt}
+                className="h-[500px] w-full object-cover"
+              />
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Prompt:</p>
-            <p className="text-muted-foreground rounded-lg bg-gray-50 p-3 text-sm">
-              {post.response.prompt}
-            </p>
-            {post.response.sourceImage?.address && (
-              <p className="text-muted-foreground text-xs">
-                Location: {post.response.sourceImage.address}
-              </p>
-            )}
-          </div>
+              {/* Navigation Arrows */}
+              {responseChain && responseChain.length > 1 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handlePrev}
+                    disabled={currentResponseIndex === 0}
+                    className="absolute top-1/2 left-2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
+                    aria-label="previous response"
+                  >
+                    <ChevronLeft className="h-8 w-8" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleNext}
+                    disabled={currentResponseIndex === responseChain.length - 1}
+                    className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
+                    aria-label="next response"
+                  >
+                    <ChevronRight className="h-8 w-8" />
+                  </Button>
+                  <div className="absolute right-2 bottom-2 transform rounded-full bg-black/50 px-3 py-1 text-xs text-white">
+                    {currentResponseIndex + 1} / {responseChain.length}
+                  </div>
+                </>
+              )}
+
+              {/* Toggle Source/Generated Image Button */}
+              {currentResponse.sourceImage?.url && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowSourceImage(!showSourceImage)}
+                  className="absolute top-2 right-2 transform rounded-full bg-black/50 text-white hover:bg-black/75"
+                  aria-label={
+                    showSourceImage
+                      ? "Show generated image"
+                      : "Show source image"
+                  }
+                >
+                  {showSourceImage ? (
+                    <RefreshCw className="h-5 w-5" />
+                  ) : (
+                    <ImageIcon className="h-5 w-5" />
+                  )}
+                </Button>
+              )}
+            </div>
+          ) : null}
+
+          {currentResponse && (
+            <div className="space-y-2">
+              {currentResponse.type === "response" &&
+                currentResponse.prompt && (
+                  <>
+                    <p className="text-sm font-medium">Prompt:</p>
+                    <p className="text-muted-foreground rounded-lg bg-gray-50 p-3 text-sm">
+                      {currentResponse.prompt}
+                    </p>
+                  </>
+                )}
+              {currentResponse.type === "source" && (
+                <p className="text-sm font-medium text-blue-600">
+                  Original Image
+                </p>
+              )}
+              {currentResponse.sourceImage?.address && (
+                <p className="text-muted-foreground text-xs">
+                  Location: {currentResponse.sourceImage.address}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
 

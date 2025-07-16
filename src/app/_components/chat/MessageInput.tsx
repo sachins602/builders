@@ -42,10 +42,12 @@ export function MessageInput({
   };
 
   const prePrompts = [
-    "Remove trees",
-    "Remove cars",
-    "Add more greenery",
-    "Make it look futuristic",
+    "🏠 Building Form and Massing",
+    "🎨 Architectural Style",
+    "🌳 Landscaping and Streetscape",
+    "🪟 Facade and Features",
+    "🧹 Site Cleanup and Preparation",
+    "👥 Community Feel",
   ];
 
   return (
@@ -69,7 +71,6 @@ export function MessageInput({
                 disabled={isGenerating}
                 className="text-sm"
               >
-                <Plus className="mr-2 h-4 w-4" />
                 {prePrompt}
               </Button>
             ))}

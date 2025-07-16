@@ -4,6 +4,127 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import type { Prisma } from "@prisma/client";
+
+// Helper function to get the full response chain for a given response
+async function getFullResponseChain(
+  db: Prisma.TransactionClient,
+  responseId: number,
+) {
+  // Get the starting response
+  const startResponse = await db.response.findUnique({
+    where: { id: responseId },
+    include: {
+      sourceImage: true,
+    },
+  });
+
+  if (!startResponse) {
+    return [];
+  }
+
+  const chain: Array<{
+    id: string | number;
+    type: "source" | "response";
+    prompt: string | null;
+    url: string;
+    previousResponseId: number | null;
+    sourceImageId: number | null;
+    sourceImage: {
+      id: number;
+      url: string;
+      address: string | null;
+    } | null;
+  }> = [];
+
+  // Build the chain backwards (from the final response to the original)
+  let currentResponse: typeof startResponse = startResponse;
+  const visitedIds = new Set<number>();
+
+  while (currentResponse && !visitedIds.has(currentResponse.id)) {
+    visitedIds.add(currentResponse.id);
+
+    // Add the current response to the chain
+    chain.unshift({
+      id: currentResponse.id,
+      type: "response",
+      prompt: currentResponse.prompt,
+      url: currentResponse.url,
+      previousResponseId: currentResponse.previousResponseId,
+      sourceImageId: currentResponse.sourceImageId,
+      sourceImage: currentResponse.sourceImage
+        ? {
+            id: currentResponse.sourceImage.id,
+            url: currentResponse.sourceImage.url,
+            address: currentResponse.sourceImage.address,
+          }
+        : null,
+    });
+
+    // Move to the previous response in the chain
+    if (currentResponse.previousResponseId) {
+      const nextResponse = await db.response.findUnique({
+        where: { id: currentResponse.previousResponseId },
+        include: {
+          sourceImage: true,
+        },
+      });
+      if (nextResponse) {
+        currentResponse = nextResponse;
+      } else {
+        break; // Reached the start of the chain
+      }
+    } else {
+      break; // Reached the start of the chain
+    }
+  }
+
+  // Add the original source image at the beginning if it exists
+  if (startResponse.sourceImage) {
+    chain.unshift({
+      id: `source-${startResponse.sourceImage.id}`,
+      type: "source",
+      prompt: null,
+      url: startResponse.sourceImage.url,
+      previousResponseId: null,
+      sourceImageId: null,
+      sourceImage: {
+        id: startResponse.sourceImage.id,
+        url: startResponse.sourceImage.url,
+        address: startResponse.sourceImage.address,
+      },
+    });
+  }
+
+  // If no source image was found, try to find the original image by looking at the first response in the chain
+  if (chain.length > 0 && chain[0] && !chain[0].type.includes("source")) {
+    const firstResponse = chain[0];
+    if (firstResponse.sourceImageId) {
+      // Try to fetch the original image
+      const originalImage = await db.images.findUnique({
+        where: { id: firstResponse.sourceImageId },
+      });
+
+      if (originalImage) {
+        chain.unshift({
+          id: `source-${originalImage.id}`,
+          type: "source",
+          prompt: null,
+          url: originalImage.url,
+          previousResponseId: null,
+          sourceImageId: null,
+          sourceImage: {
+            id: originalImage.id,
+            url: originalImage.url,
+            address: originalImage.address,
+          },
+        });
+      }
+    }
+  }
+
+  return chain;
+}
 
 export const communityRouter = createTRPCRouter({
   // Search users for sharing
@@ -54,6 +175,7 @@ export const communityRouter = createTRPCRouter({
         where: {
           id: responseId,
           createdById: ctx.session.user.id,
+          deletedAt: null,
         },
       });
 
@@ -129,7 +251,12 @@ export const communityRouter = createTRPCRouter({
       };
 
       const sharedChains = await ctx.db.sharedChain.findMany({
-        where: whereClause,
+        where: {
+          ...whereClause,
+          response: {
+            deletedAt: null, // Filter out shared chains with deleted responses
+          },
+        },
         include: {
           response: {
             include: {
@@ -153,6 +280,23 @@ export const communityRouter = createTRPCRouter({
               },
             },
           },
+          comments: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              author: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
           _count: {
             select: {
               likes: true,
@@ -173,8 +317,26 @@ export const communityRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
+      const itemsWithFullChain = await Promise.all(
+        sharedChains.map(async (post) => {
+          const responseChain = await getFullResponseChain(
+            ctx.db,
+            post.responseId,
+          );
+          console.log(
+            `Response chain for post ${post.id}:`,
+            responseChain.length,
+            "items",
+          );
+          return {
+            ...post,
+            responseChain,
+          };
+        }),
+      );
+
       return {
-        items: sharedChains,
+        items: itemsWithFullChain,
         nextCursor,
       };
     }),
@@ -210,7 +372,12 @@ export const communityRouter = createTRPCRouter({
       };
 
       const sharedChain = await ctx.db.sharedChain.findFirst({
-        where: whereClause,
+        where: {
+          ...whereClause,
+          response: {
+            deletedAt: null, // Filter out shared chains with deleted responses
+          },
+        },
         include: {
           response: {
             include: {
@@ -260,7 +427,15 @@ export const communityRouter = createTRPCRouter({
         data: { viewCount: { increment: 1 } },
       });
 
-      return sharedChain;
+      const responseChain = await getFullResponseChain(
+        ctx.db,
+        sharedChain.responseId,
+      );
+
+      return {
+        ...sharedChain,
+        responseChain,
+      };
     }),
 
   toggleLike: protectedProcedure
@@ -367,11 +542,20 @@ export const communityRouter = createTRPCRouter({
         userId: ctx.session.user.id,
       },
       include: {
-        sharedChain: true,
+        sharedChain: {
+          where: {
+            deletedAt: null, // Filter out deleted shared chains
+            response: {
+              deletedAt: null, // Filter out shared chains with deleted responses
+            },
+          },
+        },
       },
     });
 
-    const responses = likes.map((like) => like.sharedChain);
+    const responses = likes
+      .map((like) => like.sharedChain)
+      .filter((chain) => chain !== null);
 
     return responses;
   }),

@@ -14,7 +14,6 @@ interface ChatAreaProps {
   lastImage: Image | null;
   responseChain: ResponseWithImage[];
   isGenerating: boolean;
-  messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
 type ImageData =
@@ -29,7 +28,6 @@ export function ChatArea({
   lastImage,
   responseChain,
   isGenerating,
-  messagesEndRef,
 }: ChatAreaProps) {
   const originalImage =
     responseChain.find((r) => !r.previousResponseId)?.sourceImage ?? lastImage;
@@ -177,8 +175,6 @@ export function ChatArea({
             </p>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
     </div>
   );

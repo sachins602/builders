@@ -1,19 +1,32 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
 import { useChat } from "~/lib/use-chat";
-import { Sidebar } from "./chat/Sidebar";
 import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
+import ResponseAction from "./chat/ResponseAction";
+import { api } from "~/trpc/react";
 
-export function ChatInterface() {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { state, chatData, actions, isLoading } = useChat();
+interface ChatInterfaceProps {
+  continueFromResponse?: {
+    id: number;
+    prompt: string;
+    url: string;
+    sourceImageId: number | null;
+  };
+}
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.responseChain, state.isGenerating]);
+export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
+  const { state, chatData, actions, isLoading } = useChat(continueFromResponse);
+
+  const { mutate: deleteResponse } = api.response.deleteResponse.useMutation({
+    onSuccess: () => {
+      window.location.reload();
+    },
+    onError: (error) => {
+      console.error(error);
+      alert("Failed to delete response, please try again.");
+    },
+  });
 
   if (isLoading) {
     return (
@@ -29,7 +42,6 @@ export function ChatInterface() {
         lastImage={chatData.lastImage}
         responseChain={state.responseChain}
         isGenerating={state.isGenerating}
-        messagesEndRef={messagesEndRef}
       />
 
       <MessageInput
@@ -40,6 +52,14 @@ export function ChatInterface() {
         isGenerating={state.isGenerating}
         canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
         hasActiveConversation={state.responseChain.length > 0}
+      />
+      <ResponseAction
+        onDelete={() => {
+          if (state.selectedResponseId) {
+            deleteResponse({ id: state.selectedResponseId });
+          }
+        }}
+        onPublish={() => alert("Publish functionality not implemented yet.")}
       />
     </div>
   );
