@@ -2,10 +2,15 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { api } from "~/trpc/react";
 import type { ChatState, ChatData, ResponseWithImage } from "~/types/chat";
 
-export function useChat() {
+export function useChat(continueFromResponse?: {
+  id: number;
+  prompt: string;
+  url: string;
+  sourceImageId: number | null;
+}) {
   const [state, setState] = useState<ChatState>({
     prompt: "",
-    selectedResponseId: null,
+    selectedResponseId: continueFromResponse?.id ?? null,
     isGenerating: false,
     responseChain: [],
   });
