@@ -63,11 +63,15 @@ export default function MapComponent() {
   });
 
   // Event handlers
-  const handleSearchComplete = useCallback((lat: number, lng: number) => {
-    setSearchBarVisible(false);
-    setToolBarVisible(true);
-    setClickedPosition([lat, lng]);
-  }, []);
+  const handleSearchComplete = useCallback(
+    (lat: number, lng: number) => {
+      setClickedPosition([lat, lng]);
+      image.mutate({ lat, lng });
+      setSearchBarVisible(false);
+      setToolBarVisible(true);
+    },
+    [image],
+  );
 
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
