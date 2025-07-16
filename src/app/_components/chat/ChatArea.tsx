@@ -113,15 +113,19 @@ export function ChatArea({
                   )}
                 </div>
 
-                {(!isGenerating && (<img
-                  src={getImageUrl(currentImageData.image.url)}
-                  alt={
-                    currentImageData.type === "original"
-                      ? "Original image"
-                      : "Generated image"
-                  }
-                  className="max-h-72 w-full rounded-md object-contain"
-                />)) ?? (<Skeleton className="h-72 w-full rounded-md" />)}
+                {isGenerating ? (
+                  <Skeleton className="h-72 w-full rounded-md" />
+                ) : (
+                  <img
+                    src={getImageUrl(currentImageData.image.url)}
+                    alt={
+                      currentImageData.type === "original"
+                        ? "Original image"
+                        : "Generated image"
+                    }
+                    className="max-h-72 w-full rounded-md object-contain"
+                  />
+                )}
 
                 {/* Address */}
                 {currentImageData.image.address && (
