@@ -549,15 +549,84 @@ export const communityRouter = createTRPCRouter({
               deletedAt: null, // Filter out shared chains with deleted responses
             },
           },
+          include: {
+            response: {
+              include: {
+                sourceImage: {
+                  select: {
+                    id: true,
+                    address: true,
+                    lat: true,
+                    lng: true,
+                    url: true,
+                  },
+                },
+              },
+            },
+            sharedBy: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+            sharedToUsers: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            comments: {
+              where: {
+                deletedAt: null,
+              },
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
+            _count: {
+              select: {
+                likes: true,
+                comments: true,
+              },
+            },
+          },
         },
       },
     });
 
-    const responses = likes
+    const sharedChains = likes
       .map((like) => like.sharedChain)
       .filter((chain) => chain !== null);
 
-    return responses;
+    // Get full response chain for each shared chain
+    const itemsWithFullChain = await Promise.all(
+      sharedChains.map(async (post) => {
+        const responseChain = await getFullResponseChain(
+          ctx.db,
+          post.responseId,
+        );
+        return {
+          ...post,
+          responseChain,
+        };
+      }),
+    );
+
+    return itemsWithFullChain;
   }),
 
   getNearbySharedResponses: publicProcedure
