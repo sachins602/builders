@@ -1,22 +1,65 @@
 import { getImageUrl } from "~/lib/image-utils";
+import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
-import type { NearbyImage } from "./types";
 
 interface PropertyPopupProps {
   isLoadingImage: boolean;
   imageData?: {
     url: string;
   };
-  isLoadingNearbyImages: boolean;
-  nearbyImages?: NearbyImage[];
+  existingImageData?: {
+    id: number;
+    url: string;
+    address?: string | null;
+    buildingType?: string | null;
+    buildingArea?: number | null;
+    propertyType?: string | null;
+  } | null;
 }
 
 export function PropertyPopup({
   isLoadingImage,
   imageData,
-  isLoadingNearbyImages,
-  nearbyImages,
+  existingImageData,
 }: PropertyPopupProps) {
+  // If we have existing image data, show that with parcel info
+  if (existingImageData) {
+    return (
+      <div className="flex w-64 flex-col gap-2">
+        <img
+          className="h-48 w-64 rounded-lg"
+          src={getImageUrl(existingImageData.url)}
+          alt="Street view"
+        />
+        <div className="space-y-1 p-2">
+          <h3 className="text-sm font-semibold">
+            {existingImageData.address ?? "Property Information"}
+          </h3>
+          <div className="space-y-1 text-xs text-gray-600">
+            {existingImageData.buildingType && (
+              <div>Type: {existingImageData.buildingType}</div>
+            )}
+            {existingImageData.buildingArea && (
+              <div>Area: {Math.round(existingImageData.buildingArea)} m²</div>
+            )}
+            {existingImageData.propertyType && (
+              <div>Use: {existingImageData.propertyType}</div>
+            )}
+          </div>
+          <Button
+            onClick={() =>
+              (window.location.href = `/create/${existingImageData.id}`)
+            }
+            className="mt-2 w-full"
+          >
+            Edit This Property
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Original loading/new image logic
   return (
     <div className="flex w-64 flex-col gap-2">
       {isLoadingImage ? (
@@ -28,42 +71,8 @@ export function PropertyPopup({
           alt="Street view"
         />
       ) : (
-        <p>Failed to load image</p>
+        <p>No image available for this location.</p>
       )}
-
-      <div className="mx-auto flex flex-row gap-2"></div>
-
-      <div>
-        <p>Previous Builds Nearby</p>
-        <div className="flex flex-row gap-4">
-          {isLoadingNearbyImages ? (
-            <Skeleton className="h-16 w-14 rounded-xl" />
-          ) : nearbyImages && nearbyImages.length > 0 ? (
-            nearbyImages.map((image) => (
-              <div
-                key={image.id}
-                className="h-16 w-14 cursor-pointer rounded-md bg-gray-400 p-1 shadow-2xl hover:bg-gray-200"
-                onClick={() => {
-                  window.location.href = `/create/${image.id}`;
-                }}
-              >
-                <img
-                  className="h-10 w-12"
-                  src={getImageUrl(image.url)}
-                  alt={image.address ?? "Nearby Image"}
-                />
-                <div className="relative flex overflow-x-hidden">
-                  <p className="animate-marquee whitespace-nowrap">
-                    {image.address}
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p>No nearby images</p>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

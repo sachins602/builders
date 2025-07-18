@@ -27,7 +27,6 @@ export function useMapSearch({ mapRef, onSearchComplete }: UseMapSearchProps) {
             const lng = parseFloat(result.lon);
 
             mapRef.current?.setView([lat, lng], 16);
-            toast("Address found!");
             onSearchComplete(lat, lng);
 
             return true;

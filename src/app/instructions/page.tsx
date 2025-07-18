@@ -13,6 +13,10 @@ export default function InstructionsPage() {
       `/instructions/image2.png`,
       `/instructions/image3.png`,
       `/instructions/image4.png`,
-    ]} text={["Find a parcel to modify.", "Choose whether to start fresh or build upon an existing build.", "Envision your ideal multi-unit home.", "Share with your friends and community!"]} />
+    ]} text={[
+        "Find a parcel to modify.", 
+        "Choose whether to start fresh or build upon an existing build.", 
+        "Envision your ideal multi-unit home.", 
+        "Share with your friends and community!"]} />
   );
 }
