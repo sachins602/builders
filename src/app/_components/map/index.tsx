@@ -43,6 +43,7 @@ export default function MapComponent() {
   const [searchBarVisible, setSearchBarVisible] = useState(true);
   const [toolBarVisible, setToolBarVisible] = useState(false);
   const [isSearchOperation, setIsSearchOperation] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(TORONTO_CENTER);
   const [existingImageData, setExistingImageData] = useState<{
     id: number;
     url: string;
@@ -191,6 +192,10 @@ export default function MapComponent() {
     mapRef.current = map;
   }, []);
 
+  const handleMapCenterChange = useCallback((center: [number, number]) => {
+    setMapCenter(center);
+  }, []);
+
   const handleSearchClick = useCallback(() => {
     setSearchBarVisible(true);
     setToolBarVisible(false);
@@ -252,6 +257,7 @@ export default function MapComponent() {
             onMapClick={handleMapClick}
             onZoomChange={handleZoomChange}
             onMapRef={handleMapRef}
+            onMapCenterChange={handleMapCenterChange}
             showMapToast={showMapToast}
           />
 
@@ -279,7 +285,7 @@ export default function MapComponent() {
       <div className="flex w-full flex-grow flex-row justify-center"></div>
 
       {/* Navigation Buttons */}
-      <NavigationButtons />
+      <NavigationButtons currentZoom={currentZoom} mapCenter={mapCenter} />
     </div>
   );
 }

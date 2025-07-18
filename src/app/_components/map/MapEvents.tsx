@@ -7,6 +7,7 @@ interface MapEventsProps {
   onMapClick: (lat: number, lng: number) => void;
   onZoomChange: (zoom: number) => void;
   onMapRef: (map: L.Map) => void;
+  onMapCenterChange: (center: [number, number]) => void;
   showMapToast: (zoom: number) => void;
 }
 
@@ -14,6 +15,7 @@ export function MapEvents({
   onMapClick,
   onZoomChange,
   onMapRef,
+  onMapCenterChange,
   showMapToast,
 }: MapEventsProps) {
   const map = useMapEvents({
@@ -26,7 +28,9 @@ export function MapEvents({
     },
     moveend() {
       const zoom = map.getZoom();
+      const center = map.getCenter();
       onZoomChange(zoom);
+      onMapCenterChange([center.lat, center.lng]);
       showMapToast(zoom);
     },
   });
