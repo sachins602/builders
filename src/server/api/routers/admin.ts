@@ -1,13 +1,19 @@
 import { createTRPCRouter, adminProcedure } from "../trpc";
 
+function formatDate(date: Date, type: "month" | "day") {
+  if (type === "month") {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+  // type === "day"
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function getLastNMonths(n: number) {
   const months: string[] = [];
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-    );
+    months.push(formatDate(d, "month"));
   }
   return months;
 }
@@ -17,9 +23,7 @@ function getLastNDays(n: number) {
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    days.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-    );
+    days.push(formatDate(d, "day"));
   }
   return days;
 }
@@ -54,8 +58,7 @@ export const adminRouter = createTRPCRouter({
       months.map((m) => [m, 0]),
     );
     users.forEach((u) => {
-      const d = u.createdAt;
-      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const month = formatDate(u.createdAt, "month");
       if (counts[month] !== undefined) counts[month]++;
     });
     return months.map((month) => ({ month, count: counts[month] }));
@@ -71,8 +74,7 @@ export const adminRouter = createTRPCRouter({
       days.map((d) => [d, 0]),
     );
     images.forEach((img) => {
-      const d = img.createdAt;
-      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const day = formatDate(img.createdAt, "day");
       if (counts[day] !== undefined) counts[day]++;
     });
     return days.map((day) => ({ day, count: counts[day] }));
@@ -88,8 +90,7 @@ export const adminRouter = createTRPCRouter({
       days.map((d) => [d, 0]),
     );
     responses.forEach((r) => {
-      const d = r.createdAt;
-      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const day = formatDate(r.createdAt, "day");
       if (counts[day] !== undefined) counts[day]++;
     });
     return days.map((day) => ({ day, count: counts[day] }));
@@ -151,8 +152,7 @@ export const adminRouter = createTRPCRouter({
       days.map((d) => [d, 0]),
     );
     shares.forEach((s) => {
-      const d = s.createdAt;
-      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const day = formatDate(s.createdAt, "day");
       if (counts[day] !== undefined) counts[day]++;
     });
     return days.map((day) => ({ day, count: counts[day] }));

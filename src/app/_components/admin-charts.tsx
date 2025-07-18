@@ -2,7 +2,15 @@
 
 import { api } from "~/trpc/react";
 import { ChartContainer } from "./ui/chart";
-import { BarChart, Bar, CartesianGrid, XAxis, Tooltip, Legend } from "recharts";
+import {
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  Tooltip,
+  Legend,
+  YAxis,
+} from "recharts";
 import { Loader2 } from "lucide-react";
 import { Card } from "./ui/card";
 
@@ -106,6 +114,7 @@ export default function AdminCharts() {
           <BarChart data={topUsers.data?.slice(0, 10)} layout="vertical">
             <CartesianGrid vertical={false} />
             <XAxis type="number" />
+            <YAxis type="category" dataKey="name" width={100} />
             <Tooltip />
             <Bar
               dataKey="responses"
