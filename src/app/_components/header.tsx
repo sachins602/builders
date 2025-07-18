@@ -72,10 +72,12 @@ export default async function Header() {
                 <Link
                   href={session ? "/api/auth/signout" : "/api/auth/signin"}
                   className={`block ${
-                    session ? "bg-red-500" : "bg-green-500"
-                  } px-4 py-2 text-sm hover:bg-red-400`}
+                    session
+                      ? "bg-red-500 hover:bg-red-400"
+                      : "bg-green-500 hover:bg-green-400"
+                  } px-4 py-2 text-sm`}
                 >
-                  {session ? "Logout - " + session.user.name : "Log in"}
+                  {session ? "Log out" : "Log in"}
                 </Link>
               </NavigationMenuContent>
             </NavigationMenuItem>
