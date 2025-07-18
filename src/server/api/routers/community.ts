@@ -549,16 +549,213 @@ export const communityRouter = createTRPCRouter({
               deletedAt: null, // Filter out shared chains with deleted responses
             },
           },
+          include: {
+            response: {
+              include: {
+                sourceImage: {
+                  select: {
+                    id: true,
+                    address: true,
+                    lat: true,
+                    lng: true,
+                    url: true,
+                  },
+                },
+              },
+            },
+            sharedBy: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
+            sharedToUsers: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            comments: {
+              where: {
+                deletedAt: null,
+              },
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
+            _count: {
+              select: {
+                likes: true,
+                comments: true,
+              },
+            },
+          },
         },
       },
     });
 
-    const responses = likes
+    const sharedChains = likes
       .map((like) => like.sharedChain)
       .filter((chain) => chain !== null);
 
-    return responses;
+    // Get full response chain for each shared chain
+    const itemsWithFullChain = await Promise.all(
+      sharedChains.map(async (post) => {
+        const responseChain = await getFullResponseChain(
+          ctx.db,
+          post.responseId,
+        );
+        return {
+          ...post,
+          responseChain,
+        };
+      }),
+    );
+
+    return itemsWithFullChain;
   }),
+
+  getNearbySharedResponses: publicProcedure
+    .input(
+      z.object({
+        lat: z.number(),
+        lng: z.number(),
+        radius: z.number().default(0.01), // Default ~1km radius
+        limit: z.number().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { lat, lng, radius, limit } = input;
+      const currentUserId = ctx.session?.user?.id;
+
+      // Build where clause to include:
+      // 1. All public posts
+      // 2. Private posts shared TO the current user by others
+      // 3. Private posts shared BY the current user to others
+      const whereClause = {
+        deletedAt: null,
+        OR: [
+          { isPublic: true },
+          ...(currentUserId
+            ? [
+                {
+                  isPublic: false,
+                  sharedToUsers: {
+                    some: {
+                      userId: currentUserId,
+                    },
+                  },
+                },
+                {
+                  isPublic: false,
+                  sharedById: currentUserId, // Posts shared BY the current user
+                },
+              ]
+            : []),
+        ],
+      };
+
+      const nearbySharedResponses = await ctx.db.sharedChain.findMany({
+        where: {
+          ...whereClause,
+          response: {
+            deletedAt: null, // Filter out shared chains with deleted responses
+            sourceImage: {
+              // Filter by location within radius
+              lat: {
+                gte: lat - radius,
+                lte: lat + radius,
+              },
+              lng: {
+                gte: lng - radius,
+                lte: lng + radius,
+              },
+              deletedAt: null,
+            },
+          },
+        },
+        include: {
+          response: {
+            include: {
+              sourceImage: {
+                select: {
+                  id: true,
+                  address: true,
+                  lat: true,
+                  lng: true,
+                  url: true,
+                },
+              },
+            },
+          },
+          sharedBy: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+              comments: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: limit,
+      });
+
+      // Calculate distance for each response and sort by proximity
+      const responsesWithDistance = nearbySharedResponses.map(
+        (sharedResponse) => {
+          const sourceLat = sharedResponse.response.sourceImage?.lat;
+          const sourceLng = sharedResponse.response.sourceImage?.lng;
+
+          let distance = Infinity;
+          if (sourceLat && sourceLng) {
+            // Calculate distance using Haversine formula (approximate)
+            const R = 6371; // Earth's radius in km
+            const dLat = ((sourceLat - lat) * Math.PI) / 180;
+            const dLng = ((sourceLng - lng) * Math.PI) / 180;
+            const a =
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos((lat * Math.PI) / 180) *
+                Math.cos((sourceLat * Math.PI) / 180) *
+                Math.sin(dLng / 2) *
+                Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            distance = R * c;
+          }
+
+          return {
+            ...sharedResponse,
+            distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
+          };
+        },
+      );
+
+      // Sort by distance (closest first)
+      responsesWithDistance.sort((a, b) => a.distance - b.distance);
+
+      return responsesWithDistance;
+    }),
 
   // Organization Management Endpoints
 

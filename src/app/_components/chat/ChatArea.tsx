@@ -11,8 +11,6 @@ import type { ResponseWithImage, Image } from "~/types/chat";
 import { getImageUrl } from "~/lib/image-utils";
 import { Skeleton } from "../ui/skeleton";
 import WelcomeMessage from "./WelcomeMessage";
-import StreetAddress from "../StreetAddress";
-
 
 interface ChatAreaProps {
   lastImage: Image | null;
@@ -23,10 +21,10 @@ interface ChatAreaProps {
 type ImageData =
   | { type: "original"; image: Image; prompt: null }
   | {
-    type: "generated";
-    image: { url: string; address?: string };
-    prompt: string;
-  };
+      type: "generated";
+      image: { url: string; address?: string };
+      prompt: string;
+    };
 
 export function ChatArea({
   lastImage,
@@ -85,17 +83,14 @@ export function ChatArea({
   return (
     <div className="h-full flex-1 overflow-y-hidden">
       <div className="mx-auto max-w-4xl">
-
         {currentImageData && (
           <div className="bg-white p-4">
-
-
-            <div className="flex flex-row items-center justify-center ">
+            <div className="flex flex-row items-center justify-center">
               {/*Left Chevron  */}
               {hasMultipleImages && (
                 <button
                   onClick={navigateLeft}
-                  className="flex items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200 mr-2 h-10 w-10"
+                  className="mr-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200"
                   style={{ aspectRatio: "1 / 1" }}
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -106,14 +101,12 @@ export function ChatArea({
               <div>
                 {hasMultipleImages && (
                   <div
-                    className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md"
+                    className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md"
                     style={{ minWidth: 80, textAlign: "center" }}
                   >
-
                     <span className="text-sm font-medium text-gray-600">
                       {currentIndex + 1} of {allImages.length}
                     </span>
-
                   </div>
                 )}
 
@@ -127,14 +120,14 @@ export function ChatArea({
                         ? "Original image"
                         : "Generated image"
                     }
-                    className="max-h-full rounded-md object-contain"
+                    className="h-96 w-full rounded-md object-fill"
                   />
                 )}
 
                 {/* Address */}
                 {currentImageData.image.address && (
                   <p className="text-center text-xs text-gray-500">
-                    <StreetAddress address={currentImageData.image.address} />
+                    {currentImageData.image.address}
                   </p>
                 )}
               </div>
@@ -143,7 +136,7 @@ export function ChatArea({
               {hasMultipleImages && (
                 <button
                   onClick={navigateRight}
-                  className="flex items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200 ml-2 h-10 w-10"
+                  className="ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200"
                   style={{ aspectRatio: "1 / 1" }}
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -154,10 +147,7 @@ export function ChatArea({
         )}
 
         {/* Welcome Message */}
-        {showWelcomeMessage && (
-          <WelcomeMessage />
-        )}
-
+        {showWelcomeMessage && <WelcomeMessage />}
       </div>
     </div>
   );
