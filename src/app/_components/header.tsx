@@ -11,7 +11,6 @@ import {
   NavigationMenu,
   NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "./ui/navigation-menu";
@@ -21,7 +20,7 @@ export default async function Header() {
   const session = await auth();
   return (
     <header className="flex flex-row items-center justify-between p-1 text-black">
-      <div className="flex flex-row items-center justify-between">
+      <div className="flex flex-row items-center justify-between space-x-6">
         <NavigationMenu className="z-[10000]">
           <NavigationMenuList>
             <NavigationMenuItem>
@@ -30,7 +29,7 @@ export default async function Header() {
                 <Bars4Icon className="h-full" />
               </NavigationMenuTrigger>
 
-              <NavigationMenuContent>
+              <NavigationMenuContent className="w-64 md:w-64">
                 {/* Navigation Links */}
                 <Link
                   href="/create"
@@ -72,7 +71,9 @@ export default async function Header() {
                 {/* Check for user status - login/logout */}
                 <Link
                   href={session ? "/api/auth/signout" : "/api/auth/signin"}
-                  className="block bg-red-500 px-4 py-2 text-sm hover:bg-red-400"
+                  className={`block ${
+                    session ? "bg-red-500" : "bg-green-500"
+                  } px-4 py-2 text-sm hover:bg-red-400`}
                 >
                   {session ? "Logout - " + session.user.name : "Log in"}
                 </Link>
