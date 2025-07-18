@@ -159,8 +159,6 @@ export default function MapComponent() {
               <PropertyPopup
                 isLoadingImage={image.isPending}
                 imageData={image.data}
-                onSave={(lat, lng) => image.mutate({ lat, lng })}
-                clickedPosition={clickedPosition}
               />
             </Popup>
           )}

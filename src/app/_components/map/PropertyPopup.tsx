@@ -7,20 +7,12 @@ interface PropertyPopupProps {
   imageData?: {
     url: string;
   };
-  onSave: (lat: number, lng: number) => void;
-  clickedPosition: [number, number];
 }
 
 export function PropertyPopup({
   isLoadingImage,
   imageData,
-  onSave,
-  clickedPosition,
 }: PropertyPopupProps) {
-  const handleSave = () => {
-    onSave(clickedPosition[0], clickedPosition[1]);
-  };
-
   return (
     <div className="flex w-64 flex-col gap-2">
       {isLoadingImage ? (
@@ -34,9 +26,6 @@ export function PropertyPopup({
       ) : (
         <p>No image available for this location.</p>
       )}
-      <Button onClick={handleSave} disabled={isLoadingImage}>
-        Save
-      </Button>
     </div>
   );
 }
