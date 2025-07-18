@@ -82,7 +82,7 @@ export function NavigationButtons({
                     <img
                       src={getImageUrl(sharedResponse.response.url)}
                       alt="Response thumbnail"
-                      className="h-14 w-full items-center object-cover"
+                      className="h-14 w-full object-cover"
                     />
 
                     {/* Content */}
