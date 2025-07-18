@@ -54,77 +54,52 @@ export function NavigationButtons({
 
         {/* Nearby Responses Section */}
         {showNearby && (
-          <div className="mx-2 rounded-lg border bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold">Nearby Shared Responses</h3>
+          <div className="mx-2 rounded-lg border bg-white shadow-sm">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-blue-600" />
+              <h3 className="text-sm font-semibold">Nearby Responses</h3>
             </div>
 
             {nearbyResponses.isLoading ? (
-              <div className="text-center text-gray-500">
-                Loading nearby responses...
+              <div className="text-center text-xs text-gray-500">
+                Loading...
               </div>
             ) : nearbyResponses.error ? (
-              <div className="text-center text-red-500">
-                Error loading nearby responses
+              <div className="text-center text-xs text-red-500">
+                Error loading
               </div>
             ) : nearbyResponses.data && nearbyResponses.data.length > 0 ? (
-              <div className="space-y-3">
-                {nearbyResponses.data.slice(0, 3).map((sharedResponse) => (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {nearbyResponses.data.map((sharedResponse) => (
                   <div
                     key={sharedResponse.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50"
+                    className="flex-shrink-0 cursor-pointer rounded-lg border bg-gray-50 p-2 transition-colors hover:bg-gray-200"
                     onClick={() => {
-                      window.location.href = `/create/${sharedResponse.responseId}`;
+                      window.location.href = `/community/${sharedResponse.id}`;
                     }}
                   >
                     {/* Thumbnail */}
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
-                      <img
-                        src={getImageUrl(sharedResponse.response.url)}
-                        alt="Response thumbnail"
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    <img
+                      src={getImageUrl(sharedResponse.response.url)}
+                      alt="Response thumbnail"
+                      className="h-14 w-full items-center object-cover"
+                    />
 
                     {/* Content */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">
-                          {sharedResponse.response.sourceImage?.address ??
-                            "Unknown Address"}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {sharedResponse.distance}km away
-                        </span>
+                    <div className="flex flex-row gap-2">
+                      <div className="text-xs text-gray-500">
+                        {sharedResponse.distance}km
                       </div>
-                      <p className="truncate text-sm text-gray-600">
-                        {sharedResponse.response.prompt || "No prompt"}
-                      </p>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span>by {sharedResponse.sharedBy.name}</span>
-                        <span>{sharedResponse._count.likes} likes</span>
-                        <span>{sharedResponse._count.comments} comments</span>
+                      <div className="text-xs text-gray-400">
+                        {sharedResponse._count.likes} likes
                       </div>
                     </div>
                   </div>
                 ))}
-
-                {nearbyResponses.data.length > 3 && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      window.location.href = "/community";
-                    }}
-                  >
-                    View all {nearbyResponses.data.length} nearby responses
-                  </Button>
-                )}
               </div>
             ) : (
-              <div className="text-center text-gray-500">
-                No shared responses found nearby
+              <div className="text-center text-xs text-gray-500">
+                No nearby responses
               </div>
             )}
           </div>
