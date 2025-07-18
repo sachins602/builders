@@ -1,22 +1,22 @@
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, adminProcedure } from "../trpc";
 
 export const adminRouter = createTRPCRouter({
-  getUsers: protectedProcedure.query(async ({ ctx }) => {
+  getUsers: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.user.findMany();
   }),
-  getResponses: protectedProcedure.query(async ({ ctx }) => {
+  getResponses: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.response.findMany();
   }),
-  getImages: protectedProcedure.query(async ({ ctx }) => {
+  getImages: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.images.findMany();
   }),
-  getSharedPosts: protectedProcedure.query(async ({ ctx }) => {
+  getSharedPosts: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.sharedChain.findMany();
   }),
-  getSharedResponses: protectedProcedure.query(async ({ ctx }) => {
+  getSharedResponses: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.like.findMany();
   }),
-  getSharedImages: protectedProcedure.query(async ({ ctx }) => {
+  getSharedImages: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.comment.findMany();
   }),
 });
