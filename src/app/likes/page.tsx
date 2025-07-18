@@ -93,7 +93,6 @@ export default function LikesPage() {
                   userLikes?.filter((like): like is string => like !== null) ??
                   []
                 }
-                currentUserId={post.sharedBy.id}
               />
             ))}
           </div>
