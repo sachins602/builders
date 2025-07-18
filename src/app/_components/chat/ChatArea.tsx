@@ -1,18 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Image as ImageIcon,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ResponseWithImage, Image } from "~/types/chat";
 import { getImageUrl } from "~/lib/image-utils";
 import { Skeleton } from "../ui/skeleton";
 import WelcomeMessage from "./WelcomeMessage";
 import StreetAddress from "../StreetAddress";
-import { shortenAddress } from "~/lib/shorten-address";
 
 interface ChatAreaProps {
   lastImage: Image | null;
