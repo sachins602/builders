@@ -278,7 +278,13 @@ export default function MapComponent() {
         {searchBarVisible && (
           <SearchBar onSearch={handleSearch} onClose={handleSearchBarClose} />
         )}
-        {toolBarVisible && <ToolBar onSearchClick={handleSearchClick} />}
+        {toolBarVisible && (
+          <ToolBar
+            onSearchClick={handleSearchClick}
+            showBuildEditButtons={clickedPosition !== null}
+            existingImageId={existingImageData?.id ?? null}
+          />
+        )}
       </div>
 
       {/* Spacer - Builds to go here */}
