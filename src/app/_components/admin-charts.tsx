@@ -1,12 +1,12 @@
 "use client";
 
 import { api } from "~/trpc/react";
-import { ChartContainer } from "../_components/ui/chart";
+import { ChartContainer } from "./ui/chart";
 import { BarChart, Bar, CartesianGrid, XAxis, Tooltip, Legend } from "recharts";
 import { Loader2 } from "lucide-react";
-import { Card } from "../_components/ui/card";
+import { Card } from "./ui/card";
 
-export default function AdminDashboard() {
+export default function AdminCharts() {
   const usersPerMonth = api.admin.usersPerMonth.useQuery();
   const imagesPerDay = api.admin.imagesPerDay.useQuery();
   const responsesPerDay = api.admin.responsesPerDay.useQuery();
