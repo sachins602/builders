@@ -1,16 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Image as ImageIcon,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ResponseWithImage, Image } from "~/types/chat";
 import { getImageUrl } from "~/lib/image-utils";
 import { Skeleton } from "../ui/skeleton";
 import WelcomeMessage from "./WelcomeMessage";
+import StreetAddress from "../StreetAddress";
 
 interface ChatAreaProps {
   lastImage: Image | null;
@@ -126,9 +122,9 @@ export function ChatArea({
 
                 {/* Address */}
                 {currentImageData.image.address && (
-                  <p className="text-center text-xs text-gray-500">
-                    {currentImageData.image.address}
-                  </p>
+                  <div className="flex flex-row items-center justify-center">
+                    <StreetAddress address={currentImageData.image.address} />
+                  </div>
                 )}
               </div>
 
