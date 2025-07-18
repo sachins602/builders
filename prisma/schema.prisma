@@ -51,6 +51,7 @@ model User {
     name          String?
     email         String?   @unique
     emailVerified DateTime?
+    role          String?   @default("user")
     image         String?
     bio           String?   // User bio for profile
     isPublic      Boolean   @default(true) // Privacy setting
