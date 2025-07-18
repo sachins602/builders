@@ -54,6 +54,7 @@ export default function MapComponent() {
 
   // Refs
   const mapRef = useRef<L.Map | null>(null);
+  const searchOperationRef = useRef(false);
 
   // Custom hooks
   const { showMapToast } = useMapToast();
@@ -67,10 +68,12 @@ export default function MapComponent() {
     onSuccess: () => {
       void utils.response.getChatData.invalidate();
       setIsSearchOperation(false);
+      searchOperationRef.current = false;
     },
     onError: (error) => {
       console.error("Error fetching image:", error);
       setIsSearchOperation(false);
+      searchOperationRef.current = false;
     },
   });
 
@@ -98,22 +101,17 @@ export default function MapComponent() {
   const handleSearchComplete = useCallback(
     (lat: number, lng: number) => {
       setClickedPosition([lat, lng]);
-      // isSearchOperation is already true from handleSearch
 
-      // Check for existing image first
-      const existingImage = checkForExistingImage(lat, lng);
-      if (existingImage) {
-        setExistingImageData(existingImage);
-        setIsSearchOperation(false);
-      } else {
-        setExistingImageData(null);
-        image.mutate({ lat, lng });
-      }
+      // For search, always fetch new property data instead of checking existing images
+      // This ensures we get the latest property information
+      setExistingImageData(null);
+      image.mutate({ lat, lng });
+      // Don't clear isSearchOperation here - let the mutation success/error handlers do it
 
       setSearchBarVisible(false);
       setToolBarVisible(true);
     },
-    [checkForExistingImage, image],
+    [image],
   );
 
   // Search functionality
@@ -126,11 +124,13 @@ export default function MapComponent() {
   const handleSearch = useCallback(
     async (address: string) => {
       setIsSearchOperation(true);
+      searchOperationRef.current = true;
       setExistingImageData(null);
 
       // Fallback timeout to clear search operation state
       const timeoutId = setTimeout(() => {
         setIsSearchOperation(false);
+        searchOperationRef.current = false;
       }, 5000); // Clear after 5 seconds if not cleared elsewhere
 
       try {
@@ -138,11 +138,14 @@ export default function MapComponent() {
         clearTimeout(timeoutId);
         if (!success) {
           setIsSearchOperation(false);
+          searchOperationRef.current = false;
         }
         return success;
       } catch (error) {
+        console.error("Error searching:", error);
         clearTimeout(timeoutId);
         setIsSearchOperation(false);
+        searchOperationRef.current = false;
         return false;
       }
     },
@@ -173,11 +176,15 @@ export default function MapComponent() {
     (zoom: number) => {
       setCurrentZoom(zoom);
       // Don't clear popup if we're in a search operation or if there's an existing image
-      if (zoom < ZOOM_LIMIT && !isSearchOperation && !existingImageData) {
+      if (
+        zoom < ZOOM_LIMIT &&
+        !searchOperationRef.current &&
+        !existingImageData
+      ) {
         setClickedPosition(null);
       }
     },
-    [isSearchOperation, existingImageData],
+    [existingImageData],
   );
 
   const handleMapRef = useCallback((map: L.Map) => {
