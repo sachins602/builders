@@ -75,7 +75,7 @@ export function NavigationButtons({
                     key={sharedResponse.id}
                     className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50"
                     onClick={() => {
-                      window.location.href = `/community/${sharedResponse.id}`;
+                      window.location.href = `/create/${sharedResponse.responseId}`;
                     }}
                   >
                     {/* Thumbnail */}
