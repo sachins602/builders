@@ -2,7 +2,7 @@
 
 import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
-import { Loader2, Heart, RefreshCw } from "lucide-react";
+import { Loader2, Heart } from "lucide-react";
 import { CommunityPost } from "../_components/CommunityPost/CommunityPost";
 
 export default function LikesPage() {
