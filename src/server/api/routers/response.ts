@@ -281,6 +281,18 @@ export const responseRouter = createTRPCRouter({
     };
   }),
 
+  getResponsesByUserId: protectedProcedure.query(async ({ ctx }) => {
+    const responses = await ctx.db.response.findMany({
+      where: {
+        createdBy: { id: ctx.session.user.id },
+        deletedAt: null,
+        previousResponseId: null,
+      },
+      include: { sourceImage: true },
+    });
+    return responses;
+  }),
+
   getResponseById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {

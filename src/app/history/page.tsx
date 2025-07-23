@@ -19,8 +19,8 @@ export default async function History() {
     );
   }
 
-  const chatData = await api.response.getChatData();
-  if (!chatData) {
+  const responses = await api.response.getResponsesByUserId();
+  if (!responses) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -34,9 +34,6 @@ export default async function History() {
       </div>
     );
   }
-
-  const { responseHistory } = chatData;
-
   return (
     <div className="py-8">
       <div className="mb-8">
@@ -44,7 +41,7 @@ export default async function History() {
         <p className="text-gray-600">View your previously generated images</p>
       </div>
 
-      {responseHistory.length === 0 ? (
+      {responses.length === 0 ? (
         <div className="py-12 text-center">
           <h2 className="mb-2 text-xl font-semibold text-gray-600">
             No generations yet
@@ -55,7 +52,7 @@ export default async function History() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {responseHistory.map((response) => (
+          {responses.map((response) => (
             <HistoryItem key={response.id} response={response} />
           ))}
         </div>
