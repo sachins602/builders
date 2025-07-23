@@ -106,27 +106,12 @@ export default function CommunityPageContent({
       },
     );
 
-  console.log(
-    "Session available:",
-    !!session,
-    "Posts count:",
-    posts.length,
-    "Likes enabled:",
-    posts.length > 0 && !!session,
-  );
-
   useEffect(() => {
     if (likes) {
       const filteredLikes = likes.filter(
         (like): like is string => like !== null,
       );
       setUserLikes(filteredLikes);
-      console.log(
-        "User likes loaded:",
-        filteredLikes,
-        "for posts:",
-        posts.map((p) => p.id),
-      );
     }
   }, [likes, posts]);
 
@@ -155,6 +140,8 @@ export default function CommunityPageContent({
       </div>
     );
   }
+
+  console.log(posts);
 
   return (
     <div className="min-h-screen bg-gray-50">

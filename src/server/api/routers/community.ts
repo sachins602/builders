@@ -212,7 +212,7 @@ export const communityRouter = createTRPCRouter({
       return sharedChain;
     }),
 
-  getSharedPosts: publicProcedure
+  getSharedPosts: protectedProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(50).default(20),
@@ -221,12 +221,8 @@ export const communityRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const { limit, cursor } = input;
-      const currentUserId = ctx.session?.user?.id;
+      const currentUserId = ctx.session.user.id;
 
-      // Build where clause to include:
-      // 1. All public posts
-      // 2. Private posts shared TO the current user by others
-      // 3. Private posts shared BY the current user to others
       const whereClause = {
         deletedAt: null,
         OR: [
