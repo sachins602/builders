@@ -1,80 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
 import { Loader2 } from "lucide-react";
 import { CommunityPost } from "./CommunityPost/CommunityPost";
-
-type ResponseChainItem = {
-  id: string | number;
-  type: "source" | "response";
-  prompt: string | null;
-  url: string;
-  previousResponseId: number | null;
-  sourceImageId: number | null;
-  sourceImage: {
-    id: number;
-    url: string;
-    address: string | null;
-  } | null;
-};
-
-type SharedPost = {
-  id: string;
-  title: string;
-  description?: string | null;
-  isPublic: boolean;
-  viewCount: number;
-  likeCount: number;
-  commentCount: number;
-  createdAt: Date;
-  response: {
-    id: number;
-    prompt: string;
-    url: string;
-    sourceImage?: {
-      id: number;
-      url: string;
-      address?: string | null;
-    } | null;
-  };
-  sharedBy: {
-    id: string;
-    name?: string | null;
-    image?: string | null;
-  };
-  sharedToUsers?: Array<{
-    user: {
-      id: string;
-      name?: string | null;
-    };
-  }>;
-  comments?: Array<{
-    id: string;
-    content: string;
-    createdAt: Date;
-    author: {
-      id: string;
-      name?: string | null;
-      image?: string | null;
-    };
-  }>;
-  _count: {
-    likes: number;
-    comments: number;
-  };
-  responseChain: ResponseChainItem[];
-};
+interface CommunityContentProps {
+  session: { user: { id: string } };
+}
 
 export default function CommunityPageContent({
   session,
-}: {
-  session: { user: { id: string } };
-}) {
-  const [posts, setPosts] = useState<SharedPost[]>([]);
-  const [userLikes, setUserLikes] = useState<string[]>([]);
-
+}: CommunityContentProps) {
   const {
     data: postsData,
     isLoading,
@@ -84,51 +21,29 @@ export default function CommunityPageContent({
     isFetchingNextPage,
   } = api.community.getSharedPosts.useInfiniteQuery(
     { limit: 10 },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+  );
+
+  // Flatten all posts from paginated data
+  const posts = useMemo(
+    () => postsData?.pages.flatMap((page) => page.items) ?? [],
+    [postsData],
+  );
+
+  // Get user likes for all posts
+  const { data: userLikes = [] } = api.community.getUserLikes.useQuery(
+    { sharedChainIds: posts.map((post) => post.id) },
     {
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      enabled: posts.length > 0 && !!session,
+      refetchOnWindowFocus: false,
     },
   );
 
-  useEffect(() => {
-    if (postsData) {
-      const allPosts = postsData.pages.flatMap((page) => page.items);
-      setPosts(allPosts);
-    }
-  }, [postsData]);
-
-  // Get user likes for all visible posts
-  const { data: likes, isLoading: likesLoading } =
-    api.community.getUserLikes.useQuery(
-      { sharedChainIds: posts.map((post) => post.id) },
-      {
-        enabled: posts.length > 0 && !!session,
-        refetchOnWindowFocus: false,
-      },
-    );
-
-  console.log(
-    "Session available:",
-    !!session,
-    "Posts count:",
-    posts.length,
-    "Likes enabled:",
-    posts.length > 0 && !!session,
+  // Filter out null likes
+  const filteredUserLikes = useMemo(
+    () => userLikes.filter((like): like is string => like !== null),
+    [userLikes],
   );
-
-  useEffect(() => {
-    if (likes) {
-      const filteredLikes = likes.filter(
-        (like): like is string => like !== null,
-      );
-      setUserLikes(filteredLikes);
-      console.log(
-        "User likes loaded:",
-        filteredLikes,
-        "for posts:",
-        posts.map((p) => p.id),
-      );
-    }
-  }, [likes, posts]);
 
   if (isLoading) {
     return (
@@ -156,17 +71,19 @@ export default function CommunityPageContent({
     );
   }
 
+  const isEmpty = posts.length === 0;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="mb-8">
+        <header className="mb-8">
           <h1 className="mb-2 text-3xl font-bold text-gray-800">Community</h1>
           <p className="text-gray-600">
             Discover amazing AI-generated images shared by our community
           </p>
-        </div>
+        </header>
 
-        {!posts || posts.length === 0 ? (
+        {isEmpty ? (
           <div className="py-12 text-center">
             <h2 className="mb-2 text-xl font-semibold text-gray-600">
               No posts yet
@@ -181,8 +98,8 @@ export default function CommunityPageContent({
               <CommunityPost
                 key={post.id}
                 post={post}
-                userLikes={userLikes}
-                currentUserId={session.user?.id}
+                userLikes={filteredUserLikes}
+                currentUserId={session.user.id}
               />
             ))}
 

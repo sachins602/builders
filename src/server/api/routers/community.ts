@@ -212,7 +212,8 @@ export const communityRouter = createTRPCRouter({
       return sharedChain;
     }),
 
-  getSharedPosts: publicProcedure
+  // TODO: make this endpoint simpler
+  getSharedPosts: protectedProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(50).default(20),
@@ -221,12 +222,8 @@ export const communityRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const { limit, cursor } = input;
-      const currentUserId = ctx.session?.user?.id;
+      const currentUserId = ctx.session.user.id;
 
-      // Build where clause to include:
-      // 1. All public posts
-      // 2. Private posts shared TO the current user by others
-      // 3. Private posts shared BY the current user to others
       const whereClause = {
         deletedAt: null,
         OR: [
@@ -323,11 +320,6 @@ export const communityRouter = createTRPCRouter({
             ctx.db,
             post.responseId,
           );
-          console.log(
-            `Response chain for post ${post.id}:`,
-            responseChain.length,
-            "items",
-          );
           return {
             ...post,
             responseChain,
@@ -341,6 +333,126 @@ export const communityRouter = createTRPCRouter({
       };
     }),
 
+  // TODO: make this endpoint simpler
+  getSharedPopularPosts: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { limit, cursor } = input;
+      const currentUserId = ctx.session.user.id;
+
+      const whereClause = {
+        deletedAt: null,
+        OR: [
+          { isPublic: true },
+          ...(currentUserId
+            ? [
+                {
+                  isPublic: false,
+                  sharedToUsers: {
+                    some: {
+                      userId: currentUserId,
+                    },
+                  },
+                },
+                {
+                  isPublic: false,
+                  sharedById: currentUserId, // Posts shared BY the current user
+                },
+              ]
+            : []),
+        ],
+      };
+
+      const sharedChains = await ctx.db.sharedChain.findMany({
+        where: {
+          ...whereClause,
+          response: {
+            deletedAt: null, // Filter out shared chains with deleted responses
+          },
+        },
+        include: {
+          response: {
+            include: {
+              sourceImage: true,
+            },
+          },
+          sharedBy: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          sharedToUsers: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          comments: {
+            where: {
+              deletedAt: null,
+            },
+            include: {
+              author: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+              comments: true,
+            },
+          },
+        },
+        orderBy: {
+          likeCount: "desc",
+        },
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+      });
+
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (sharedChains.length > limit) {
+        const nextItem = sharedChains.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      const itemsWithFullChain = await Promise.all(
+        sharedChains.map(async (post) => {
+          const responseChain = await getFullResponseChain(
+            ctx.db,
+            post.responseId,
+          );
+          return {
+            ...post,
+            responseChain,
+          };
+        }),
+      );
+
+      return {
+        items: itemsWithFullChain,
+        nextCursor,
+      };
+    }),
   getSharedPost: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
