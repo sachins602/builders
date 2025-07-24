@@ -33,6 +33,10 @@ import { useMapToast } from "./useMapToast";
 import { NearbyResponses } from "./NearbyResponses";
 
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
+const TORONTO_BOUNDS: [[number, number], [number, number]] = [
+  [43.5, -79.75], // Southwest corner (lat, lng)
+  [44.0, -78.95], // Northeast corner (lat, lng)
+];
 
 // Consolidated state for popup/selection
 interface SelectionState {
@@ -225,14 +229,16 @@ export default function MapComponent() {
         <MapContainer
           center={TORONTO_CENTER}
           zoom={INITIAL_ZOOM}
+          minZoom={10}
           scrollWheelZoom={true}
           style={{ height: "100%", width: "100%" }}
+          maxBounds={TORONTO_BOUNDS}
+          maxBoundsViscosity={1.0}
         >
           <TileLayer
             url={`https://api.maptiler.com/maps/toner/{z}/{x}/{y}.png?key=${env.NEXT_PUBLIC_MAPTILER_KEY}`}
             attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-
           <GeoJSON
             data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
             style={(feature) => {
@@ -278,6 +284,7 @@ export default function MapComponent() {
               opacity: 1,
               fillOpacity: 1,
             }}
+            interactive={false}
           />
 
           <PropertyPolygons parcelData={parcelData.data} />
