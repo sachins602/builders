@@ -30,7 +30,7 @@ export function NearbyResponses({
     <div className="h-32">
       {nearbyResponses.data && nearbyResponses.data.length > 0 ? (
         <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold">Nearby Responses</h3>
+          <h3 className="text-sm font-semibold">Nearby Builds</h3>
           <div className="flex flex-row gap-2 overflow-x-auto">
             {nearbyResponses.data.map((sharedResponse) => (
               <div
