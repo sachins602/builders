@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Heart,
   MessageCircle,
@@ -22,7 +22,7 @@ import { cn } from "~/lib/utils";
 import { getImageUrl } from "~/lib/image-utils";
 import { Skeleton } from "../ui/skeleton";
 
-type Response = {
+type ResponseChainItem = {
   id: string | number;
   type: "source" | "response";
   prompt: string | null;
@@ -80,7 +80,7 @@ interface CommunityPostProps {
       likes: number;
       comments: number;
     };
-    responseChain: Response[];
+    responseChain: ResponseChainItem[];
   };
   userLikes?: string[];
   currentUserId?: string;
@@ -93,71 +93,44 @@ export function CommunityPost({
 }: CommunityPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [isLiked, setIsLiked] = useState(false); // Start with false, will be updated when userLikes loads
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [currentResponseIndex, setCurrentResponseIndex] = useState(0);
   const [showSourceImage, setShowSourceImage] = useState(false);
 
-  const { responseChain } = post;
   const utils = api.useUtils();
 
-  // Debug logging
-  console.log(
-    "CommunityPost received responseChain:",
-    responseChain?.length,
-    "items",
+  // Memoize computed values
+  const isLiked = useMemo(
+    () => userLikes.includes(post.id),
+    [userLikes, post.id],
   );
-  if (responseChain && responseChain.length > 0) {
-    console.log(
-      "Response chain items:",
-      responseChain.map((item) => ({
-        id: item.id,
-        type: item.type,
-        prompt: item.prompt?.substring(0, 50),
-      })),
-    );
-  }
+  const currentResponse = useMemo(
+    () => post.responseChain?.[currentResponseIndex],
+    [post.responseChain, currentResponseIndex],
+  );
+  const hasMultipleImages = useMemo(
+    () => post.responseChain?.length > 1,
+    [post.responseChain],
+  );
+  const canNavigate = useMemo(
+    () => ({
+      prev: currentResponseIndex > 0,
+      next: currentResponseIndex < (post.responseChain?.length || 0) - 1,
+    }),
+    [currentResponseIndex, post.responseChain],
+  );
 
-  useEffect(() => {
-    if (responseChain) {
-      // Start with the original image (first in chain)
-      setCurrentResponseIndex(0);
-    }
-  }, [responseChain]);
+  const imageUrl = useMemo(() => {
+    if (!currentResponse) return "";
+    return showSourceImage
+      ? getImageUrl(currentResponse.sourceImage?.url ?? "")
+      : getImageUrl(currentResponse.url ?? "");
+  }, [currentResponse, showSourceImage]);
 
-  // Update like state when userLikes changes
-  useEffect(() => {
-    const isPostLiked = userLikes.includes(post.id);
-    setIsLiked(isPostLiked);
-    console.log(
-      `Post ${post.id} like state:`,
-      isPostLiked,
-      "userLikes:",
-      userLikes,
-    );
-  }, [userLikes, post.id]);
-
-  const currentResponse = responseChain?.[currentResponseIndex];
-
-  const handlePrev = () => {
-    setShowSourceImage(false); // Always show generated image on navigation
-    setCurrentResponseIndex((prev) => Math.max(0, prev - 1));
-  };
-
-  const handleNext = () => {
-    setShowSourceImage(false); // Always show generated image on navigation
-    if (responseChain) {
-      setCurrentResponseIndex((prev) =>
-        Math.min(responseChain.length - 1, prev + 1),
-      );
-    }
-  };
-
+  // API mutations
   const toggleLike = api.community.toggleLike.useMutation({
-    onSuccess: (data) => {
-      setIsLiked(data.liked);
-      setLikeCount((prev) => (data.liked ? prev + 1 : prev - 1));
-    },
+    onSuccess: (data) =>
+      setLikeCount((prev) => (data.liked ? prev + 1 : prev - 1)),
   });
 
   const addComment = api.community.addComment.useMutation({
@@ -167,27 +140,28 @@ export function CommunityPost({
     },
   });
 
-  const handleLike = () => {
-    toggleLike.mutate({ sharedChainId: post.id });
-  };
+  // Event handlers
+  const handleLike = () => toggleLike.mutate({ sharedChainId: post.id });
 
   const handleComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
-
-    addComment.mutate({
-      sharedChainId: post.id,
-      content: newComment.trim(),
-    });
+    const content = newComment.trim();
+    if (!content) return;
+    addComment.mutate({ sharedChainId: post.id, content });
   };
 
-  const imageUrl = showSourceImage
-    ? getImageUrl(currentResponse?.sourceImage?.url ?? "")
-    : getImageUrl(currentResponse?.url ?? "");
+  const handleNavigation = (direction: "prev" | "next") => {
+    setShowSourceImage(false);
+    setCurrentResponseIndex((prev) =>
+      direction === "prev"
+        ? Math.max(0, prev - 1)
+        : Math.min((post.responseChain?.length || 0) - 1, prev + 1),
+    );
+  };
 
-  const imageAlt = showSourceImage
-    ? `Source image for ${post.title}`
-    : post.title;
+  if (!post.responseChain?.length) {
+    return <Skeleton className="h-[600px] w-full" />;
+  }
 
   return (
     <Card className="w-full">
@@ -211,15 +185,13 @@ export function CommunityPost({
               <p className="text-sm font-semibold">
                 {post.sharedBy.name ?? "Anonymous"}
               </p>
-              {post.isPublic ? (
-                <div title="Public post">
+              <div title={post.isPublic ? "Public post" : "Private post"}>
+                {post.isPublic ? (
                   <Globe className="h-3 w-3 text-blue-500" />
-                </div>
-              ) : (
-                <div title="Private post">
+                ) : (
                   <Lock className="h-3 w-3 text-amber-500" />
-                </div>
-              )}
+                )}
+              </div>
             </div>
             <p className="text-muted-foreground text-xs">
               {new Date(post.createdAt).toLocaleDateString()}
@@ -247,52 +219,54 @@ export function CommunityPost({
             )}
           </div>
 
-          {!responseChain ? (
-            <Skeleton className="h-[500px] w-full" />
-          ) : currentResponse ? (
+          {currentResponse && (
             <div className="relative overflow-hidden rounded-lg">
               <img
                 src={imageUrl}
-                alt={imageAlt}
+                alt={
+                  showSourceImage
+                    ? `Source image for ${post.title}`
+                    : post.title
+                }
                 className="h-[500px] w-full object-cover"
               />
 
-              {/* Navigation Arrows */}
-              {responseChain && responseChain.length > 1 && (
+              {/* Navigation Controls */}
+              {hasMultipleImages && (
                 <>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handlePrev}
-                    disabled={currentResponseIndex === 0}
-                    className="absolute top-1/2 left-2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
-                    aria-label="previous response"
+                    onClick={() => handleNavigation("prev")}
+                    disabled={!canNavigate.prev}
+                    className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-black/75 text-white hover:bg-black/90 disabled:opacity-50"
+                    aria-label="Previous image"
                   >
                     <ChevronLeft className="h-8 w-8" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handleNext}
-                    disabled={currentResponseIndex === responseChain.length - 1}
-                    className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full bg-black/75 text-white hover:bg-black/90"
-                    aria-label="next response"
+                    onClick={() => handleNavigation("next")}
+                    disabled={!canNavigate.next}
+                    className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-black/75 text-white hover:bg-black/90 disabled:opacity-50"
+                    aria-label="Next image"
                   >
                     <ChevronRight className="h-8 w-8" />
                   </Button>
-                  <div className="absolute right-2 bottom-2 transform rounded-full bg-black/50 px-3 py-1 text-xs text-white">
-                    {currentResponseIndex + 1} / {responseChain.length}
+                  <div className="absolute right-2 bottom-2 rounded-full bg-black/50 px-3 py-1 text-xs text-white">
+                    {currentResponseIndex + 1} / {post.responseChain.length}
                   </div>
                 </>
               )}
 
-              {/* Toggle Source/Generated Image Button */}
+              {/* Source/Generated Toggle */}
               {currentResponse.sourceImage?.url && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowSourceImage(!showSourceImage)}
-                  className="absolute top-2 right-2 transform rounded-full bg-black/50 text-white hover:bg-black/75"
+                  className="absolute top-2 right-2 rounded-full bg-black/50 text-white hover:bg-black/75"
                   aria-label={
                     showSourceImage
                       ? "Show generated image"
@@ -307,7 +281,7 @@ export function CommunityPost({
                 </Button>
               )}
             </div>
-          ) : null}
+          )}
 
           {currentResponse && (
             <div className="space-y-2">
