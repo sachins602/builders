@@ -7,16 +7,9 @@ import { Trash2 } from "lucide-react";
 import { api } from "~/trpc/react";
 import Link from "next/link";
 import { Share2 } from "lucide-react";
+import type { ResponseWithImage } from "~/types/chat";
 
-interface HistoryItemProps {
-  response: {
-    id: number;
-    prompt: string;
-    url: string;
-  };
-}
-
-export function HistoryItem({ response }: HistoryItemProps) {
+export function HistoryItem({ response }: { response: ResponseWithImage }) {
   const deleteResponse = api.response.deleteResponse.useMutation({
     onSuccess: () => {
       // Refresh the page or update the UI
@@ -41,7 +34,9 @@ export function HistoryItem({ response }: HistoryItemProps) {
         src={getImageUrl(response.url)}
       />
       <div className="space-y-2 space-x-4 px-2 py-1">
-        <h3 className="line-clamp-2 font-medium">{response.prompt}</h3>
+        <h3 className="line-clamp-2 font-normal">
+          {response.sourceImage?.address ?? "No address available"}
+        </h3>
         <div className="flex gap-2">
           <ShareDialog responseId={response.id}>
             <Button variant="outline" size="sm">
