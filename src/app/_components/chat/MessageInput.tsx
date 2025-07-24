@@ -10,9 +10,6 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from "../ui/dropdown-menu";
 
 interface MessageInputProps {
@@ -29,7 +26,6 @@ export function MessageInput({
   prompt,
   onPromptChange,
   onGenerate,
-  onReset,
   isGenerating,
   canGenerate,
   hasActiveConversation,
@@ -51,16 +47,6 @@ export function MessageInput({
       ? "How would you like to modify this building?"
       : "Describe how you want to transform the image...";
   };
-
-  const prePrompts = [
-    "🏠 Building Form and Massing",
-    "🎨 Architectural Style",
-    "🌳 Landscaping and Streetscape",
-    "🪟 Facade and Features",
-    "🧹 Site Cleanup and Preparation",
-    "👥 Community Feel",
-  ];
-
   const prePromptsJSON = {
     buildingFormAndMassing: [
       "Replace the house with a duplex",
