@@ -4,7 +4,16 @@ import React from "react";
 import { Button } from "../ui/button";
 import { Plus, Send } from "lucide-react";
 
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "../ui/dropdown-menu" 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "../ui/dropdown-menu";
 
 interface MessageInputProps {
   prompt: string;
@@ -52,7 +61,7 @@ export function MessageInput({
     "👥 Community Feel",
   ];
 
-    const prePromptsJSON = {
+  const prePromptsJSON = {
     buildingFormAndMassing: [
       "Replace the house with a duplex",
       "Add a second story",
@@ -103,10 +112,8 @@ export function MessageInput({
     communityFeel: "👥 Community Feel",
   };
 
-  
-
   return (
-    <div className="flex-shrink-0 border-t bg-white p-4">
+    <div className="flex-shrink-0 bg-white p-4">
       {canGenerate && (
         <div className="mb-3">
           <div className="mb-2">
@@ -116,64 +123,71 @@ export function MessageInput({
           </div>
 
           {/* Quick prompts dropdowns - desktop and tablet only */}
-            <div className="hidden sm:grid grid-cols-2 gap-2">
-              {Object.entries(prePromptsJSON).map(([key, prompts]) => (
+          <div className="hidden grid-cols-2 gap-2 sm:grid">
+            {Object.entries(prePromptsJSON).map(([key, prompts]) => (
               <div key={key} className="col-span-1">
                 <select
-                className="w-full rounded border px-2 py-1 text-sm text-gray-800 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                disabled={isGenerating}
-                onChange={e => {
-                  const value = e.target.value;
-                  if (value) {
-                  onPromptChange(prompt ? `${prompt} ${value}` : value);
-                  e.target.selectedIndex = 0; // Reset dropdown after selection
-                  }
-                }}
-                defaultValue=""
+                  className="w-full rounded border bg-white px-2 py-1 text-sm text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  disabled={isGenerating}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value) {
+                      onPromptChange(prompt ? `${prompt} ${value}` : value);
+                      e.target.selectedIndex = 0; // Reset dropdown after selection
+                    }
+                  }}
+                  defaultValue=""
                 >
-                <option value="" disabled>
-                  {prePromptsFriendlyNames[key as keyof typeof prePromptsFriendlyNames]}
-                </option>
-                {prompts.map((p) => (
-                  <option key={p} value={p}>
-                  {p}
+                  <option value="" disabled>
+                    {
+                      prePromptsFriendlyNames[
+                        key as keyof typeof prePromptsFriendlyNames
+                      ]
+                    }
                   </option>
-                ))}
+                  {prompts.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
                 </select>
               </div>
-              ))}
-            </div>
+            ))}
+          </div>
 
           {/* Quick prompts dropdown single dropdown to save vertical space - mobile only */}
           <div className="sm:hidden">
             {/* Using shadcn/ui DropdownMenu for mobile quick prompts */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Quick prompts
-              </Button>
+                <Button variant="outline" className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Quick prompts
+                </Button>
               </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" className="max-h-60">
-              {Object.entries(prePromptsJSON).map(([key, prompts]) => (
-                <React.Fragment key={key}>
-                <DropdownMenuLabel className="font-semibold opacity-80">
-                  {prePromptsFriendlyNames[key as keyof typeof prePromptsFriendlyNames]}
-                </DropdownMenuLabel>
-                {prompts.map((p) => (
-                  <DropdownMenuItem
-                  key={p}
-                  onSelect={() => {
-                    onPromptChange(prompt ? `${prompt} ${p}` : p);
-                  }}
-                  >
-                  {p}
-                  </DropdownMenuItem>
+              <DropdownMenuContent align="center" className="max-h-60">
+                {Object.entries(prePromptsJSON).map(([key, prompts]) => (
+                  <React.Fragment key={key}>
+                    <DropdownMenuLabel className="font-semibold opacity-80">
+                      {
+                        prePromptsFriendlyNames[
+                          key as keyof typeof prePromptsFriendlyNames
+                        ]
+                      }
+                    </DropdownMenuLabel>
+                    {prompts.map((p) => (
+                      <DropdownMenuItem
+                        key={p}
+                        onSelect={() => {
+                          onPromptChange(prompt ? `${prompt} ${p}` : p);
+                        }}
+                      >
+                        {p}
+                      </DropdownMenuItem>
+                    ))}
+                  </React.Fragment>
                 ))}
-                </React.Fragment>
-              ))}
               </DropdownMenuContent>
-              
             </DropdownMenu>
           </div>
         </div>
@@ -185,10 +199,10 @@ export function MessageInput({
           onChange={(e) => onPromptChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={getPlaceholderText()}
-          className="w-full resize-none rounded-lg border bg-gray-50 p-3 pr-12 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:rows-1"
+          className="sm:rows-1 w-full resize-none rounded-lg border bg-gray-50 p-3 pr-12 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
           disabled={isGenerating || !canGenerate}
           rows={1}
-          style={{ height: '75px' }}
+          style={{ height: "75px" }}
         />
         <Button
           onClick={onGenerate}
