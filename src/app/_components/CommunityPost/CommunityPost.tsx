@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Image as ImageIcon,
   RefreshCw,
+  UserCheck,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { Button } from "../ui/button";
@@ -159,6 +160,11 @@ export function CommunityPost({
     );
   };
 
+  // Determine sharing status for iconography
+  const isPublic = post.isPublic;
+  const isSharedByMe = !isPublic && post.sharedBy.id === currentUserId;
+  const isSharedWithMe = !isPublic && post.sharedBy.id !== currentUserId;
+
   if (!post.responseChain?.length) {
     return <Skeleton className="h-[600px] w-full" />;
   }
@@ -185,13 +191,24 @@ export function CommunityPost({
               <p className="text-sm font-semibold">
                 {post.sharedBy.name ?? "Anonymous"}
               </p>
-              <div title={post.isPublic ? "Public post" : "Private post"}>
-                {post.isPublic ? (
+              {/* Iconography for public/private/shared */}
+              {isPublic ? (
+                <div title="Public post">
                   <Globe className="h-3 w-3 text-blue-500" />
-                ) : (
+                </div>
+              ) : isSharedByMe ? (
+                <div title="Private post (shared by you)">
                   <Lock className="h-3 w-3 text-amber-500" />
-                )}
-              </div>
+                </div>
+              ) : isSharedWithMe ? (
+                <div
+                  className="flex items-center gap-1"
+                  title="Private post (shared with you)"
+                >
+                  <Lock className="h-3 w-3 text-amber-500" />
+                  <UserCheck className="h-3 w-3 text-green-600" />
+                </div>
+              ) : null}
             </div>
             <p className="text-muted-foreground text-xs">
               {new Date(post.createdAt).toLocaleDateString()}
