@@ -225,7 +225,7 @@ export default function MapComponent() {
   return (
     <div className="w-full flex-col space-y-2">
       {/* Map Container */}
-      <div className="h-[calc(100vh-370px)] w-full">
+      <div className="h-[calc(100vh-370px)] w-full drop-shadow-md">
         <MapContainer
           center={TORONTO_CENTER}
           zoom={INITIAL_ZOOM}
