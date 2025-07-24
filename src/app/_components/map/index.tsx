@@ -34,28 +34,35 @@ import { NearbyResponses } from "./NearbyResponses";
 
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
-export default function MapComponent() {
-  // State management
-  const [currentZoom, setCurrentZoom] = useState(INITIAL_ZOOM);
-  const [clickedPosition, setClickedPosition] = useState<
-    [number, number] | null
-  >(null);
-  const [searchBarVisible, setSearchBarVisible] = useState(true);
-  const [toolBarVisible, setToolBarVisible] = useState(false);
-  const [isSearchOperation, setIsSearchOperation] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number]>(TORONTO_CENTER);
-  const [existingImageData, setExistingImageData] = useState<{
+// Consolidated state for popup/selection
+interface SelectionState {
+  position: [number, number] | null;
+  existingImageData: {
     id: number;
     url: string;
     address?: string | null;
     buildingType?: string | null;
     buildingArea?: number | null;
     propertyType?: string | null;
-  } | null>(null);
+  } | null;
+  isFromSearch: boolean;
+}
+
+export default function MapComponent() {
+  // State management - simplified
+  const [currentZoom, setCurrentZoom] = useState(INITIAL_ZOOM);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(TORONTO_CENTER);
+  const [showSearchBar, setShowSearchBar] = useState(true);
+
+  // Consolidated selection state
+  const [selection, setSelection] = useState<SelectionState>({
+    position: null,
+    existingImageData: null,
+    isFromSearch: false,
+  });
 
   // Refs
   const mapRef = useRef<L.Map | null>(null);
-  const searchOperationRef = useRef(false);
 
   // Custom hooks
   const { showMapToast } = useMapToast();
@@ -68,13 +75,15 @@ export default function MapComponent() {
   const image = api.response.saveStreetViewImageAddress.useMutation({
     onSuccess: () => {
       void utils.response.getChatData.invalidate();
-      setIsSearchOperation(false);
-      searchOperationRef.current = false;
     },
     onError: (error) => {
       console.error("Error fetching image:", error);
-      setIsSearchOperation(false);
-      searchOperationRef.current = false;
+      // Clear selection on error
+      setSelection({
+        position: null,
+        existingImageData: null,
+        isFromSearch: false,
+      });
     },
   });
 
@@ -98,21 +107,51 @@ export default function MapComponent() {
     [imagesQuery.data],
   );
 
-  // Event handlers
+  // Unified handler for both search and click operations
+  const handleLocationSelect = useCallback(
+    (lat: number, lng: number, isFromSearch: boolean) => {
+      const position: [number, number] = [lat, lng];
+
+      if (isFromSearch) {
+        // For search, always fetch new property data
+        setSelection({
+          position,
+          existingImageData: null,
+          isFromSearch: true,
+        });
+        image.mutate({ lat, lng });
+      } else {
+        // For click, check existing images first
+        const existingImage = checkForExistingImage(lat, lng);
+        setSelection({
+          position,
+          existingImageData: existingImage,
+          isFromSearch: false,
+        });
+
+        if (!existingImage) {
+          image.mutate({ lat, lng });
+        }
+      }
+
+      setShowSearchBar(false);
+    },
+    [checkForExistingImage, image],
+  );
+
+  // Event handlers - simplified
   const handleSearchComplete = useCallback(
     (lat: number, lng: number) => {
-      setClickedPosition([lat, lng]);
-
-      // For search, always fetch new property data instead of checking existing images
-      // This ensures we get the latest property information
-      setExistingImageData(null);
-      image.mutate({ lat, lng });
-      // Don't clear isSearchOperation here - let the mutation success/error handlers do it
-
-      setSearchBarVisible(false);
-      setToolBarVisible(true);
+      handleLocationSelect(lat, lng, true);
     },
-    [image],
+    [handleLocationSelect],
+  );
+
+  const handleMapClick = useCallback(
+    (lat: number, lng: number) => {
+      handleLocationSelect(lat, lng, false);
+    },
+    [handleLocationSelect],
   );
 
   // Search functionality
@@ -121,71 +160,31 @@ export default function MapComponent() {
     onSearchComplete: handleSearchComplete,
   });
 
-  // Wrapper function to handle search with proper state management
   const handleSearch = useCallback(
     async (address: string) => {
-      setIsSearchOperation(true);
-      searchOperationRef.current = true;
-      setExistingImageData(null);
-
-      // Fallback timeout to clear search operation state
-      const timeoutId = setTimeout(() => {
-        setIsSearchOperation(false);
-        searchOperationRef.current = false;
-      }, 5000); // Clear after 5 seconds if not cleared elsewhere
-
-      try {
-        const success = await performSearch(address);
-        clearTimeout(timeoutId);
-        if (!success) {
-          setIsSearchOperation(false);
-          searchOperationRef.current = false;
-        }
-        return success;
-      } catch (error) {
-        console.error("Error searching:", error);
-        clearTimeout(timeoutId);
-        setIsSearchOperation(false);
-        searchOperationRef.current = false;
-        return false;
-      }
+      const success = await performSearch(address);
+      return success;
     },
     [performSearch],
-  );
-
-  const handleMapClick = useCallback(
-    (lat: number, lng: number) => {
-      setClickedPosition([lat, lng]);
-      setIsSearchOperation(false);
-
-      // Check for existing image first
-      const existingImage = checkForExistingImage(lat, lng);
-      if (existingImage) {
-        setExistingImageData(existingImage);
-      } else {
-        setExistingImageData(null);
-        image.mutate({ lat, lng });
-      }
-
-      setSearchBarVisible(false);
-      setToolBarVisible(true);
-    },
-    [checkForExistingImage, image],
   );
 
   const handleZoomChange = useCallback(
     (zoom: number) => {
       setCurrentZoom(zoom);
-      // Don't clear popup if we're in a search operation or if there's an existing image
+      // Clear popup if zoomed out too far and not from search
       if (
         zoom < ZOOM_LIMIT &&
-        !searchOperationRef.current &&
-        !existingImageData
+        !selection.isFromSearch &&
+        !selection.existingImageData
       ) {
-        setClickedPosition(null);
+        setSelection({
+          position: null,
+          existingImageData: null,
+          isFromSearch: false,
+        });
       }
     },
-    [existingImageData],
+    [selection],
   );
 
   const handleMapRef = useCallback((map: L.Map) => {
@@ -197,17 +196,21 @@ export default function MapComponent() {
   }, []);
 
   const handleSearchClick = useCallback(() => {
-    setSearchBarVisible(true);
-    setToolBarVisible(false);
-    setClickedPosition(null);
-    setExistingImageData(null);
+    setShowSearchBar(true);
+    setSelection({
+      position: null,
+      existingImageData: null,
+      isFromSearch: false,
+    });
   }, []);
 
   const handleSearchBarClose = useCallback(() => {
-    setSearchBarVisible(false);
-    setToolBarVisible(true);
-    setClickedPosition(null);
-    setExistingImageData(null);
+    setShowSearchBar(false);
+    setSelection({
+      position: null,
+      existingImageData: null,
+      isFromSearch: false,
+    });
   }, []);
 
   // Show initial toast
@@ -261,12 +264,12 @@ export default function MapComponent() {
             showMapToast={showMapToast}
           />
 
-          {clickedPosition && (
-            <Popup position={clickedPosition}>
+          {selection.position && (
+            <Popup position={selection.position}>
               <PropertyPopup
                 isLoadingImage={image.isPending}
                 imageData={image.data}
-                existingImageData={existingImageData}
+                existingImageData={selection.existingImageData}
               />
             </Popup>
           )}
@@ -274,14 +277,14 @@ export default function MapComponent() {
       </div>
       {/* Controls */}
       <div className="flex w-full place-self-center">
-        {searchBarVisible && (
+        {showSearchBar && (
           <SearchBar onSearch={handleSearch} onClose={handleSearchBarClose} />
         )}
-        {toolBarVisible && (
+        {!showSearchBar && (
           <ToolBar
             onSearchClick={handleSearchClick}
-            showBuildEditButtons={clickedPosition !== null}
-            existingImageId={existingImageData?.id ?? null}
+            showBuildEditButtons={selection.position !== null}
+            existingImageId={selection.existingImageData?.id ?? null}
           />
         )}
       </div>
