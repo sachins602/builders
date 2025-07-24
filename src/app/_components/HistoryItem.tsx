@@ -6,6 +6,7 @@ import { getImageUrl } from "~/lib/image-utils";
 import { Trash2 } from "lucide-react";
 import { api } from "~/trpc/react";
 import Link from "next/link";
+import { Share2 } from "lucide-react";
 
 interface HistoryItemProps {
   response: {
@@ -23,8 +24,17 @@ export function HistoryItem({ response }: HistoryItemProps) {
     },
   });
 
+  const { data: shared } = api.response.getSharedStatusWithId.useQuery({
+    id: response.id,
+  });
+
   return (
     <div className="group relative overflow-hidden rounded-lg border bg-white shadow-md transition-shadow duration-300 hover:shadow-lg">
+      {shared && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700 shadow">
+          <Share2 className="h-4 w-4" /> Shared
+        </div>
+      )}
       <img
         alt="Generated Art"
         className="h-60 w-full object-cover"

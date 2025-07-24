@@ -430,4 +430,13 @@ export const responseRouter = createTRPCRouter({
         data: { deletedAt: new Date() },
       });
     }),
+
+  getSharedStatusWithId: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const { id } = input;
+      return await ctx.db.sharedChain.findFirst({
+        where: { responseId: id, deletedAt: null },
+      });
+    }),
 });
