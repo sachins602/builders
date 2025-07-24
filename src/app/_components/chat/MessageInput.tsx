@@ -113,15 +113,12 @@ export function MessageInput({
   };
 
   return (
-    <div className="flex-shrink-0 bg-white p-4">
+    <div className="flex-shrink-0 bg-white">
       {canGenerate && (
-        <div className="mb-3">
-          <div className="mb-2">
-            <span className="text-sm font-medium text-gray-600">
-              Quick prompts
-            </span>
-          </div>
-
+        <div>
+          <span className="text-sm font-medium text-gray-600">
+            Quick prompts
+          </span>
           {/* Quick prompts dropdowns - desktop and tablet only */}
           <div className="hidden grid-cols-2 gap-2 sm:grid">
             {Object.entries(prePromptsJSON).map(([key, prompts]) => (
@@ -193,7 +190,7 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative">
+      <div className="relative mt-1">
         <textarea
           value={prompt}
           onChange={(e) => onPromptChange(e.target.value)}
