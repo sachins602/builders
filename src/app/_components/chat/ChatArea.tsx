@@ -115,7 +115,7 @@ export function ChatArea({
                       ? "Original image"
                       : "Generated image"
                   }
-                  className="sm:h[25vh] max-h-[50vh] w-full rounded-md object-contain md:max-h-[40vh] lg:h-full"
+                  className="max-h-[50vh] w-full rounded-md object-contain sm:h-[35vh] md:max-h-[40vh] lg:h-[50vh]"
                   style={{ minHeight: 120 }}
                 />
               )}

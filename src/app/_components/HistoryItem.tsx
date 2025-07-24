@@ -41,13 +41,13 @@ export function HistoryItem({ response }: { response: ResponseWithImage }) {
           {!isSharedLoading && !shared && (
             <ShareDialog responseId={response.id}>
               <Button variant="outline" size="sm">
-                <Share2 className="mr-1 h-4 w-4" /> Share
+                <Share2 className="h-4 w-4" /> Share
               </Button>
             </ShareDialog>
           )}
           <Link href={`/create/${response.id}`}>
             <Button variant="outline" size="sm">
-              <ArrowRight className="mr-1 h-4 w-4" /> Continue
+              <ArrowRight className="h-4 w-4" /> Continue
             </Button>
           </Link>
           <Button
@@ -58,7 +58,7 @@ export function HistoryItem({ response }: { response: ResponseWithImage }) {
             size="sm"
             disabled={deleteResponse.isPending}
           >
-            <Trash2 className="m-2 inline-block h-4 w-4" />
+            <Trash2 className="inline-block h-4 w-4" />
             <span>{deleteResponse.isPending ? "Deleting..." : "Delete"}</span>
           </Button>
         </div>

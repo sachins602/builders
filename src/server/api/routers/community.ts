@@ -320,11 +320,6 @@ export const communityRouter = createTRPCRouter({
             ctx.db,
             post.responseId,
           );
-          console.log(
-            `Response chain for post ${post.id}:`,
-            responseChain.length,
-            "items",
-          );
           return {
             ...post,
             responseChain,
@@ -445,11 +440,6 @@ export const communityRouter = createTRPCRouter({
           const responseChain = await getFullResponseChain(
             ctx.db,
             post.responseId,
-          );
-          console.log(
-            `Response chain for post ${post.id}:`,
-            responseChain.length,
-            "items",
           );
           return {
             ...post,
