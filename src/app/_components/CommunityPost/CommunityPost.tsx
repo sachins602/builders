@@ -100,27 +100,30 @@ export function CommunityPost({
 
   const utils = api.useUtils();
 
-  // Memoize computed values
+  // Memoize reversed response chain (last response first)
+  const reversedResponseChain = useMemo(
+    () => [...post.responseChain].reverse(),
+    [post.responseChain],
+  );
   const isLiked = useMemo(
     () => userLikes.includes(post.id),
     [userLikes, post.id],
   );
   const currentResponse = useMemo(
-    () => post.responseChain?.[currentResponseIndex],
-    [post.responseChain, currentResponseIndex],
+    () => reversedResponseChain?.[currentResponseIndex],
+    [reversedResponseChain, currentResponseIndex],
   );
   const hasMultipleImages = useMemo(
-    () => post.responseChain?.length > 1,
-    [post.responseChain],
+    () => reversedResponseChain?.length > 1,
+    [reversedResponseChain],
   );
   const canNavigate = useMemo(
     () => ({
       prev: currentResponseIndex > 0,
-      next: currentResponseIndex < (post.responseChain?.length || 0) - 1,
+      next: currentResponseIndex < (reversedResponseChain?.length || 0) - 1,
     }),
-    [currentResponseIndex, post.responseChain],
+    [currentResponseIndex, reversedResponseChain],
   );
-
   const imageUrl = useMemo(() => {
     if (!currentResponse) return "";
     return showSourceImage
@@ -156,7 +159,7 @@ export function CommunityPost({
     setCurrentResponseIndex((prev) =>
       direction === "prev"
         ? Math.max(0, prev - 1)
-        : Math.min((post.responseChain?.length || 0) - 1, prev + 1),
+        : Math.min((reversedResponseChain?.length || 0) - 1, prev + 1),
     );
   };
 
@@ -272,7 +275,7 @@ export function CommunityPost({
                     <ChevronRight className="h-8 w-8" />
                   </Button>
                   <div className="absolute right-2 bottom-2 rounded-full bg-black/50 px-3 py-1 text-xs text-white">
-                    {currentResponseIndex + 1} / {post.responseChain.length}
+                    {currentResponseIndex + 1} / {reversedResponseChain.length}
                   </div>
                 </>
               )}
