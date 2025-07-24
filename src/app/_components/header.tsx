@@ -32,6 +32,18 @@ export default async function Header() {
               <NavigationMenuContent className="w-64 md:w-64">
                 {/* Navigation Links */}
                 <Link
+                  href="/"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/profile"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Profile
+                </Link>
+                <Link
                   href="/create"
                   className="block px-4 py-2 text-sm hover:bg-gray-100"
                 >
@@ -50,10 +62,16 @@ export default async function Header() {
                   My Likes
                 </Link>
                 <Link
-                  href="/community"
+                  href="/mycommunity"
                   className="block px-4 py-2 text-sm hover:bg-gray-100"
                 >
-                  Community
+                  My Community
+                </Link>
+                <Link
+                  href="/popular"
+                  className="block px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Popular
                 </Link>
                 <Link
                   href="/communities"

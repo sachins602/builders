@@ -77,74 +77,73 @@ export function ChatArea({
   };
 
   return (
-    <div className="h-full flex-1 overflow-y-hidden">
-      <div className="mx-auto max-w-4xl">
-        {currentImageData && (
-          <div className="bg-white p-4">
-            <div className="flex flex-row items-center justify-center">
-              {/*Left Chevron  */}
-              {hasMultipleImages && (
-                <button
-                  onClick={navigateLeft}
-                  className="mr-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200"
-                  style={{ aspectRatio: "1 / 1" }}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-              )}
+    <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col justify-center overflow-hidden">
+      {currentImageData && (
+        <div className="flex w-full flex-row items-center justify-center bg-white p-2 sm:p-4">
+          {/*Left Chevron  */}
+          {hasMultipleImages && (
+            <button
+              onClick={navigateLeft}
+              className="mr-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200"
+              style={{ aspectRatio: "1 / 1" }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          )}
 
-              {/* Image Display */}
-              <div>
-                {hasMultipleImages && (
-                  <div
-                    className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md"
-                    style={{ minWidth: 80, textAlign: "center" }}
-                  >
-                    <span className="text-sm font-medium text-gray-600">
-                      {currentIndex + 1} of {allImages.length}
-                    </span>
-                  </div>
-                )}
-
-                {isGenerating ? (
-                  <Skeleton className="h-72 w-full rounded-md" />
-                ) : (
-                  <img
-                    src={getImageUrl(currentImageData.image.url)}
-                    alt={
-                      currentImageData.type === "original"
-                        ? "Original image"
-                        : "Generated image"
-                    }
-                    className="h-96 w-full rounded-md object-fill"
-                  />
-                )}
-
-                {/* Address */}
-                {currentImageData.image.address && (
-                  <div className="flex flex-row items-center justify-center">
-                    <StreetAddress address={currentImageData.image.address} />
-                  </div>
-                )}
+          {/* Image Display */}
+          <div className="relative flex w-full max-w-full flex-col items-center">
+            {hasMultipleImages && (
+              <div
+                className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md"
+                style={{ minWidth: 80, textAlign: "center" }}
+              >
+                <span className="text-sm font-medium text-gray-600">
+                  {currentIndex + 1} of {allImages.length}
+                </span>
               </div>
+            )}
 
-              {/*Right Chevron  */}
-              {hasMultipleImages && (
-                <button
-                  onClick={navigateRight}
-                  className="ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200"
-                  style={{ aspectRatio: "1 / 1" }}
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
+            <div className="flex w-full max-w-full items-center justify-center">
+              {isGenerating ? (
+                <Skeleton className="h-64 w-full max-w-lg rounded-md" />
+              ) : (
+                <img
+                  src={getImageUrl(currentImageData.image.url)}
+                  alt={
+                    currentImageData.type === "original"
+                      ? "Original image"
+                      : "Generated image"
+                  }
+                  className="max-h-[50vh] w-full rounded-md object-contain sm:h-[35vh] md:max-h-[40vh] lg:h-[50vh]"
+                  style={{ minHeight: 120 }}
+                />
               )}
             </div>
-          </div>
-        )}
 
-        {/* Welcome Message */}
-        {showWelcomeMessage && <WelcomeMessage />}
-      </div>
+            {/* Address */}
+            {currentImageData.image.address && (
+              <div className="mt-2 flex flex-row items-center justify-center">
+                <StreetAddress address={currentImageData.image.address} />
+              </div>
+            )}
+          </div>
+
+          {/*Right Chevron  */}
+          {hasMultipleImages && (
+            <button
+              onClick={navigateRight}
+              className="ml-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 p-2 transition-colors hover:bg-gray-200"
+              style={{ aspectRatio: "1 / 1" }}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Welcome Message */}
+      {showWelcomeMessage && <WelcomeMessage />}
     </div>
   );
 }

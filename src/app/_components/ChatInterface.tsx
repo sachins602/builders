@@ -1,5 +1,4 @@
 "use client";
-
 import { useChat } from "~/lib/use-chat";
 import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
@@ -37,13 +36,12 @@ export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
   }
 
   return (
-    <div className="flex h-[calc(100vh-100px)] w-full flex-col">
+    <div className="flex h-[calc(100vh-100px)] min-h-0 w-full flex-col">
       <ChatArea
         lastImage={chatData.lastImage}
         responseChain={state.responseChain}
         isGenerating={state.isGenerating}
       />
-
       <MessageInput
         prompt={state.prompt}
         onPromptChange={actions.setPrompt}
@@ -61,7 +59,7 @@ export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
         }}
         canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
         isGenerating={state.isGenerating}
-        onPublish={() => alert("Publish functionality not implemented yet.")}
+        responseId={state.selectedResponseId ?? null}
       />
     </div>
   );
