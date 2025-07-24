@@ -23,7 +23,6 @@ import { TORONTO_CENTER, INITIAL_ZOOM, ZOOM_LIMIT, outerBounds } from "./types";
 // Components
 import { SearchBar } from "./SearchBar";
 import { ToolBar } from "./ToolBar";
-import { NavigationButtons } from "./NavigationButtons";
 import { PropertyPopup } from "./PropertyPopup";
 import { PropertyPolygons } from "./PropertyPolygons";
 import { MapEvents } from "./MapEvents";
@@ -31,6 +30,7 @@ import { MapEvents } from "./MapEvents";
 // Hooks
 import { useMapSearch } from "./useMapSearch";
 import { useMapToast } from "./useMapToast";
+import { NearbyResponses } from "./NearbyResponses";
 
 const maskPolygon: [number, number][][] = [...outerBounds, torontoBoundary];
 
@@ -216,9 +216,9 @@ export default function MapComponent() {
   }, [currentZoom, showMapToast]);
 
   return (
-    <div className="flex h-full w-full flex-col space-y-2">
+    <div className="w-full flex-col space-y-2">
       {/* Map Container */}
-      <div className="h-[calc(100vh-400px)] w-full">
+      <div className="h-[calc(100vh-370px)] w-full">
         <MapContainer
           center={TORONTO_CENTER}
           zoom={INITIAL_ZOOM}
@@ -272,7 +272,6 @@ export default function MapComponent() {
           )}
         </MapContainer>
       </div>
-
       {/* Controls */}
       <div className="flex w-full place-self-center">
         {searchBarVisible && (
@@ -286,12 +285,8 @@ export default function MapComponent() {
           />
         )}
       </div>
-
       {/* Spacer - Builds to go here */}
-      <div className="flex w-full flex-grow flex-row justify-center"></div>
-
-      {/* Navigation Buttons */}
-      <NavigationButtons currentZoom={currentZoom} mapCenter={mapCenter} />
+      <NearbyResponses currentZoom={currentZoom} mapCenter={mapCenter} />
     </div>
   );
 }
