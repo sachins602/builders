@@ -62,10 +62,10 @@ export default async function Header() {
                   My Likes
                 </Link>
                 <Link
-                  href="/community"
+                  href="/mycommunity"
                   className="block px-4 py-2 text-sm hover:bg-gray-100"
                 >
-                  Community
+                  MyE Community
                 </Link>
                 <Link
                   href="/popular"
