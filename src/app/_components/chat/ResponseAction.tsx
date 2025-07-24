@@ -24,17 +24,12 @@ export default function ResponseAction({
       <p className="text-gray-500">
         {isGenerating ? "Generating..." : canGenerate ? "" : "Select an image"}
       </p>
-      {/* <button
-        className="flex flex-col items-center rounded bg-green-500 p-1 text-white hover:bg-green-600"
-        onClick={onPublish}
-      >
-        <Rocket className="m-1 inline-block h-4 w-4" />
-        <span className="text-sm">Publish</span>
-      </button> */}
       {responseId && (
         <ShareDialog responseId={responseId}>
-          <Rocket className="m-1 inline-block h-4 w-4" />
-          <span className="text-sm">Publish</span>
+          <button className="flex flex-col items-center rounded bg-green-500 p-1 text-white hover:bg-green-600">
+            <Rocket className="m-1 inline-block h-4 w-4" />
+            <span className="text-sm">Publish</span>
+          </button>
         </ShareDialog>
       )}
     </div>
