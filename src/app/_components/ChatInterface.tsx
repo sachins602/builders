@@ -61,7 +61,7 @@ export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
         }}
         canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
         isGenerating={state.isGenerating}
-        onPublish={() => alert("Publish functionality not implemented yet.")}
+        responseId={state.selectedResponseId ?? null}
       />
     </div>
   );

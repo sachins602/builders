@@ -1,13 +1,14 @@
 import { Rocket, Trash2 } from "lucide-react";
+import { ShareDialog } from "../ShareDialog";
 
 export default function ResponseAction({
   onDelete,
-  onPublish,
+  responseId,
   isGenerating,
   canGenerate,
 }: {
   onDelete: () => void;
-  onPublish: () => void;
+  responseId: number | null;
   isGenerating: boolean;
   canGenerate: boolean;
 }) {
@@ -23,13 +24,19 @@ export default function ResponseAction({
       <p className="text-gray-500">
         {isGenerating ? "Generating..." : canGenerate ? "" : "Select an image"}
       </p>
-      <button
+      {/* <button
         className="flex flex-col items-center rounded bg-green-500 p-1 text-white hover:bg-green-600"
         onClick={onPublish}
       >
         <Rocket className="m-1 inline-block h-4 w-4" />
         <span className="text-sm">Publish</span>
-      </button>
+      </button> */}
+      {responseId && (
+        <ShareDialog responseId={responseId}>
+          <Rocket className="m-1 inline-block h-4 w-4" />
+          <span className="text-sm">Publish</span>
+        </ShareDialog>
+      )}
     </div>
   );
 }
