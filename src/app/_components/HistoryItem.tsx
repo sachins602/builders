@@ -3,10 +3,9 @@
 import { Button } from "./ui/button";
 import { ShareDialog } from "./ShareDialog";
 import { getImageUrl } from "~/lib/image-utils";
-import { Trash2 } from "lucide-react";
+import { Trash2, Share2, ArrowRight } from "lucide-react";
 import { api } from "~/trpc/react";
 import Link from "next/link";
-import { Share2 } from "lucide-react";
 import type { ResponseWithImage } from "~/types/chat";
 
 export function HistoryItem({ response }: { response: ResponseWithImage }) {
@@ -17,9 +16,10 @@ export function HistoryItem({ response }: { response: ResponseWithImage }) {
     },
   });
 
-  const { data: shared } = api.response.getSharedStatusWithId.useQuery({
-    id: response.id,
-  });
+  const { data: shared, isLoading: isSharedLoading } =
+    api.response.getSharedStatusWithId.useQuery({
+      id: response.id,
+    });
 
   return (
     <div className="group relative overflow-hidden rounded-lg border bg-white shadow-md transition-shadow duration-300 hover:shadow-lg">
@@ -38,14 +38,16 @@ export function HistoryItem({ response }: { response: ResponseWithImage }) {
           {response.sourceImage?.address ?? "No address available"}
         </h3>
         <div className="flex gap-2">
-          <ShareDialog responseId={response.id}>
-            <Button variant="outline" size="sm">
-              Share
-            </Button>
-          </ShareDialog>
+          {!isSharedLoading && !shared && (
+            <ShareDialog responseId={response.id}>
+              <Button variant="outline" size="sm">
+                <Share2 className="mr-1 h-4 w-4" /> Share
+              </Button>
+            </ShareDialog>
+          )}
           <Link href={`/create/${response.id}`}>
             <Button variant="outline" size="sm">
-              Continue
+              <ArrowRight className="mr-1 h-4 w-4" /> Continue
             </Button>
           </Link>
           <Button
