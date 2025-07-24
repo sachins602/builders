@@ -1,10 +1,11 @@
-import { HydrateClient } from "~/trpc/server";
 import MapWrapper from "./_components/map/mapwrapper";
+import { NavigationButtons } from "./_components/map/NavigationButtons";
 
 export default async function Home() {
   return (
-    <HydrateClient>
+    <div className="flex h-full w-full flex-col">
       <MapWrapper />
-    </HydrateClient>
+      <NavigationButtons />
+    </div>
   );
 }
