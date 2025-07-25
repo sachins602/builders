@@ -17,9 +17,7 @@ const navItems = [
 export default function PageTitle() {
   const pathname = usePathname();
   const selectedIdx = navItems.findIndex(
-    (item) =>
-      pathname === item.href ||
-      (typeof pathname === "string" && pathname.startsWith(item.href + "/")),
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
   );
   const selectedItem = navItems[selectedIdx === -1 ? 0 : selectedIdx];
 
