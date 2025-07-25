@@ -21,7 +21,7 @@ export default function PageTitle() {
       pathname === item.href ||
       (typeof pathname === "string" && pathname.startsWith(item.href + "/")),
   );
-  const selectedItem = navItems[selectedIdx ?? 0];
+  const selectedItem = navItems[selectedIdx === -1 ? 0 : selectedIdx];
 
   return <p className="text-xl font-bold">{selectedItem?.label}</p>;
 }
