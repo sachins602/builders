@@ -5,17 +5,21 @@ interface ToolBarProps {
   onSearchClick: () => void;
   showBuildEditButtons: boolean;
   existingImageId?: number | null;
+  // Indicates if a build exists for the current address
+  // This is used to determine if the "Remix" button should be shown
+  buildExists: boolean;
 }
 
 export function ToolBar({
   onSearchClick,
   showBuildEditButtons,
   existingImageId,
+  buildExists,
 }: ToolBarProps) {
   return (
     <div className="flex w-full flex-row justify-center gap-4">
       <Button variant="secondary" onClick={onSearchClick}>
-        <Search className="m-2 h-28 w-28 scale-250" />
+        <Search className="m-2 h-16 w-16" />
         <span>Search</span>
       </Button>
 
@@ -27,8 +31,8 @@ export function ToolBar({
               window.location.href = "/create";
             }}
           >
-            <Hammer className="m-2 h-28 w-28 scale-250" />
-            <p>Build</p>
+            <Hammer className="m-2 h-16 w-16" />
+            <span>Build</span>
           </Button>
 
           <Button
@@ -41,8 +45,13 @@ export function ToolBar({
               }
             }}
           >
-            <Edit className="m-2 h-28 w-28 scale-250" />
-            <p>Edit</p>
+            {/* If buildExists is true, show the Remix button, otherwise show Edit */}
+            {buildExists ? (
+              <>
+                <Edit className="m-2 h-16 w-16" />
+                <span>Remix</span>
+              </>
+            ) : null}
           </Button>
         </div>
       )}

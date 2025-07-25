@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/profile", label: "Profile" },
-  { href: "/create", label: "Continue Remix" },
+  { href: "/create", label: "Continue Build" },
   { href: "/history", label: "My Builds & Remixes" },
   { href: "/likes", label: "My Likes" },
   { href: "/mycommunity", label: "My Community" },
   { href: "/popular", label: "Popular" },
-  { href: "/communities", label: "Manage Community Organizations" },
+  { href: "/organizations", label: "Community Organizations" },
   { href: "/about", label: "About" },
 ];
 

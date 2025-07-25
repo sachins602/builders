@@ -48,7 +48,7 @@ export default async function Header() {
                   href="/create"
                   className="block px-4 py-2 text-sm hover:bg-gray-100"
                 >
-                  Continue Remix
+                  Continue Last Build
                 </Link>
                 <Link
                   href="/history"
@@ -75,10 +75,10 @@ export default async function Header() {
                   Popular
                 </Link>
                 <Link
-                  href="/communities"
+                  href="/organizations"
                   className="block px-4 py-2 text-sm hover:bg-gray-100"
                 >
-                  Manage Community Organizations
+                  Community Organizations
                 </Link>
                 <Link
                   href="/about"
