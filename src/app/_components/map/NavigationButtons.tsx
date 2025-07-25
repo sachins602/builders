@@ -17,7 +17,7 @@ export function NavigationButtons() {
       <Button
         variant="secondary"
         onClick={() => {
-          window.location.href = "/community";
+          window.location.href = "/communities";
         }}
       >
         <Users className="h-16 w-16" />
