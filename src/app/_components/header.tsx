@@ -119,11 +119,11 @@ export default async function Header() {
       <div>
         <Link href="/">
           <Image
-            src="/omm-logo.png"
+            src="/images/newlogo-grayscale.png"
             alt="Our Missing Middle Logo"
             width="50"
             height="50"
-            className="h-10 w-10"
+            className="h-10 w-10 mr-2"
           />
         </Link>
       </div>
