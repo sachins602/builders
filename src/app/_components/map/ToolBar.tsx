@@ -7,7 +7,7 @@ interface ToolBarProps {
   existingImageId?: number | null;
   // Indicates if a build exists for the current address
   // This is used to determine if the "Remix" button should be shown
-  buildExists: boolean | null;
+  buildExists: boolean;
 }
 
 export function ToolBar({
@@ -51,12 +51,7 @@ export function ToolBar({
                 <Edit className="m-2 h-16 w-16" />
                 <span>Remix</span>
               </>
-            ) : (
-              <>
-                <Edit className="m-2 h-16 w-16" />
-                <span>Edit</span>
-              </>
-            )}
+            ) : null}
           </Button>
         </div>
       )}
