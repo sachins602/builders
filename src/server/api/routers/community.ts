@@ -347,6 +347,9 @@ export const communityRouter = createTRPCRouter({
 
       const whereClause = {
         deletedAt: null,
+        likeCount: {
+          gt: 0,
+        },
         OR: [
           { isPublic: true },
           ...(currentUserId

@@ -38,18 +38,11 @@ const TORONTO_BOUNDS: [[number, number], [number, number]] = [
   [44.0, -78.95], // Northeast corner (lat, lng)
 ];
 
-// Consolidated state for popup/selection
+// State for selection (to show build/edit buttons or popup)
 interface SelectionState {
   position: [number, number] | null;
-  existingImageData: {
-    id: number;
-    url: string;
-    address?: string | null;
-    buildingType?: string | null;
-    buildingArea?: number | null;
-    propertyType?: string | null;
-  } | null;
   isFromSearch: boolean;
+  hasParcelData: boolean;
 }
 
 export default function MapComponent() {
@@ -61,8 +54,8 @@ export default function MapComponent() {
   // Consolidated selection state
   const [selection, setSelection] = useState<SelectionState>({
     position: null,
-    existingImageData: null,
     isFromSearch: false,
+    hasParcelData: false,
   });
 
   // Refs
@@ -74,7 +67,6 @@ export default function MapComponent() {
   // API hooks
   const utils = api.useUtils();
   const parcelData = api.response.getEnhancedParcelData.useQuery();
-  const imagesQuery = api.response.getImages.useQuery();
 
   const image = api.response.saveStreetViewImageAddress.useMutation({
     onSuccess: () => {
@@ -85,78 +77,86 @@ export default function MapComponent() {
       // Clear selection on error
       setSelection({
         position: null,
-        existingImageData: null,
         isFromSearch: false,
+        hasParcelData: false,
       });
     },
   });
 
-  // Helper function to check if there's an existing image near the coordinates
-  const checkForExistingImage = useCallback(
-    (lat: number, lng: number) => {
-      if (!imagesQuery.data) return null;
+  // Point-in-polygon algorithm
+  const isPointInPolygon = useCallback(
+    (point: [number, number], polygon: [number, number][]) => {
+      const [x, y] = point;
+      let inside = false;
 
-      // Find image within ~50 meters (roughly 0.0005 degrees)
-      const threshold = 0.0005;
-      const existingImage = imagesQuery.data.find(
-        (img) =>
-          img.lat &&
-          img.lng &&
-          Math.abs(img.lat - lat) < threshold &&
-          Math.abs(img.lng - lng) < threshold,
-      );
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i]!;
+        const [xj, yj] = polygon[j]!;
 
-      return existingImage ?? null;
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+          inside = !inside;
+        }
+      }
+
+      return inside;
     },
-    [imagesQuery.data],
+    [],
   );
 
-  // Unified handler for both search and click operations
-  const handleLocationSelect = useCallback(
-    (lat: number, lng: number, isFromSearch: boolean) => {
+  // Handler for search location selection
+  const handleSearchSelect = useCallback(
+    (lat: number, lng: number) => {
       const position: [number, number] = [lat, lng];
 
-      if (isFromSearch) {
-        // For search, always fetch new property data
-        setSelection({
-          position,
-          existingImageData: null,
-          isFromSearch: true,
-        });
-        image.mutate({ lat, lng });
-      } else {
-        // For click, check existing images first
-        const existingImage = checkForExistingImage(lat, lng);
-        setSelection({
-          position,
-          existingImageData: existingImage,
-          isFromSearch: false,
-        });
+      // Check if there's parcel data at the searched location
+      const hasParcelData = parcelData.data?.some((parcel) => {
+        if (
+          parcel.propertyBoundary?.coordinates &&
+          Array.isArray(parcel.propertyBoundary.coordinates[0])
+        ) {
+          // Convert from [lng, lat] to [lat, lng] for the polygon check
+          const coordinates = (
+            parcel.propertyBoundary.coordinates[0] as [number, number][]
+          ).map(([lng, lat]) => [lat, lng] as [number, number]);
 
-        if (!existingImage) {
-          image.mutate({ lat, lng });
+          return isPointInPolygon([lat, lng], coordinates);
         }
+        return false;
+      });
+
+      // For search, set position to show build/edit buttons and potentially popup
+      setSelection({
+        position,
+        isFromSearch: true,
+        hasParcelData: !!hasParcelData,
+      });
+
+      // Only fetch image if there's no parcel data (PropertyPopup will need it)
+      if (!hasParcelData) {
+        image.mutate({ lat, lng });
       }
 
       setShowSearchBar(false);
     },
-    [checkForExistingImage, image],
+    [image, parcelData.data, isPointInPolygon],
   );
 
   // Event handlers - simplified
   const handleSearchComplete = useCallback(
     (lat: number, lng: number) => {
-      handleLocationSelect(lat, lng, true);
+      handleSearchSelect(lat, lng);
     },
-    [handleLocationSelect],
+    [handleSearchSelect],
   );
 
-  const handleMapClick = useCallback(
-    (lat: number, lng: number) => {
-      handleLocationSelect(lat, lng, false);
-    },
-    [handleLocationSelect],
-  );
+  // Handler for when a property polygon is clicked - clear popup selection
+  const handlePolygonClick = useCallback(() => {
+    setSelection({
+      position: null,
+      isFromSearch: false,
+      hasParcelData: false,
+    });
+  }, []);
 
   // Search functionality
   const { performSearch } = useMapSearch({
@@ -175,16 +175,12 @@ export default function MapComponent() {
   const handleZoomChange = useCallback(
     (zoom: number) => {
       setCurrentZoom(zoom);
-      // Clear popup if zoomed out too far and not from search
-      if (
-        zoom < ZOOM_LIMIT &&
-        !selection.isFromSearch &&
-        !selection.existingImageData
-      ) {
+      // Clear selection if zoomed out too far and not from search
+      if (zoom < ZOOM_LIMIT && !selection.isFromSearch) {
         setSelection({
           position: null,
-          existingImageData: null,
           isFromSearch: false,
+          hasParcelData: false,
         });
       }
     },
@@ -203,8 +199,8 @@ export default function MapComponent() {
     setShowSearchBar(true);
     setSelection({
       position: null,
-      existingImageData: null,
       isFromSearch: false,
+      hasParcelData: false,
     });
   }, []);
 
@@ -212,10 +208,45 @@ export default function MapComponent() {
     setShowSearchBar(false);
     setSelection({
       position: null,
-      existingImageData: null,
       isFromSearch: false,
+      hasParcelData: false,
     });
   }, []);
+
+  // Handler for map clicks - only show popup when no parcel data exists
+  const handleMapClick = useCallback(
+    (lat: number, lng: number) => {
+      // Check if there's parcel data at this location using proper polygon boundaries
+      const hasParcelData = parcelData.data?.some((parcel) => {
+        if (
+          parcel.propertyBoundary?.coordinates &&
+          Array.isArray(parcel.propertyBoundary.coordinates[0])
+        ) {
+          // Convert from [lng, lat] to [lat, lng] for the polygon check
+          const coordinates = (
+            parcel.propertyBoundary.coordinates[0] as [number, number][]
+          ).map(([lng, lat]) => [lat, lng] as [number, number]);
+
+          return isPointInPolygon([lat, lng], coordinates);
+        }
+        return false;
+      });
+
+      // Only show PropertyPopup when there's no parcel data
+      if (!hasParcelData) {
+        const position: [number, number] = [lat, lng];
+        setSelection({
+          position,
+          isFromSearch: false,
+          hasParcelData: false,
+        });
+        // Fetch street view image
+        image.mutate({ lat, lng });
+        setShowSearchBar(false);
+      }
+    },
+    [parcelData.data, image, isPointInPolygon],
+  );
 
   // Show initial toast
   useEffect(() => {
@@ -241,37 +272,10 @@ export default function MapComponent() {
           />
           <GeoJSON
             data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
-            style={(feature) => {
-              // Type guard for GeoJSON feature
-              const type =
-                typeof feature === "object" &&
-                feature &&
-                "properties" in feature &&
-                typeof feature.properties === "object" &&
-                feature.properties &&
-                "type" in feature.properties
-                  ? (feature.properties as { type?: string }).type
-                  : undefined;
-              if (type === "water") {
-                return {
-                  color: "#4FC3F7",
-                  fillColor: "#4FC3F7",
-                  fillOpacity: 0.7,
-                };
-              }
-              if (type === "park") {
-                return {
-                  color: "#81C784",
-                  fillColor: "#81C784",
-                  fillOpacity: 0.5,
-                };
-              }
-              // Default: light gray
-              return {
-                color: "#BDBDBD",
-                fillColor: "#F5F5F5",
-                fillOpacity: 0.2,
-              };
+            style={{
+              color: "#BDBDBD",
+              fillColor: "#F5F5F5",
+              fillOpacity: 0.2,
             }}
           />
 
@@ -287,7 +291,17 @@ export default function MapComponent() {
             interactive={false}
           />
 
-          <PropertyPolygons parcelData={parcelData.data} />
+          <PropertyPolygons
+            onPopupClose={() =>
+              setSelection({
+                position: null,
+                isFromSearch: false,
+                hasParcelData: false,
+              })
+            }
+            parcelData={parcelData.data}
+            onPolygonClick={handlePolygonClick}
+          />
 
           <MapEvents
             onMapClick={handleMapClick}
@@ -297,12 +311,11 @@ export default function MapComponent() {
             showMapToast={showMapToast}
           />
 
-          {selection.position && (
+          {selection.position && !selection.hasParcelData && (
             <Popup position={selection.position}>
               <PropertyPopup
                 isLoadingImage={image.isPending}
                 imageData={image.data}
-                existingImageData={selection.existingImageData}
               />
             </Popup>
           )}
@@ -317,7 +330,7 @@ export default function MapComponent() {
           <ToolBar
             onSearchClick={handleSearchClick}
             showBuildEditButtons={selection.position !== null}
-            existingImageId={selection.existingImageData?.id ?? null}
+            existingImageId={null}
           />
         )}
       </div>

@@ -5,9 +5,15 @@ import type { PropertyData } from "./types";
 
 interface PropertyPolygonsProps {
   parcelData?: PropertyData[];
+  onPopupClose: () => void;
+  onPolygonClick?: () => void; // Add callback to notify parent
 }
 
-export function PropertyPolygons({ parcelData }: PropertyPolygonsProps) {
+export function PropertyPolygons({
+  parcelData,
+  onPolygonClick,
+  onPopupClose,
+}: PropertyPolygonsProps) {
   if (!parcelData) return null;
 
   return (
@@ -26,7 +32,13 @@ export function PropertyPolygons({ parcelData }: PropertyPolygonsProps) {
               key={parcel.id}
               positions={coordinates}
               eventHandlers={{
-                click: () => {
+                click: (e: LeafletMouseEvent) => {
+                  // Stop the event from bubbling to the map
+                  e.originalEvent.stopPropagation();
+
+                  // Notify parent that a polygon was clicked (to clear selection state)
+                  onPolygonClick?.();
+
                   console.log(`Property clicked: ${parcel.address}`);
                   console.log(`Building type: ${parcel.buildingType}`);
                   if (parcel.buildingArea) {
@@ -50,7 +62,11 @@ export function PropertyPolygons({ parcelData }: PropertyPolygonsProps) {
                 interactive: true,
               }}
             >
-              <Popup>
+              <Popup
+                eventHandlers={{
+                  popupclose: () => onPopupClose(),
+                }}
+              >
                 <div className="p-2">
                   <h3 className="text-sm font-semibold">
                     {parcel.address ?? "Unknown Address"}
