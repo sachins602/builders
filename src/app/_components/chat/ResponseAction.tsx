@@ -33,7 +33,7 @@ export default function ResponseAction({
       </ShareDialog>
       ) : (
       // Invisible placeholder to maintain alignment
-      <div className="w-[72px] h-[40px] invisible" />
+      <div className="w-20 h-10 invisible" />
       )}
     </div>
   );
