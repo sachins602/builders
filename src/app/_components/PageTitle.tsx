@@ -21,5 +21,5 @@ export default function PageTitle() {
   );
   const selectedItem = navItems[selectedIdx === -1 ? 0 : selectedIdx];
 
-  return <p className="text-xl font-bold">{selectedItem?.label}</p>;
+  return <span className="text-2xl font-bold text-shadow-lg/10 px-4 py-2 block flex-grow-0 items-center">{selectedItem?.label}</span>;
 }

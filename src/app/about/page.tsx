@@ -1,14 +1,14 @@
 export default function About() {
   return (
-    <section id="about">
-      <h1 className="text-4xl font-bold mb-6 text-black">
+    <section id="about" className="max-w-4xl mx-auto px-4 py-8">
+      <h1 className="text-4xl font-bold mb-6 text-black text-center">
         About <em>Our Missing Middle</em>
       </h1>
-      <p>
-        <img src="/images/housingforms.png" alt="Housing Forms" className="mb-4 rounded-lg shadow-lg h-[40vh]" />
+      <p className="flex justify-center">
+        <img src="/images/newlogo.png" alt="Housing Forms" className="mb-4 rounded-full shadow-lg h-[40vh]" />
       </p>
       <p>
-        <strong>Our Missing Middle</strong> is a <em>proof-of-concept web application</em> designed to help visualize and explore <strong>missing middle housing</strong> options in low-rise neighborhoods using AI-powered image manipulation.
+        <strong>Our Missing Middle</strong> is a proof-of-concept web application designed to help visualize and explore <em>medium density housing</em> options in low-rise neighborhoods using AI-powered image manipulation.
       </p>
 
       <p>
@@ -25,6 +25,9 @@ export default function About() {
       <h2 className="text-2xl font-semibold mt-8 mb-4 text-black">
         What is Missing Middle Housing?
       </h2>
+      <p className="flex justify-center">
+        <img src="/images/housingforms.png" alt="Housing Forms" className="mb-4 rounded-lg shadow-lg h-[40vh]" />
+      </p>
       <p>
         Missing middle housing refers to a range of multi-unit or clustered housing types that are compatible in scale with single-family homes. These include duplexes, triplexes, fourplexes, townhouses, and small apartment buildings. They provide a middle ground between single-family homes and larger apartment complexes, offering more affordable and diverse housing options.
       </p>
@@ -32,8 +35,9 @@ export default function About() {
       <h2 className="text-2xl font-semibold mt-8 mb-4 text-black">
         Tackling NIMBYism
       </h2>
-      <img src="/images/uglyvsattractive.png" alt="Housing Forms" className="mb-4 rounded-lg shadow-lg h-[40vh]" />
-
+      <p className="flex justify-center">
+        <img src="/images/uglyvsattractive.png" alt="Housing Forms" className="mb-4 rounded-lg shadow-lg h-[40vh]" />
+      </p>
       <p>
         One of the biggest challenges in implementing medium density housing is overcoming NIMBYism (Not In My Backyard). This app aims to address this by allowing users to visualize how these housing types would look in their neighborhoods, helping to alleviate concerns and foster acceptance.
       </p>
