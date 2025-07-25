@@ -19,6 +19,8 @@ export default async function Popular() {
     sharedChainIds: popularPosts.items.map((post) => post.id),
   });
 
+  const filteredUserLikes = userLikes.filter((like) => like !== null);
+
   return (
     <HydrateClient>
       <div className="flex h-full w-full flex-col">
@@ -27,7 +29,7 @@ export default async function Popular() {
             <CommunityPost
               key={post.id}
               post={post}
-              userLikes={userLikes.filter((like) => like !== null)}
+              userLikes={filteredUserLikes}
               currentUserId={session.user.id}
             />
           ))}
