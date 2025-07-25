@@ -15,6 +15,7 @@ import {
   NavigationMenuTrigger,
 } from "./ui/navigation-menu";
 import { Bars4Icon } from "@heroicons/react/24/outline";
+import PageTitle from "./PageTitle";
 
 export default async function Header() {
   const session = await auth();
@@ -47,7 +48,7 @@ export default async function Header() {
                   href="/create"
                   className="block px-4 py-2 text-sm hover:bg-gray-100"
                 >
-                  Create AI Image
+                  Continue Remix
                 </Link>
                 <Link
                   href="/history"
@@ -113,6 +114,7 @@ export default async function Header() {
         )}
       </div>
 
+      <PageTitle />
       {/*Logo*/}
       <div>
         <Link href="/">

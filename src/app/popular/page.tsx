@@ -22,7 +22,6 @@ export default async function Popular() {
   return (
     <HydrateClient>
       <div className="flex h-full w-full flex-col">
-        <h1 className="text-2xl font-bold">Popular</h1>
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
           {popularPosts.items.map((post) => (
             <CommunityPost
