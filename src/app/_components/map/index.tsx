@@ -241,37 +241,10 @@ export default function MapComponent() {
           />
           <GeoJSON
             data={TorontoTopoJSON as GeoJSON.GeoJsonObject}
-            style={(feature) => {
-              // Type guard for GeoJSON feature
-              const type =
-                typeof feature === "object" &&
-                feature &&
-                "properties" in feature &&
-                typeof feature.properties === "object" &&
-                feature.properties &&
-                "type" in feature.properties
-                  ? (feature.properties as { type?: string }).type
-                  : undefined;
-              if (type === "water") {
-                return {
-                  color: "#4FC3F7",
-                  fillColor: "#4FC3F7",
-                  fillOpacity: 0.7,
-                };
-              }
-              if (type === "park") {
-                return {
-                  color: "#81C784",
-                  fillColor: "#81C784",
-                  fillOpacity: 0.5,
-                };
-              }
-              // Default: light gray
-              return {
-                color: "#BDBDBD",
-                fillColor: "#F5F5F5",
-                fillOpacity: 0.2,
-              };
+            style={{
+              color: "#BDBDBD",
+              fillColor: "#F5F5F5",
+              fillOpacity: 0.2,
             }}
           />
 
