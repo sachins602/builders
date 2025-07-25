@@ -377,7 +377,7 @@ export const responseRouter = createTRPCRouter({
     return "you can now see this secret message!";
   }),
 
-  getEnhancedParcelData: publicProcedure.query(async ({ ctx }) => {
+  getEnhancedParcelData: protectedProcedure.query(async ({ ctx }) => {
     const parcels = await ctx.db.images.findMany({
       select: {
         id: true,
@@ -389,7 +389,35 @@ export const responseRouter = createTRPCRouter({
         buildingType: true,
         buildingArea: true,
       },
-      where: { deletedAt: null },
+      where: {
+        deletedAt: null,
+        OR: [
+          {
+            createdBy: { id: ctx.session.user.id },
+            responses: { some: { createdBy: { id: ctx.session.user.id } } },
+          },
+          // Images with responses that are shared to the user
+          {
+            responses: {
+              some: {
+                sharedChains: {
+                  some: {
+                    deletedAt: null,
+                    OR: [
+                      { isPublic: true },
+                      {
+                        sharedToUsers: {
+                          some: { userId: ctx.session.user.id },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
     });
 
     // Parse the JSON boundary data for frontend use
