@@ -166,19 +166,43 @@ export default function MapComponent() {
     });
   }, []);
 
+  // Point-in-polygon algorithm
+  const isPointInPolygon = useCallback(
+    (point: [number, number], polygon: [number, number][]) => {
+      const [x, y] = point;
+      let inside = false;
+
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i]!;
+        const [xj, yj] = polygon[j]!;
+
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+          inside = !inside;
+        }
+      }
+
+      return inside;
+    },
+    [],
+  );
+
   // Handler for map clicks - only show popup when no parcel data exists
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
-      // Check if there's parcel data at this location
+      // Check if there's parcel data at this location using proper polygon boundaries
       const hasParcelData = parcelData.data?.some((parcel) => {
-        // Simple point-in-polygon check (you may want to improve this)
-        // For now, just check if coordinates are roughly within 0.001 degrees
-        return (
-          parcel.lat &&
-          parcel.lng &&
-          Math.abs(parcel.lat - lat) < 0.001 &&
-          Math.abs(parcel.lng - lng) < 0.001
-        );
+        if (
+          parcel.propertyBoundary?.coordinates &&
+          Array.isArray(parcel.propertyBoundary.coordinates[0])
+        ) {
+          // Convert from [lng, lat] to [lat, lng] for the polygon check
+          const coordinates = (
+            parcel.propertyBoundary.coordinates[0] as [number, number][]
+          ).map(([lng, lat]) => [lat, lng] as [number, number]);
+
+          return isPointInPolygon([lat, lng], coordinates);
+        }
+        return false;
       });
 
       // Only show PropertyPopup when there's no parcel data
@@ -193,7 +217,7 @@ export default function MapComponent() {
         setShowSearchBar(false);
       }
     },
-    [parcelData.data, image],
+    [parcelData.data, image, isPointInPolygon],
   );
 
   // Show initial toast
