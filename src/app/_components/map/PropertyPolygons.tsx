@@ -5,12 +5,14 @@ import type { PropertyData } from "./types";
 
 interface PropertyPolygonsProps {
   parcelData?: PropertyData[];
+  onPopupClose: () => void;
   onPolygonClick?: () => void; // Add callback to notify parent
 }
 
 export function PropertyPolygons({
   parcelData,
   onPolygonClick,
+  onPopupClose,
 }: PropertyPolygonsProps) {
   if (!parcelData) return null;
 
@@ -60,7 +62,11 @@ export function PropertyPolygons({
                 interactive: true,
               }}
             >
-              <Popup>
+              <Popup
+                eventHandlers={{
+                  popupclose: () => onPopupClose(),
+                }}
+              >
                 <div className="p-2">
                   <h3 className="text-sm font-semibold">
                     {parcel.address ?? "Unknown Address"}

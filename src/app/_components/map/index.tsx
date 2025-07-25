@@ -38,17 +38,9 @@ const TORONTO_BOUNDS: [[number, number], [number, number]] = [
   [44.0, -78.95], // Northeast corner (lat, lng)
 ];
 
-// Consolidated state for popup/selection
+// State for selection (to show build/edit buttons or popup)
 interface SelectionState {
   position: [number, number] | null;
-  existingImageData: {
-    id: number;
-    url: string;
-    address?: string | null;
-    buildingType?: string | null;
-    buildingArea?: number | null;
-    propertyType?: string | null;
-  } | null;
   isFromSearch: boolean;
 }
 
@@ -61,7 +53,6 @@ export default function MapComponent() {
   // Consolidated selection state
   const [selection, setSelection] = useState<SelectionState>({
     position: null,
-    existingImageData: null,
     isFromSearch: false,
   });
 
@@ -74,7 +65,6 @@ export default function MapComponent() {
   // API hooks
   const utils = api.useUtils();
   const parcelData = api.response.getEnhancedParcelData.useQuery();
-  const imagesQuery = api.response.getImages.useQuery();
 
   const image = api.response.saveStreetViewImageAddress.useMutation({
     onSuccess: () => {
@@ -85,84 +75,41 @@ export default function MapComponent() {
       // Clear selection on error
       setSelection({
         position: null,
-        existingImageData: null,
         isFromSearch: false,
       });
     },
   });
 
-  // Helper function to check if there's an existing image near the coordinates
-  const checkForExistingImage = useCallback(
+  // Handler for search location selection
+  const handleSearchSelect = useCallback(
     (lat: number, lng: number) => {
-      if (!imagesQuery.data) return null;
-
-      // Find image within ~50 meters (roughly 0.0005 degrees)
-      const threshold = 0.0005;
-      const existingImage = imagesQuery.data.find(
-        (img) =>
-          img.lat &&
-          img.lng &&
-          Math.abs(img.lat - lat) < threshold &&
-          Math.abs(img.lng - lng) < threshold,
-      );
-
-      return existingImage ?? null;
-    },
-    [imagesQuery.data],
-  );
-
-  // Unified handler for both search and click operations
-  const handleLocationSelect = useCallback(
-    (lat: number, lng: number, isFromSearch: boolean) => {
       const position: [number, number] = [lat, lng];
 
-      if (isFromSearch) {
-        // For search, always fetch new property data
-        setSelection({
-          position,
-          existingImageData: null,
-          isFromSearch: true,
-        });
-        image.mutate({ lat, lng });
-      } else {
-        // For click, check existing images first
-        const existingImage = checkForExistingImage(lat, lng);
-        setSelection({
-          position,
-          existingImageData: existingImage,
-          isFromSearch: false,
-        });
+      // For search, set position to show build/edit buttons
+      setSelection({
+        position,
+        isFromSearch: true,
+      });
 
-        if (!existingImage) {
-          image.mutate({ lat, lng });
-        }
-      }
-
+      // Fetch property image data for the location
+      image.mutate({ lat, lng });
       setShowSearchBar(false);
     },
-    [checkForExistingImage, image],
+    [image],
   );
 
   // Event handlers - simplified
   const handleSearchComplete = useCallback(
     (lat: number, lng: number) => {
-      handleLocationSelect(lat, lng, true);
+      handleSearchSelect(lat, lng);
     },
-    [handleLocationSelect],
-  );
-
-  const handleMapClick = useCallback(
-    (lat: number, lng: number) => {
-      handleLocationSelect(lat, lng, false);
-    },
-    [handleLocationSelect],
+    [handleSearchSelect],
   );
 
   // Handler for when a property polygon is clicked - clear popup selection
   const handlePolygonClick = useCallback(() => {
     setSelection({
       position: null,
-      existingImageData: null,
       isFromSearch: false,
     });
   }, []);
@@ -184,15 +131,10 @@ export default function MapComponent() {
   const handleZoomChange = useCallback(
     (zoom: number) => {
       setCurrentZoom(zoom);
-      // Clear popup if zoomed out too far and not from search
-      if (
-        zoom < ZOOM_LIMIT &&
-        !selection.isFromSearch &&
-        !selection.existingImageData
-      ) {
+      // Clear selection if zoomed out too far and not from search
+      if (zoom < ZOOM_LIMIT && !selection.isFromSearch) {
         setSelection({
           position: null,
-          existingImageData: null,
           isFromSearch: false,
         });
       }
@@ -212,7 +154,6 @@ export default function MapComponent() {
     setShowSearchBar(true);
     setSelection({
       position: null,
-      existingImageData: null,
       isFromSearch: false,
     });
   }, []);
@@ -221,10 +162,39 @@ export default function MapComponent() {
     setShowSearchBar(false);
     setSelection({
       position: null,
-      existingImageData: null,
       isFromSearch: false,
     });
   }, []);
+
+  // Handler for map clicks - only show popup when no parcel data exists
+  const handleMapClick = useCallback(
+    (lat: number, lng: number) => {
+      // Check if there's parcel data at this location
+      const hasParcelData = parcelData.data?.some((parcel) => {
+        // Simple point-in-polygon check (you may want to improve this)
+        // For now, just check if coordinates are roughly within 0.001 degrees
+        return (
+          parcel.lat &&
+          parcel.lng &&
+          Math.abs(parcel.lat - lat) < 0.001 &&
+          Math.abs(parcel.lng - lng) < 0.001
+        );
+      });
+
+      // Only show PropertyPopup when there's no parcel data
+      if (!hasParcelData) {
+        const position: [number, number] = [lat, lng];
+        setSelection({
+          position,
+          isFromSearch: false,
+        });
+        // Fetch street view image
+        image.mutate({ lat, lng });
+        setShowSearchBar(false);
+      }
+    },
+    [parcelData.data, image],
+  );
 
   // Show initial toast
   useEffect(() => {
@@ -270,6 +240,9 @@ export default function MapComponent() {
           />
 
           <PropertyPolygons
+            onPopupClose={() =>
+              setSelection({ position: null, isFromSearch: false })
+            }
             parcelData={parcelData.data}
             onPolygonClick={handlePolygonClick}
           />
@@ -282,12 +255,11 @@ export default function MapComponent() {
             showMapToast={showMapToast}
           />
 
-          {selection.position && (
+          {selection.position && !selection.isFromSearch && (
             <Popup position={selection.position}>
               <PropertyPopup
                 isLoadingImage={image.isPending}
                 imageData={image.data}
-                existingImageData={selection.existingImageData}
               />
             </Popup>
           )}
@@ -302,7 +274,7 @@ export default function MapComponent() {
           <ToolBar
             onSearchClick={handleSearchClick}
             showBuildEditButtons={selection.position !== null}
-            existingImageId={selection.existingImageData?.id ?? null}
+            existingImageId={null}
           />
         )}
       </div>
