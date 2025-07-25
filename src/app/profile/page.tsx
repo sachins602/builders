@@ -105,10 +105,10 @@ export default async function ProfilePage() {
         )}
         <div className="mt-4 text-right">
           <Link
-            href="/communities"
+            href="/organizations"
             className="text-sm text-blue-600 hover:underline"
           >
-            Explore communities
+            Explore organizations
           </Link>
         </div>
       </section>

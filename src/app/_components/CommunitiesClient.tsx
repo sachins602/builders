@@ -245,93 +245,91 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Community Organizations
-          </h1>
+        <div className="mb-6 flex items-center justify-center">
+
           {session && (
             <Dialog
               open={isCreateDialogOpen}
               onOpenChange={setIsCreateDialogOpen}
             >
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create Organization
-                </Button>
+          <Button className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Organization
+          </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create New Organization</DialogTitle>
-                </DialogHeader>
-                <form action={handleCreateOrganization} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Organization Name *</Label>
-                    <Input id="name" name="name" required maxLength={100} />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description *</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      required
-                      maxLength={250}
-                      placeholder="Brief description (max 250 characters)"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" />
-                  </div>
-                  <div>
-                    <Label htmlFor="website">Website</Label>
-                    <Input
-                      id="website"
-                      name="website"
-                      type="url"
-                      placeholder="https://"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" name="phone" type="tel" />
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input id="address" name="address" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <Label htmlFor="neighbourhood">Neighbourhood</Label>
-                      <Input id="neighbourhood" name="neighbourhood" />
-                    </div>
-                    <div>
-                      <Label htmlFor="borough">Borough</Label>
-                      <Input id="borough" name="borough" />
-                    </div>
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input id="city" name="city" />
-                    </div>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={createOrgMutation.isPending}
-                  >
-                    {createOrgMutation.isPending
-                      ? "Creating..."
-                      : "Create Organization"}
-                  </Button>
-                </form>
+          <DialogHeader>
+            <DialogTitle>Create New Organization</DialogTitle>
+          </DialogHeader>
+          <form action={handleCreateOrganization} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Organization Name *</Label>
+              <Input id="name" name="name" required maxLength={100} />
+            </div>
+            <div>
+              <Label htmlFor="description">Description *</Label>
+              <Textarea
+                id="description"
+                name="description"
+                required
+                maxLength={250}
+                placeholder="Brief description (max 250 characters)"
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" />
+            </div>
+            <div>
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                name="website"
+                type="url"
+                placeholder="https://"
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input id="phone" name="phone" type="tel" />
+            </div>
+            <div>
+              <Label htmlFor="address">Address</Label>
+              <Input id="address" name="address" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label htmlFor="neighbourhood">Neighbourhood</Label>
+                <Input id="neighbourhood" name="neighbourhood" />
+              </div>
+              <div>
+                <Label htmlFor="borough">Borough</Label>
+                <Input id="borough" name="borough" />
+              </div>
+              <div>
+                <Label htmlFor="city">City</Label>
+                <Input id="city" name="city" />
+              </div>
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={createOrgMutation.isPending}
+            >
+              {createOrgMutation.isPending
+                ? "Creating..."
+                : "Create Organization"}
+            </Button>
+          </form>
               </DialogContent>
             </Dialog>
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="w-full">
           {/* Left Column - Organization List */}
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-2xl mx-auto">
             <Card className="p-6">
               <h2 className="mb-4 text-xl font-semibold">Organizations</h2>
 
@@ -372,150 +370,148 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
             </Card>
           </div>
 
-          {/* Right Column - Organization Detail */}
-          <div>
-            <Card className="min-h-[500px] p-6">
-              {!selectedOrg ? (
-                <div className="flex h-full items-center justify-center text-gray-500">
-                  Select an organization to view details
-                </div>
-              ) : isLoadingDetail ? (
-                <div className="flex h-full items-center justify-center">
-                  Loading organization details...
-                </div>
-              ) : selectedOrgDetail ? (
-                <div className="space-y-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <Avatar className="h-16 w-16">
-                        {selectedOrgDetail.avatar ? (
-                          <img
-                            src={selectedOrgDetail.avatar}
-                            alt={selectedOrgDetail.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-gray-200 text-xl text-gray-600">
-                            {selectedOrgDetail.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </Avatar>
-                      <div>
-                        <h2 className="text-2xl font-bold">
-                          {selectedOrgDetail.name}
-                        </h2>
-                        <p className="mt-2 text-gray-600">
-                          {selectedOrgDetail.description}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedOrg(null)}
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
+          {/* Dialog - Organization Detail */}
+          {selectedOrg && (
+            <Dialog open={!!selectedOrg} onOpenChange={() => setSelectedOrg(null)} >
+              <DialogContent className="max-w-xl" showCloseButton={false}>
+                {isLoadingDetail ? (
+                  <div className="flex h-96 items-center justify-center">
+                    Loading organization details...
                   </div>
-
-                  <div className="space-y-3">
-                    {selectedOrgDetail.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <a
-                          href={`mailto:${selectedOrgDetail.email}`}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {selectedOrgDetail.email}
-                        </a>
-                      </div>
-                    )}
-                    {selectedOrgDetail.website && (
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-gray-500" />
-                        <a
-                          href={selectedOrgDetail.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          {selectedOrgDetail.website}
-                        </a>
-                      </div>
-                    )}
-                    {selectedOrgDetail.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <a
-                          href={`tel:${selectedOrgDetail.phone}`}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {selectedOrgDetail.phone}
-                        </a>
-                      </div>
-                    )}
-                    {selectedOrgDetail.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <span>{selectedOrgDetail.address}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span>{selectedOrgDetail._count.members} members</span>
-                    </div>
-                  </div>
-
-                  {session && (
-                    <div className="border-t pt-4">
-                      {selectedOrgDetail.currentUserMembership ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline">
-                              Member since{" "}
-                              {new Date(
-                                selectedOrgDetail.currentUserMembership.joinedAt,
-                              ).toLocaleDateString()}
-                            </Badge>
-                            <Badge>
-                              {selectedOrgDetail.currentUserMembership.role}
-                            </Badge>
-                          </div>
-                          {selectedOrgDetail.currentUserMembership.role !==
-                            "owner" && (
-                            <Button
-                              variant="outline"
-                              onClick={handleLeaveOrganization}
-                              disabled={leaveOrgMutation.isPending}
-                              className="w-full"
-                            >
-                              {leaveOrgMutation.isPending
-                                ? "Leaving..."
-                                : "Leave Community"}
-                            </Button>
+                ) : selectedOrgDetail ? (
+                  <div className="space-y-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4">
+                        <Avatar className="h-16 w-16">
+                          {selectedOrgDetail.avatar ? (
+                            <img
+                              src={selectedOrgDetail.avatar}
+                              alt={selectedOrgDetail.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-gray-200 text-xl text-gray-600">
+                              {selectedOrgDetail.name.charAt(0).toUpperCase()}
+                            </div>
                           )}
+                        </Avatar>
+                        <div>
+                          <h2 className="text-2xl font-bold">
+                            {selectedOrgDetail.name}
+                          </h2>
+                          <p className="mt-2 text-gray-600">
+                            {selectedOrgDetail.description}
+                          </p>
                         </div>
-                      ) : (
-                        <Button
-                          onClick={handleJoinOrganization}
-                          disabled={joinOrgMutation.isPending}
-                          className="w-full"
-                        >
-                          {joinOrgMutation.isPending
-                            ? "Joining..."
-                            : "Join Community"}
-                        </Button>
-                      )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedOrg(null)}
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center text-red-500">
-                  Organization not found
-                </div>
-              )}
-            </Card>
-          </div>
+
+                    <div className="space-y-3">
+                      {selectedOrgDetail.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-500" />
+                          <a
+                            href={`mailto:${selectedOrgDetail.email}`}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {selectedOrgDetail.email}
+                          </a>
+                        </div>
+                      )}
+                      {selectedOrgDetail.website && (
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-gray-500" />
+                          <a
+                            href={selectedOrgDetail.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            {selectedOrgDetail.website}
+                          </a>
+                        </div>
+                      )}
+                      {selectedOrgDetail.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-gray-500" />
+                          <a
+                            href={`tel:${selectedOrgDetail.phone}`}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {selectedOrgDetail.phone}
+                          </a>
+                        </div>
+                      )}
+                      {selectedOrgDetail.address && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <span>{selectedOrgDetail.address}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        <span>{selectedOrgDetail._count.members} members</span>
+                      </div>
+                    </div>
+
+                    {session && (
+                      <div className="border-t pt-4">
+                        {selectedOrgDetail.currentUserMembership ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline">
+                                Member since{" "}
+                                {new Date(
+                                  selectedOrgDetail.currentUserMembership.joinedAt,
+                                ).toLocaleDateString()}
+                              </Badge>
+                              <Badge>
+                                {selectedOrgDetail.currentUserMembership.role}
+                              </Badge>
+                            </div>
+                            {selectedOrgDetail.currentUserMembership.role !==
+                              "owner" && (
+                              <Button
+                                variant="outline"
+                                onClick={handleLeaveOrganization}
+                                disabled={leaveOrgMutation.isPending}
+                                className="w-full"
+                              >
+                                {leaveOrgMutation.isPending
+                                  ? "Leaving..."
+                                  : "Leave Community"}
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={handleJoinOrganization}
+                            disabled={joinOrgMutation.isPending}
+                            className="w-full"
+                          >
+                            {joinOrgMutation.isPending
+                              ? "Joining..."
+                              : "Join Community"}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex h-96 items-center justify-center text-red-500">
+                    Organization not found
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
     </div>
