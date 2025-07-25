@@ -42,6 +42,7 @@ const TORONTO_BOUNDS: [[number, number], [number, number]] = [
 interface SelectionState {
   position: [number, number] | null;
   isFromSearch: boolean;
+  hasParcelData: boolean;
 }
 
 export default function MapComponent() {
@@ -54,6 +55,7 @@ export default function MapComponent() {
   const [selection, setSelection] = useState<SelectionState>({
     position: null,
     isFromSearch: false,
+    hasParcelData: false,
   });
 
   // Refs
@@ -76,26 +78,67 @@ export default function MapComponent() {
       setSelection({
         position: null,
         isFromSearch: false,
+        hasParcelData: false,
       });
     },
   });
+
+  // Point-in-polygon algorithm
+  const isPointInPolygon = useCallback(
+    (point: [number, number], polygon: [number, number][]) => {
+      const [x, y] = point;
+      let inside = false;
+
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i]!;
+        const [xj, yj] = polygon[j]!;
+
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+          inside = !inside;
+        }
+      }
+
+      return inside;
+    },
+    [],
+  );
 
   // Handler for search location selection
   const handleSearchSelect = useCallback(
     (lat: number, lng: number) => {
       const position: [number, number] = [lat, lng];
 
-      // For search, set position to show build/edit buttons
+      // Check if there's parcel data at the searched location
+      const hasParcelData = parcelData.data?.some((parcel) => {
+        if (
+          parcel.propertyBoundary?.coordinates &&
+          Array.isArray(parcel.propertyBoundary.coordinates[0])
+        ) {
+          // Convert from [lng, lat] to [lat, lng] for the polygon check
+          const coordinates = (
+            parcel.propertyBoundary.coordinates[0] as [number, number][]
+          ).map(([lng, lat]) => [lat, lng] as [number, number]);
+
+          return isPointInPolygon([lat, lng], coordinates);
+        }
+        return false;
+      });
+
+      // For search, set position to show build/edit buttons and potentially popup
       setSelection({
         position,
         isFromSearch: true,
+        hasParcelData: !!hasParcelData,
       });
 
-      // Fetch property image data for the location
-      image.mutate({ lat, lng });
+      // Only fetch image if there's no parcel data (PropertyPopup will need it)
+      if (!hasParcelData) {
+        image.mutate({ lat, lng });
+      }
+
       setShowSearchBar(false);
     },
-    [image],
+    [image, parcelData.data, isPointInPolygon],
   );
 
   // Event handlers - simplified
@@ -111,6 +154,7 @@ export default function MapComponent() {
     setSelection({
       position: null,
       isFromSearch: false,
+      hasParcelData: false,
     });
   }, []);
 
@@ -136,6 +180,7 @@ export default function MapComponent() {
         setSelection({
           position: null,
           isFromSearch: false,
+          hasParcelData: false,
         });
       }
     },
@@ -155,6 +200,7 @@ export default function MapComponent() {
     setSelection({
       position: null,
       isFromSearch: false,
+      hasParcelData: false,
     });
   }, []);
 
@@ -163,28 +209,9 @@ export default function MapComponent() {
     setSelection({
       position: null,
       isFromSearch: false,
+      hasParcelData: false,
     });
   }, []);
-
-  // Point-in-polygon algorithm
-  const isPointInPolygon = useCallback(
-    (point: [number, number], polygon: [number, number][]) => {
-      const [x, y] = point;
-      let inside = false;
-
-      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const [xi, yi] = polygon[i]!;
-        const [xj, yj] = polygon[j]!;
-
-        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-          inside = !inside;
-        }
-      }
-
-      return inside;
-    },
-    [],
-  );
 
   // Handler for map clicks - only show popup when no parcel data exists
   const handleMapClick = useCallback(
@@ -211,6 +238,7 @@ export default function MapComponent() {
         setSelection({
           position,
           isFromSearch: false,
+          hasParcelData: false,
         });
         // Fetch street view image
         image.mutate({ lat, lng });
@@ -265,7 +293,11 @@ export default function MapComponent() {
 
           <PropertyPolygons
             onPopupClose={() =>
-              setSelection({ position: null, isFromSearch: false })
+              setSelection({
+                position: null,
+                isFromSearch: false,
+                hasParcelData: false,
+              })
             }
             parcelData={parcelData.data}
             onPolygonClick={handlePolygonClick}
@@ -279,7 +311,7 @@ export default function MapComponent() {
             showMapToast={showMapToast}
           />
 
-          {selection.position && !selection.isFromSearch && (
+          {selection.position && !selection.hasParcelData && (
             <Popup position={selection.position}>
               <PropertyPopup
                 isLoadingImage={image.isPending}
