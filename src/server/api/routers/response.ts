@@ -392,12 +392,11 @@ export const responseRouter = createTRPCRouter({
       where: {
         deletedAt: null,
         OR: [
-          // 1. Images with responses created by the user (current logic)
           {
             createdBy: { id: ctx.session.user.id },
             responses: { some: { createdBy: { id: ctx.session.user.id } } },
           },
-          // 2. Images with responses that are shared to the user
+          // Images with responses that are shared to the user
           {
             responses: {
               some: {
