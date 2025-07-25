@@ -331,6 +331,7 @@ export default function MapComponent() {
             onSearchClick={handleSearchClick}
             showBuildEditButtons={selection.position !== null}
             existingImageId={null}
+            buildExists={true} // Placeholder, replace with actual logic to check if a build exists for the current address
           />
         )}
       </div>
