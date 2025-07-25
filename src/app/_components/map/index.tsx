@@ -158,6 +158,15 @@ export default function MapComponent() {
     [handleLocationSelect],
   );
 
+  // Handler for when a property polygon is clicked - clear popup selection
+  const handlePolygonClick = useCallback(() => {
+    setSelection({
+      position: null,
+      existingImageData: null,
+      isFromSearch: false,
+    });
+  }, []);
+
   // Search functionality
   const { performSearch } = useMapSearch({
     mapRef,
@@ -260,7 +269,10 @@ export default function MapComponent() {
             interactive={false}
           />
 
-          <PropertyPolygons parcelData={parcelData.data} />
+          <PropertyPolygons
+            parcelData={parcelData.data}
+            onPolygonClick={handlePolygonClick}
+          />
 
           <MapEvents
             onMapClick={handleMapClick}
