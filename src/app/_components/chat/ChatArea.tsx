@@ -79,7 +79,7 @@ export function ChatArea({
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col justify-center overflow-hidden">
       {currentImageData && (
-        <div className="flex w-full flex-row items-center justify-center bg-white p-2 sm:p-4">
+        <div className="flex w-full h-full flex-row items-center justify-center bg-white p-2 sm:p-4">
           {/*Left Chevron  */}
           {hasMultipleImages && (
             <button
@@ -92,10 +92,10 @@ export function ChatArea({
           )}
 
           {/* Image Display */}
-          <div className="relative flex w-full max-w-full flex-col items-center">
+          <div className="relative flex w-full max-w-full flex-col items-center h-full">
             {hasMultipleImages && (
               <div
-                className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md"
+                className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md flex-grow-1"
                 style={{ minWidth: 80, textAlign: "center" }}
               >
                 <span className="text-sm font-medium text-gray-600">
@@ -104,28 +104,31 @@ export function ChatArea({
               </div>
             )}
 
-            <div className="flex w-full max-w-full items-center justify-center">
-              {isGenerating ? (
-                <Skeleton className="h-64 w-full max-w-lg rounded-md" />
-              ) : (
+            <div className="flex w-full max-w-full items-center justify-center h-full">
+                {isGenerating ? (
+                <Skeleton className="h-full w-full max-w-lg rounded-md" />
+                ) : (
                 <img
                   src={getImageUrl(currentImageData.image.url)}
                   alt={
-                    currentImageData.type === "original"
-                      ? "Original image"
-                      : "Generated image"
+                  currentImageData.type === "original"
+                    ? "Original image"
+                    : "Generated image"
                   }
-                  className="max-h-[50vh] w-full rounded-md object-contain sm:h-[35vh] md:max-h-[40vh] lg:h-[50vh]"
-                  style={{ minHeight: 120 }}
+                  className="h-full max-h-lg w-auto rounded-md object-contain"
+                  style={{ minHeight: 120, aspectRatio: "auto" }}
                 />
-              )}
+                )}
             </div>
 
             {/* Address */}
             {currentImageData.image.address && (
-              <div className="mt-2 flex flex-row items-center justify-center">
+                <div
+                className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white px-4 py-2 shadow-md flex flex-row items-center justify-center text-center"
+                style={{ zIndex: 20 }}
+                >
                 <StreetAddress address={currentImageData.image.address} />
-              </div>
+                </div>
             )}
           </div>
 
