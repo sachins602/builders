@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 // Helper function to build the full response chain
 async function buildResponseChain(
@@ -45,61 +45,53 @@ async function buildResponseChain(
     });
   }
 
-  // Build the chain by following previousResponseId
-  let currentResponseId = response.previousResponseId;
-  const chainResponses: Array<{
-    id: number;
-    prompt: string;
-    url: string;
-    sourceImage: {
-      id: number;
-      url: string;
-      address: string | null;
-    } | null;
-    previousResponseId: number | null;
-  }> = [
-    {
-      id: response.id,
-      prompt: response.prompt,
-      url: response.url,
-      sourceImage: response.sourceImage
-        ? {
-            id: response.sourceImage.id,
-            url: response.sourceImage.url,
-            address: response.sourceImage.address,
-          }
-        : null,
-      previousResponseId: response.previousResponseId,
-    },
-  ];
+  // Build the chain by following previousResponseId using recursive CTE
 
-  // Collect all responses in the chain
-  while (currentResponseId) {
-    const prevResponse = await db.response.findUnique({
-      where: { id: currentResponseId },
-      include: {
-        sourceImage: true,
-      },
-    });
-    if (prevResponse) {
-      chainResponses.unshift({
-        id: prevResponse.id,
-        prompt: prevResponse.prompt,
-        url: prevResponse.url,
-        sourceImage: prevResponse.sourceImage
-          ? {
-              id: prevResponse.sourceImage.id,
-              url: prevResponse.sourceImage.url,
-              address: prevResponse.sourceImage.address,
-            }
-          : null,
-        previousResponseId: prevResponse.previousResponseId,
-      });
-      currentResponseId = prevResponse.previousResponseId;
-    } else {
-      break;
-    }
-  }
+  // Collect all responses in the chain using a recursive CTE to avoid N+1 queries
+  const rawResponses = await db.$queryRaw<
+    Array<{
+      id: number;
+      prompt: string;
+      url: string;
+      sourceImageId: number | null;
+      sourceImageUrl: string | null;
+      sourceImageAddress: string | null;
+      previousResponseId: number | null;
+    }>
+  >(Prisma.sql`
+    WITH RECURSIVE ResponseChain AS (
+      SELECT 
+        r.id, r.prompt, r.url, r.previousResponseId,
+        si.id AS sourceImageId, si.url AS sourceImageUrl, si.address AS sourceImageAddress
+      FROM response r
+      LEFT JOIN Images si ON r.sourceImageId = si.id
+      WHERE r.id = ${response.id}
+      UNION ALL
+      SELECT 
+        r.id, r.prompt, r.url, r.previousResponseId,
+        si.id AS sourceImageId, si.url AS sourceImageUrl, si.address AS sourceImageAddress
+      FROM response r
+      LEFT JOIN Images si ON r.sourceImageId = si.id
+      INNER JOIN ResponseChain rc ON r.id = rc.previousResponseId
+    )
+    SELECT * FROM ResponseChain ORDER BY id;
+  `);
+
+  // Process the results to build the chainResponses array
+  // The CTE returns responses in chronological order (oldest first), which is what we want
+  const chainResponses = rawResponses.map((resp) => ({
+    id: resp.id,
+    prompt: resp.prompt,
+    url: resp.url,
+    sourceImage: resp.sourceImageId
+      ? {
+          id: resp.sourceImageId,
+          url: resp.sourceImageUrl!,
+          address: resp.sourceImageAddress,
+        }
+      : null,
+    previousResponseId: resp.previousResponseId,
+  }));
 
   // Add all responses to the chain
   chainResponses.forEach((resp) => {
