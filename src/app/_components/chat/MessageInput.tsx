@@ -183,7 +183,7 @@ export function MessageInput({
           onKeyDown={(e) => {
         handleKeyDown(e);
         if (e.key === "Enter" && !e.shiftKey && prompt.trim() && !isGenerating && canGenerate) {
-          onPromptChange(""); // Clear textarea after submit
+          onGenerate(); // Trigger generation logic
         }
           }}
           placeholder={getPlaceholderText()}
