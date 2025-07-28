@@ -21,7 +21,7 @@ export default async function Header() {
   const session = await auth();
   return (
     <header className="flex flex-row items-center justify-between p-1 text-black">
-      <div className="flex flex-row items-center justify-between space-x-6">
+      <div className="flex flex-row items-center justify-between space-x-6 w-32">
         <NavigationMenu className="z-[10000]">
           <NavigationMenuList>
             <NavigationMenuItem>
@@ -112,11 +112,12 @@ export default async function Header() {
             <AvatarFallback>img</AvatarFallback>
           </Avatar>
         )}
-      </div>
+        </div>
 
-      <PageTitle />
+        <PageTitle />
+
       {/*Logo*/}
-      <div>
+      <div className="w-32 flex items-center justify-end">
         <Link href="/">
           <Image
             src="/images/newlogo-grayscale.png"
@@ -127,6 +128,8 @@ export default async function Header() {
           />
         </Link>
       </div>
+      
     </header>
+
   );
 }

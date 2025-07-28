@@ -176,26 +176,45 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative mt-1">
+      <div className="relative mt-1 mb-1">
         <textarea
           value={prompt}
           onChange={(e) => onPromptChange(e.target.value)}
-          onKeyDown={handleKeyDown}
+          onKeyDown={(e) => {
+            handleKeyDown(e);
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              prompt.trim() &&
+              !isGenerating &&
+              canGenerate
+            ) {
+              onGenerate(); // Trigger generation logic
+            }
+          }}
           placeholder={getPlaceholderText()}
           className="sm:rows-1 w-full resize-none rounded-lg border bg-gray-50 p-3 pr-12 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
           disabled={isGenerating || !canGenerate}
           rows={1}
           style={{ height: "75px" }}
         />
-        <Button
-          onClick={onGenerate}
-          className="absolute top-1/2 right-2 -translate-y-1/2"
-          variant="ghost"
-          size="icon"
-          disabled={isGenerating || !prompt.trim() || !canGenerate}
-        >
-          <Send className="h-5 w-5 text-black" />
-        </Button>
+        <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-400">
+            <Button
+              onClick={() => {
+                onGenerate();
+                onPromptChange("");
+              }}
+              className="flex text-black"
+              variant="ghost"
+              size="icon"
+              disabled={isGenerating || !prompt.trim() || !canGenerate}
+              style={{ boxShadow: "none" }}
+            >
+              <Send className="size-8 text-black" />
+            </Button>
+          </span>
+        </div>
       </div>
     </div>
   );
