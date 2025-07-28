@@ -176,15 +176,21 @@ export function MessageInput({
         </div>
       )}
 
-      <div className="relative mb-1 mt-1">
+      <div className="relative mt-1 mb-1">
         <textarea
           value={prompt}
           onChange={(e) => onPromptChange(e.target.value)}
           onKeyDown={(e) => {
-        handleKeyDown(e);
-        if (e.key === "Enter" && !e.shiftKey && prompt.trim() && !isGenerating && canGenerate) {
-          onGenerate(); // Trigger generation logic
-        }
+            handleKeyDown(e);
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              prompt.trim() &&
+              !isGenerating &&
+              canGenerate
+            ) {
+              onGenerate(); // Trigger generation logic
+            }
           }}
           placeholder={getPlaceholderText()}
           className="sm:rows-1 w-full resize-none rounded-lg border bg-gray-50 p-3 pr-12 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
@@ -192,16 +198,12 @@ export function MessageInput({
           rows={1}
           style={{ height: "75px" }}
         />
-        <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center">
-          <span className="flex items-center justify-center rounded-full bg-gray-200 size-12 transition-colors hover:bg-gray-400">
+        <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-400">
             <Button
-              onClick={async () => {
-                try {
-                  await onGenerate();
-                  onPromptChange(""); // Clear textarea after successful submit
-                } catch (error) {
-                  console.error("Error during generation:", error);
-                }
+              onClick={() => {
+                onGenerate();
+                onPromptChange("");
               }}
               className="flex text-black"
               variant="ghost"
@@ -209,7 +211,7 @@ export function MessageInput({
               disabled={isGenerating || !prompt.trim() || !canGenerate}
               style={{ boxShadow: "none" }}
             >
-              <Send className="text-black size-8" />
+              <Send className="size-8 text-black" />
             </Button>
           </span>
         </div>
