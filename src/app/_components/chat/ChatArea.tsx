@@ -95,7 +95,7 @@ export function ChatArea({
           <div className="relative flex w-full max-w-full flex-col items-center h-full">
             {hasMultipleImages && (
               <div
-                className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md flex-grow-1"
+                className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-1 shadow-md flex-grow"
                 style={{ minWidth: 80, textAlign: "center" }}
               >
                 <span className="text-sm font-medium text-gray-600">
