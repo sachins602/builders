@@ -17,8 +17,6 @@ export default async function RemixPage({ params }: RemixPageProps) {
 
   if (!post) return notFound();
 
-  console.log(post);
-
   return (
     <HydrateClient>
       <div className="mx-auto max-w-2xl">
