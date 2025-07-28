@@ -214,8 +214,19 @@ export const userRouter = createTRPCRouter({
       // Check if user owns this response
       const isOwner = response.createdById === ctx.session.user.id;
 
-      // Find the shared chain that contains this response
-      const sharedChain = response.sharedChains[0];
+      // Find the active shared chain that contains this response
+      // Filter out deleted chains and select the most recent one if multiple exist
+      const activeSharedChains = response.sharedChains.filter(
+        (chain) => chain.deletedAt === null,
+      );
+      const sharedChain =
+        activeSharedChains.length > 0
+          ? activeSharedChains.sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime(),
+            )[0]
+          : null;
 
       // If there's no shared chain, only the owner can access it
       if (!sharedChain) {
