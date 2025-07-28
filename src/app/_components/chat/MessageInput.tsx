@@ -195,9 +195,13 @@ export function MessageInput({
         <div className="absolute top-1/2 right-2 -translate-y-1/2 flex items-center">
           <span className="flex items-center justify-center rounded-full bg-gray-200 size-12 transition-colors hover:bg-gray-400">
             <Button
-              onClick={() => {
-          onGenerate();
-          onPromptChange(""); // Clear textarea after submit
+              onClick={async () => {
+                try {
+                  await onGenerate();
+                  onPromptChange(""); // Clear textarea after successful submit
+                } catch (error) {
+                  console.error("Error during generation:", error);
+                }
               }}
               className="flex text-black"
               variant="ghost"
