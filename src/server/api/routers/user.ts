@@ -227,7 +227,7 @@ export const userRouter = createTRPCRouter({
         // Create a mock shared chain structure for owner's unshared response
         const mockSharedChain = {
           id: `unshared-${response.id}`,
-          title: `Response ${response.id}`,
+          title: "",
           description: null,
           isPublic: false,
           viewCount: 0,
