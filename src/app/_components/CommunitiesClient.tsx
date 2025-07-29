@@ -81,6 +81,129 @@ interface CommunitiesClientProps {
   session: Session | null;
 }
 
+// Address Search Component for Organization Form
+interface AddressSearchProps {
+  onAddressSelect: (address: string, lat: number, lng: number) => void;
+}
+
+function AddressSearch({ onAddressSelect }: AddressSearchProps) {
+  const [searchValue, setSearchValue] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState("");
+
+  interface NominatimSuggestion {
+    display_name: string;
+    lat: string;
+    lon: string;
+  }
+
+  // Fetch suggestions from Nominatim
+  const fetchSuggestions = async (query: string) => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          query,
+        )}&addressdetails=1&limit=5`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+      const data = (await res.json()) as NominatimSuggestion[];
+      setSuggestions(data.map((item) => item.display_name));
+    } catch (e) {
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounced input handler
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchValue(value);
+    setShowSuggestions(true);
+    setTimeout(() => {
+      void fetchSuggestions(value);
+    }, 300);
+  };
+
+  const handleSuggestionClick = async (suggestion: string) => {
+    setSearchValue(suggestion);
+    setSelectedAddress(suggestion);
+    setShowSuggestions(false);
+
+    // Get coordinates for the selected address
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          suggestion,
+        )}&limit=1`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+      const data = (await res.json()) as NominatimSuggestion[];
+      if (data.length > 0) {
+        const lat = parseFloat(data[0]!.lat);
+        const lng = parseFloat(data[0]!.lon);
+        onAddressSelect(suggestion, lat, lng);
+      }
+    } catch (e) {
+      console.error("Error getting coordinates:", e);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <Label htmlFor="address">Address</Label>
+      <div className="relative">
+        <Input
+          id="address"
+          name="address"
+          type="text"
+          placeholder="Search for an address..."
+          value={searchValue}
+          onChange={handleInputChange}
+          onFocus={() => searchValue && setShowSuggestions(true)}
+          autoComplete="off"
+        />
+        {showSuggestions && suggestions.length > 0 && (
+          <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-white shadow-lg">
+            {suggestions.map((suggestion, idx) => (
+              <li
+                key={idx}
+                className="cursor-pointer px-4 py-2 text-sm hover:bg-gray-100"
+                onClick={() => handleSuggestionClick(suggestion)}
+              >
+                {suggestion}
+              </li>
+            ))}
+            {loading && (
+              <li className="px-4 py-2 text-sm text-gray-400">Loading...</li>
+            )}
+          </ul>
+        )}
+      </div>
+      {selectedAddress && (
+        <div className="mt-2 text-sm text-gray-600">
+          Selected: {selectedAddress}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CommunitiesClient({ session }: CommunitiesClientProps) {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [userLocation, setUserLocation] = useState<{
@@ -88,6 +211,11 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
     lng: number;
   } | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState("");
+  const [selectedCoordinates, setSelectedCoordinates] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   // Get user's geolocation
   useEffect(() => {
@@ -157,15 +285,20 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
       email: (formData.get("email") as string) || undefined,
       website: (formData.get("website") as string) || undefined,
       phone: (formData.get("phone") as string) || undefined,
-      address: (formData.get("address") as string) || undefined,
-      lat: userLocation?.lat,
-      lng: userLocation?.lng,
-      neighbourhood: (formData.get("neighbourhood") as string) || undefined,
-      borough: (formData.get("borough") as string) || undefined,
-      city: (formData.get("city") as string) || undefined,
+      address: selectedAddress || undefined,
+      lat: selectedCoordinates?.lat ?? userLocation?.lat,
+      lng: selectedCoordinates?.lng ?? userLocation?.lng,
+      neighbourhood: undefined, // Will be extracted from address if needed
+      borough: undefined, // Will be extracted from address if needed
+      city: undefined, // Will be extracted from address if needed
     };
 
     createOrgMutation.mutate(data);
+  };
+
+  const handleAddressSelect = (address: string, lat: number, lng: number) => {
+    setSelectedAddress(address);
+    setSelectedCoordinates({ lat, lng });
   };
 
   const handleJoinOrganization = () => {
@@ -243,85 +376,67 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
   );
 
   return (
-    <div className="min-h-screen  p-6">
+    <div className="min-h-screen p-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex items-center justify-center">
-
           {session && (
             <Dialog
               open={isCreateDialogOpen}
               onOpenChange={setIsCreateDialogOpen}
             >
               <DialogTrigger asChild>
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Create Organization
-          </Button>
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Organization
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Organization</DialogTitle>
-          </DialogHeader>
-          <form action={handleCreateOrganization} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Organization Name *</Label>
-              <Input id="name" name="name" required maxLength={100} />
-            </div>
-            <div>
-              <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                name="description"
-                required
-                maxLength={250}
-                placeholder="Brief description (max 250 characters)"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" />
-            </div>
-            <div>
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                name="website"
-                type="url"
-                placeholder="https://"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" name="phone" type="tel" />
-            </div>
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" name="address" />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label htmlFor="neighbourhood">Neighbourhood</Label>
-                <Input id="neighbourhood" name="neighbourhood" />
-              </div>
-              <div>
-                <Label htmlFor="borough">Borough</Label>
-                <Input id="borough" name="borough" />
-              </div>
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input id="city" name="city" />
-              </div>
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={createOrgMutation.isPending}
-            >
-              {createOrgMutation.isPending
-                ? "Creating..."
-                : "Create Organization"}
-            </Button>
-          </form>
+                <DialogHeader>
+                  <DialogTitle>Create New Organization</DialogTitle>
+                </DialogHeader>
+                <form action={handleCreateOrganization} className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Organization Name *</Label>
+                    <Input id="name" name="name" required maxLength={100} />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description *</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      required
+                      maxLength={250}
+                      placeholder="Brief description (max 250 characters)"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" />
+                  </div>
+                  <div>
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      name="website"
+                      type="url"
+                      placeholder="https://"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" name="phone" type="tel" />
+                  </div>
+                  <AddressSearch onAddressSelect={handleAddressSelect} />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={createOrgMutation.isPending}
+                  >
+                    {createOrgMutation.isPending
+                      ? "Creating..."
+                      : "Create Organization"}
+                  </Button>
+                </form>
               </DialogContent>
             </Dialog>
           )}
@@ -329,7 +444,7 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
 
         <div className="w-full">
           {/* Left Column - Organization List */}
-          <div className="space-y-6 max-w-2xl mx-auto">
+          <div className="mx-auto max-w-2xl space-y-6">
             <Card className="p-6">
               <h2 className="mb-4 text-xl font-semibold">Organizations</h2>
 
@@ -372,7 +487,10 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
 
           {/* Dialog - Organization Detail */}
           {selectedOrg && (
-            <Dialog open={!!selectedOrg} onOpenChange={() => setSelectedOrg(null)} >
+            <Dialog
+              open={!!selectedOrg}
+              onOpenChange={() => setSelectedOrg(null)}
+            >
               <DialogContent className="max-w-xl" showCloseButton={false}>
                 {isLoadingDetail ? (
                   <div className="flex h-96 items-center justify-center">
