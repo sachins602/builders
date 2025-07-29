@@ -7,7 +7,9 @@ export function ShareButton() {
     <Button
       onClick={() => {
         void navigator.clipboard.writeText(window.location.href);
-        toast.success("URL copied to clipboard");
+        toast.success("URL copied to clipboard", {
+          duration: 1800,
+        });
       }}
     >
       Share
