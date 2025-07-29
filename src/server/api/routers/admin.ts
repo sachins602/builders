@@ -1,4 +1,5 @@
 import { createTRPCRouter, adminProcedure } from "../trpc";
+import { z } from "zod";
 
 function formatDate(date: Date, type: "month" | "day") {
   if (type === "month") {
@@ -47,6 +48,30 @@ export const adminRouter = createTRPCRouter({
   getSharedImages: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.comment.findMany();
   }),
+
+  // Assign admin privileges to a user by email
+  assignAdmin: adminProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { email: input.email },
+      });
+
+      if (!user) {
+        throw new Error("User not found with this email address");
+      }
+
+      if (user.role === "admin") {
+        throw new Error("User is already an admin");
+      }
+
+      const updatedUser = await ctx.db.user.update({
+        where: { email: input.email },
+        data: { role: "admin" },
+      });
+
+      return updatedUser;
+    }),
 
   // Users registered per month (last 12 months)
   usersPerMonth: adminProcedure.query(async ({ ctx }) => {

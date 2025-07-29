@@ -289,6 +289,7 @@ export const responseRouter = createTRPCRouter({
         previousResponseId: null,
       },
       include: { sourceImage: true },
+      orderBy: { createdAt: "desc" },
     });
     return responses;
   }),

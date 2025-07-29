@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { api } from "~/trpc/react";
 import { ChartContainer } from "./ui/chart";
 import {
@@ -11,8 +12,119 @@ import {
   Legend,
   YAxis,
 } from "recharts";
-import { Loader2 } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { Card } from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { toast } from "sonner";
+
+// AssignAdmin Component
+function AssignAdmin() {
+  const [email, setEmail] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const assignAdminMutation = api.admin.assignAdmin.useMutation({
+    onSuccess: () => {
+      toast.success("Admin privileges assigned successfully!", {
+        duration: 1800,
+      });
+      setEmail("");
+      setIsDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to assign admin privileges", {
+        duration: 1800,
+      });
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Please enter an email address", {
+        duration: 1800,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await assignAdminMutation.mutateAsync({ email: email.trim() });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <Shield className="h-6 w-6 text-blue-600" />
+        <h2 className="text-xl font-semibold">Admin Management</h2>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button className="w-full">
+            <Shield className="mr-2 h-4 w-4" />
+            Assign Admin
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Admin Privileges</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="email">User Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter user's email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting || !email.trim()}
+                className="flex-1"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Assigning...
+                  </>
+                ) : (
+                  "Assign Admin"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
 
 export default function AdminCharts() {
   const usersPerMonth = api.admin.usersPerMonth.useQuery();
@@ -39,6 +151,9 @@ export default function AdminCharts() {
 
   return (
     <div className="grid grid-cols-1 gap-8 p-8 md:grid-cols-2 xl:grid-cols-3">
+      {/* Admin Management Card */}
+      <AssignAdmin />
+
       {/* Users Registered Per Month */}
       <Card className="p-4">
         <h2 className="mb-2 text-lg font-semibold">
