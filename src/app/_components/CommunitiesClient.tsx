@@ -61,13 +61,6 @@ interface Organization {
   } | null;
 }
 
-interface GroupedOrganizations {
-  neighbourhood: Organization[];
-  borough: Organization[];
-  city: Organization[];
-  other: Organization[];
-}
-
 interface Session {
   user: {
     id: string;
