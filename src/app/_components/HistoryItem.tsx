@@ -3,7 +3,7 @@
 import { Button } from "./ui/button";
 import { ShareDialog } from "./ShareDialog";
 import { getImageUrl } from "~/lib/image-utils";
-import { Trash2, Share2, ArrowRight } from "lucide-react";
+import { Trash2, Share2, ArrowRight, Eye } from "lucide-react";
 import { api } from "~/trpc/react";
 import Link from "next/link";
 import type { ResponseWithImage } from "~/types/chat";
@@ -48,6 +48,11 @@ export function HistoryItem({ response }: { response: ResponseWithImage }) {
           <Link href={`/create/${response.id}`}>
             <Button variant="outline" size="sm">
               <ArrowRight className="h-4 w-4" /> Continue
+            </Button>
+          </Link>
+          <Link href={`/remix/${response.id}`}>
+            <Button variant="outline" size="sm">
+              <Eye className="h-4 w-4" /> View
             </Button>
           </Link>
           <Button
