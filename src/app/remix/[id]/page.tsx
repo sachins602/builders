@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CommunityPost } from "~/app/_components/CommunityPost/CommunityPost";
 import { HydrateClient } from "~/trpc/server";
 import { api } from "~/trpc/server";
+import { ShareButton } from "~/app/_components/ShareButton";
 
 interface RemixPageProps {
   params: Promise<{
@@ -19,8 +20,11 @@ export default async function RemixPage({ params }: RemixPageProps) {
 
   return (
     <HydrateClient>
-      <div className="mx-auto max-w-2xl">
-        <CommunityPost post={post} />
+      <div className="flex flex-row justify-center gap-4">
+        <div className="max-w-2xl">
+          <CommunityPost post={post} />
+        </div>
+        <ShareButton />
       </div>
     </HydrateClient>
   );
