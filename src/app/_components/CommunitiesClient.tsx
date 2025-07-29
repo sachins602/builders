@@ -492,6 +492,9 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
               onOpenChange={() => setSelectedOrg(null)}
             >
               <DialogContent className="max-w-xl" showCloseButton={false}>
+                <DialogHeader>
+                  <DialogTitle>Organization Details</DialogTitle>
+                </DialogHeader>
                 {isLoadingDetail ? (
                   <div className="flex h-96 items-center justify-center">
                     Loading organization details...
