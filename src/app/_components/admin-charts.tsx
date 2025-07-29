@@ -34,19 +34,25 @@ function AssignAdmin() {
 
   const assignAdminMutation = api.admin.assignAdmin.useMutation({
     onSuccess: () => {
-      toast.success("Admin privileges assigned successfully!");
+      toast.success("Admin privileges assigned successfully!", {
+        duration: 1800,
+      });
       setEmail("");
       setIsDialogOpen(false);
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to assign admin privileges");
+      toast.error(error.message || "Failed to assign admin privileges", {
+        duration: 1800,
+      });
     },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      toast.error("Please enter an email address");
+      toast.error("Please enter an email address", {
+        duration: 1800,
+      });
       return;
     }
 
