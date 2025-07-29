@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "~/trpc/react";
 import { Button } from "~/app/_components/ui/button";
 import { Card } from "~/app/_components/ui/card";
@@ -85,6 +85,8 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   interface NominatimSuggestion {
     display_name: string;
@@ -92,13 +94,22 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
     lon: string;
   }
 
-  // Fetch suggestions from Nominatim
+  // Fetch suggestions from Nominatim with proper cleanup
   const fetchSuggestions = async (query: string) => {
     if (!query.trim()) {
       setSuggestions([]);
       return;
     }
+
+    // Cancel previous request if it exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
     setLoading(true);
+
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
@@ -108,23 +119,40 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
           headers: {
             Accept: "application/json",
           },
+          signal: abortControllerRef.current.signal,
         },
       );
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = (await res.json()) as NominatimSuggestion[];
       setSuggestions(data.map((item) => item.display_name));
     } catch (e) {
-      setSuggestions([]);
+      // Only set empty suggestions if it's not an abort error
+      if (e instanceof Error && e.name !== "AbortError") {
+        console.error("Error fetching suggestions:", e);
+        setSuggestions([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Debounced input handler
+  // Debounced input handler with proper cleanup
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchValue(value);
     setShowSuggestions(true);
-    setTimeout(() => {
+
+    // Clear previous timeout
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    // Set new timeout
+    debounceRef.current = setTimeout(() => {
       void fetchSuggestions(value);
     }, 300);
   };
@@ -134,8 +162,14 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
     setSelectedAddress(suggestion);
     setShowSuggestions(false);
 
+    // Cancel any ongoing fetch request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     // Get coordinates for the selected address
     try {
+      const controller = new AbortController();
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
           suggestion,
@@ -144,8 +178,14 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
           headers: {
             Accept: "application/json",
           },
+          signal: controller.signal,
         },
       );
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = (await res.json()) as NominatimSuggestion[];
       if (data.length > 0) {
         const lat = parseFloat(data[0]!.lat);
@@ -153,9 +193,23 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
         onAddressSelect(suggestion, lat, lng);
       }
     } catch (e) {
-      console.error("Error getting coordinates:", e);
+      if (e instanceof Error && e.name !== "AbortError") {
+        console.error("Error getting coordinates:", e);
+      }
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   return (
     <div className="relative">
