@@ -243,6 +243,27 @@ export const responseRouter = createTRPCRouter({
     });
   }),
 
+  getImageById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const image = await ctx.db.images.findUnique({
+        where: { id: input.id, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          address: true,
+          lat: true,
+          lng: true,
+          propertyType: true,
+          buildingType: true,
+          buildingArea: true,
+          createdAt: true,
+        },
+      });
+      return image;
+    }),
+
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
     const image = await ctx.db.images.findFirst({
       orderBy: { createdAt: "desc" },

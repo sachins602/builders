@@ -18,7 +18,13 @@ import { env } from "~/env";
 import { api } from "~/trpc/react";
 
 // Types and constants
-import { TORONTO_CENTER, INITIAL_ZOOM, ZOOM_LIMIT, outerBounds } from "./types";
+import {
+  TORONTO_CENTER,
+  INITIAL_ZOOM,
+  ZOOM_LIMIT,
+  outerBounds,
+  type PropertyData,
+} from "./types";
 
 // Components
 import { SearchBar } from "./SearchBar";
@@ -43,6 +49,7 @@ interface SelectionState {
   position: [number, number] | null;
   isFromSearch: boolean;
   hasParcelData: boolean;
+  selectedParcel?: PropertyData | null; // Track the selected parcel data
 }
 
 export default function MapComponent() {
@@ -56,6 +63,7 @@ export default function MapComponent() {
     position: null,
     isFromSearch: false,
     hasParcelData: false,
+    selectedParcel: null,
   });
 
   // Refs
@@ -79,6 +87,7 @@ export default function MapComponent() {
         position: null,
         isFromSearch: false,
         hasParcelData: false,
+        selectedParcel: null,
       });
     },
   });
@@ -129,6 +138,7 @@ export default function MapComponent() {
         position,
         isFromSearch: true,
         hasParcelData: !!hasParcelData,
+        selectedParcel: null,
       });
 
       // Only fetch image if there's no parcel data (PropertyPopup will need it)
@@ -149,12 +159,13 @@ export default function MapComponent() {
     [handleSearchSelect],
   );
 
-  // Handler for when a property polygon is clicked - clear popup selection
-  const handlePolygonClick = useCallback(() => {
+  // Handler for when a property polygon is clicked - now receives parcel data
+  const handlePolygonClick = useCallback((parcel: PropertyData) => {
     setSelection({
       position: null,
       isFromSearch: false,
-      hasParcelData: false,
+      hasParcelData: true,
+      selectedParcel: parcel,
     });
   }, []);
 
@@ -181,6 +192,7 @@ export default function MapComponent() {
           position: null,
           isFromSearch: false,
           hasParcelData: false,
+          selectedParcel: null,
         });
       }
     },
@@ -201,6 +213,7 @@ export default function MapComponent() {
       position: null,
       isFromSearch: false,
       hasParcelData: false,
+      selectedParcel: null,
     });
   }, []);
 
@@ -210,6 +223,7 @@ export default function MapComponent() {
       position: null,
       isFromSearch: false,
       hasParcelData: false,
+      selectedParcel: null,
     });
   }, []);
 
@@ -239,6 +253,7 @@ export default function MapComponent() {
           position,
           isFromSearch: false,
           hasParcelData: false,
+          selectedParcel: null,
         });
         // Fetch street view image
         image.mutate({ lat, lng });
@@ -297,6 +312,7 @@ export default function MapComponent() {
                 position: null,
                 isFromSearch: false,
                 hasParcelData: false,
+                selectedParcel: null,
               })
             }
             parcelData={parcelData.data}
@@ -329,9 +345,12 @@ export default function MapComponent() {
         {!showSearchBar && (
           <ToolBar
             onSearchClick={handleSearchClick}
-            showBuildEditButtons={selection.position !== null}
-            existingImageId={null}
-            buildExists={true} // Placeholder, replace with actual logic to check if a build exists for the current address
+            showBuildEditButtons={
+              selection.position !== null || selection.selectedParcel !== null
+            }
+            existingImageId={selection.selectedParcel?.id ?? null}
+            buildExists={selection.selectedParcel !== null}
+            selectedParcel={selection.selectedParcel}
           />
         )}
       </div>

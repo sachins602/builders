@@ -1,5 +1,6 @@
 import { Button } from "../ui/button";
 import { Search, Hammer, Edit } from "lucide-react";
+import type { PropertyData } from "./types";
 
 interface ToolBarProps {
   onSearchClick: () => void;
@@ -8,6 +9,7 @@ interface ToolBarProps {
   // Indicates if a build exists for the current address
   // This is used to determine if the "Remix" button should be shown
   buildExists: boolean;
+  selectedParcel?: PropertyData | null;
 }
 
 export function ToolBar({
@@ -15,6 +17,7 @@ export function ToolBar({
   showBuildEditButtons,
   existingImageId,
   buildExists,
+  selectedParcel,
 }: ToolBarProps) {
   return (
     <div className="flex w-full flex-row justify-center gap-4">
@@ -35,24 +38,35 @@ export function ToolBar({
             <span>Build</span>
           </Button>
 
-          <Button
-            variant="secondary"
-            onClick={() => {
-              if (existingImageId) {
-                window.location.href = `/create/${existingImageId}`;
-              } else {
-                window.location.href = "/edit";
-              }
-            }}
-          >
-            {/* If buildExists is true, show the Remix button, otherwise show Edit */}
-            {buildExists ? (
-              <>
-                <Edit className="m-2 h-16 w-16" />
-                <span>Remix</span>
-              </>
-            ) : null}
-          </Button>
+          {/* Only show Remix button when a parcel is selected */}
+          {selectedParcel && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                window.location.href = `/remix/${selectedParcel.id}`;
+              }}
+            >
+              <Edit className="m-2 h-16 w-16" />
+              <span>Remix</span>
+            </Button>
+          )}
+
+          {/* Show Edit button for other cases (non-parcel selections) */}
+          {!selectedParcel && showBuildEditButtons && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (existingImageId) {
+                  window.location.href = `/create/${existingImageId}`;
+                } else {
+                  window.location.href = "/edit";
+                }
+              }}
+            >
+              <Edit className="m-2 h-16 w-16" />
+              <span>Edit</span>
+            </Button>
+          )}
         </div>
       )}
     </div>

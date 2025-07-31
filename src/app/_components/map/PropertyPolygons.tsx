@@ -3,11 +3,12 @@ import type { LeafletMouseEvent } from "leaflet";
 import type L from "leaflet";
 import type { PropertyData } from "./types";
 import { getImageUrl } from "~/lib/image-utils";
+import Image from "next/image";
 
 interface PropertyPolygonsProps {
   parcelData?: PropertyData[];
   onPopupClose: () => void;
-  onPolygonClick?: () => void; // Add callback to notify parent
+  onPolygonClick?: (parcel: PropertyData) => void; // Add callback to notify parent with parcel data
 }
 
 export function PropertyPolygons({
@@ -37,8 +38,8 @@ export function PropertyPolygons({
                   // Stop the event from bubbling to the map
                   e.originalEvent.stopPropagation();
 
-                  // Notify parent that a polygon was clicked (to clear selection state)
-                  onPolygonClick?.();
+                  // Notify parent that a polygon was clicked with parcel data
+                  onPolygonClick?.(parcel);
                 },
                 mouseover: (e: LeafletMouseEvent) => {
                   (e.target as L.Path).setStyle({ fillOpacity: 0.7 });
