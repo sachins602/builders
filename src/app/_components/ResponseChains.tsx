@@ -173,7 +173,12 @@ export default function ResponseChains({
     }
   };
 
-  if (chains.length === 0) {
+
+
+  // Filter out empty chains and ensure we only show valid chains
+  const validChains = chains.filter(chain => chain.length > 0);
+
+  if (validChains.length === 0) {
     return (
       <div className="rounded-lg bg-gray-50 p-8 text-center">
         <p className="text-gray-500">No response chains yet.</p>
@@ -186,7 +191,7 @@ export default function ResponseChains({
 
   return (
     <div className="space-y-6">
-      {chains.map((chain, chainIndex) => (
+      {validChains.map((chain, chainIndex) => (
         <div
           key={`chain-${chainIndex}`}
           className="border-b border-gray-200 pb-6 last:border-b-0"

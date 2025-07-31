@@ -114,7 +114,8 @@ export default async function RemixPage({ params }: RemixPageProps) {
         {/* Existing Response Chains */}
         <div className="rounded-lg bg-white p-6 shadow-lg">
           <h3 className="mb-4 text-xl font-semibold">
-            Existing Response Chains ({responseChains.length})
+            Existing Response Chains (
+            {responseChains.filter((chain) => chain.length > 0).length})
           </h3>
           <ResponseChains chains={responseChains} />
         </div>

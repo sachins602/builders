@@ -369,7 +369,8 @@ export const responseRouter = createTRPCRouter({
         chains.push(chain);
       }
 
-      return chains;
+      // Only return chains that have at least one response
+      return chains.filter(chain => chain.length > 0);
     }),
 
   getPlacesDetails: publicProcedure
