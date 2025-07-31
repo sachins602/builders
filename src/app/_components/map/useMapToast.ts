@@ -34,6 +34,7 @@ export function useMapToast() {
             style: {
               marginTop: "30px",
             },
+            duration: 2000,
           });
           setToastState("zoomed out");
         }
@@ -43,6 +44,7 @@ export function useMapToast() {
             style: {
               marginTop: "30px",
             },
+            duration: 2000,
           });
           setToastState("zoomed in");
         }
