@@ -2,11 +2,12 @@ import { Polygon, Popup } from "react-leaflet";
 import type { LeafletMouseEvent } from "leaflet";
 import type L from "leaflet";
 import type { PropertyData } from "./types";
+import { getImageUrl } from "~/lib/image-utils";
 
 interface PropertyPolygonsProps {
   parcelData?: PropertyData[];
   onPopupClose: () => void;
-  onPolygonClick?: () => void; // Add callback to notify parent
+  onPolygonClick?: (parcel: PropertyData) => void; // Add callback to notify parent with parcel data
 }
 
 export function PropertyPolygons({
@@ -36,16 +37,8 @@ export function PropertyPolygons({
                   // Stop the event from bubbling to the map
                   e.originalEvent.stopPropagation();
 
-                  // Notify parent that a polygon was clicked (to clear selection state)
-                  onPolygonClick?.();
-
-                  console.log(`Property clicked: ${parcel.address}`);
-                  console.log(`Building type: ${parcel.buildingType}`);
-                  if (parcel.buildingArea) {
-                    console.log(
-                      `Building area: ${Math.round(parcel.buildingArea)} m²`,
-                    );
-                  }
+                  // Notify parent that a polygon was clicked with parcel data
+                  onPolygonClick?.(parcel);
                 },
                 mouseover: (e: LeafletMouseEvent) => {
                   (e.target as L.Path).setStyle({ fillOpacity: 0.7 });
@@ -64,24 +57,23 @@ export function PropertyPolygons({
             >
               <Popup
                 eventHandlers={{
-                  popupclose: () => onPopupClose(),
+                  popupclose: () => {
+                    onPopupClose();
+                  },
+                  popupopen: () => {
+                    // Popup opened
+                  },
                 }}
               >
                 <div className="p-2">
+                  <img
+                    src={getImageUrl(parcel.imageUrl)}
+                    alt="Property"
+                    className="h-48 w-64 rounded-lg"
+                  />
                   <h3 className="text-sm font-semibold">
                     {parcel.address ?? "Unknown Address"}
                   </h3>
-                  <div className="mt-1 space-y-1 text-xs text-gray-600">
-                    {parcel.buildingType && (
-                      <div>Type: {parcel.buildingType}</div>
-                    )}
-                    {parcel.buildingArea && (
-                      <div>Area: {Math.round(parcel.buildingArea)} m²</div>
-                    )}
-                    {parcel.propertyType && (
-                      <div>Use: {parcel.propertyType}</div>
-                    )}
-                  </div>
                 </div>
               </Popup>
             </Polygon>

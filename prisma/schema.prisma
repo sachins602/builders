@@ -267,6 +267,7 @@ model Organization {
     description String   @db.Text // 250 character description
     email       String?
     website     String?
+    imageUrl    String? 
     phone       String?
     avatar      String?  // URL to organization avatar/logo
     

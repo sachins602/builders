@@ -12,7 +12,7 @@ import {
   Legend,
   YAxis,
 } from "recharts";
-import { Loader2, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -25,6 +25,7 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { toast } from "sonner";
+import { Loading } from "./ui/loading";
 
 // AssignAdmin Component
 function AssignAdmin() {
@@ -103,7 +104,7 @@ function AssignAdmin() {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loading />
                     Assigning...
                   </>
                 ) : (
@@ -144,7 +145,7 @@ export default function AdminCharts() {
   ) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loading />
       </div>
     );
   }

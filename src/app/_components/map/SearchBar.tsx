@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search, X } from "lucide-react";
+import { Loading } from "../ui/loading";
 
 interface NominatimSuggestion {
   display_name: string;
@@ -102,7 +103,9 @@ export function SearchBar({ onSearch, onClose }: SearchBarProps) {
               </li>
             ))}
             {loading && (
-              <li className="px-4 py-2 text-sm text-gray-400">Loading...</li>
+              <li className="px-4 py-2 text-sm text-gray-400">
+                <Loading />
+              </li>
             )}
           </ul>
         )}
