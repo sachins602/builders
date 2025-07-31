@@ -4,13 +4,13 @@ import { HydrateClient } from "~/trpc/server";
 import { api } from "~/trpc/server";
 import { ShareButton } from "~/app/_components/ShareButton";
 
-interface RemixPageProps {
+interface BuildPageProps {
   params: Promise<{
     id: string;
   }>;
 }
 
-export default async function RemixPage({ params }: RemixPageProps) {
+export default async function BuildPage({ params }: BuildPageProps) {
   const resolvedParams = await params;
   const post = await api.user.getUserResponseById({
     responseId: parseInt(resolvedParams.id),
