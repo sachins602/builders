@@ -335,6 +335,7 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
       email: (formData.get("email") as string) || undefined,
       website: (formData.get("website") as string) || undefined,
       phone: (formData.get("phone") as string) || undefined,
+      imageUrl: (formData.get("imageUrl") as string) || undefined,
       address: selectedAddress || undefined,
       lat: selectedCoordinates?.lat ?? userLocation?.lat,
       lng: selectedCoordinates?.lng ?? userLocation?.lng,
@@ -373,9 +374,9 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
     >
       <div className="flex items-start space-x-3">
         <Avatar className="h-12 w-12">
-          {org.avatar ? (
+          {org.imageUrl || org.avatar ? (
             <img
-              src={org.avatar}
+              src={org.imageUrl || org.avatar}
               alt={org.name}
               className="h-full w-full object-cover"
             />
@@ -476,6 +477,15 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                     <Label htmlFor="phone">Phone</Label>
                     <Input id="phone" name="phone" type="tel" />
                   </div>
+                  <div>
+                    <Label htmlFor="imageUrl">Organization Image URL</Label>
+                    <Input
+                      id="imageUrl"
+                      name="imageUrl"
+                      type="url"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
                   <AddressSearch onAddressSelect={handleAddressSelect} />
                   <Button
                     type="submit"
@@ -555,9 +565,13 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4">
                         <Avatar className="h-16 w-16">
-                          {selectedOrgDetail.avatar ? (
+                          {selectedOrgDetail.imageUrl ||
+                          selectedOrgDetail.avatar ? (
                             <img
-                              src={selectedOrgDetail.avatar}
+                              src={
+                                selectedOrgDetail.imageUrl ||
+                                selectedOrgDetail.avatar
+                              }
                               alt={selectedOrgDetail.name}
                               className="h-full w-full object-cover"
                             />
@@ -584,6 +598,24 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                         <ArrowLeft className="h-4 w-4" />
                       </Button>
                     </div>
+
+                    {/* Organization Image */}
+                    {(selectedOrgDetail.imageUrl ||
+                      selectedOrgDetail.avatar) && (
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-semibold">
+                          Organization Image
+                        </h3>
+                        <img
+                          src={
+                            selectedOrgDetail.imageUrl ||
+                            selectedOrgDetail.avatar
+                          }
+                          alt={selectedOrgDetail.name}
+                          className="w-full max-w-md rounded-lg object-cover"
+                        />
+                      </div>
+                    )}
 
                     <div className="space-y-3">
                       {selectedOrgDetail.email && (
