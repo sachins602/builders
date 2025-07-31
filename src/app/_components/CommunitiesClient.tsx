@@ -35,6 +35,7 @@ interface Organization {
   website?: string | null;
   phone?: string | null;
   avatar?: string | null;
+  imageUrl?: string | null;
   address?: string | null;
   lat?: number | null;
   lng?: number | null;
@@ -374,9 +375,9 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
     >
       <div className="flex items-start space-x-3">
         <Avatar className="h-12 w-12">
-          {org.imageUrl || org.avatar ? (
+          {(org.imageUrl ?? org.avatar) ? (
             <img
-              src={org.imageUrl || org.avatar}
+              src={(org.imageUrl ?? org.avatar)!}
               alt={org.name}
               className="h-full w-full object-cover"
             />
@@ -565,12 +566,12 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4">
                         <Avatar className="h-16 w-16">
-                          {selectedOrgDetail.imageUrl ||
-                          selectedOrgDetail.avatar ? (
+                          {(selectedOrgDetail.imageUrl ??
+                          selectedOrgDetail.avatar) ? (
                             <img
                               src={
-                                selectedOrgDetail.imageUrl ||
-                                selectedOrgDetail.avatar
+                                (selectedOrgDetail.imageUrl ??
+                                  selectedOrgDetail.avatar)!
                               }
                               alt={selectedOrgDetail.name}
                               className="h-full w-full object-cover"
@@ -600,7 +601,7 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                     </div>
 
                     {/* Organization Image */}
-                    {(selectedOrgDetail.imageUrl ||
+                    {(selectedOrgDetail.imageUrl ??
                       selectedOrgDetail.avatar) && (
                       <div className="space-y-2">
                         <h3 className="text-lg font-semibold">
@@ -608,8 +609,8 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                         </h3>
                         <img
                           src={
-                            selectedOrgDetail.imageUrl ||
-                            selectedOrgDetail.avatar
+                            (selectedOrgDetail.imageUrl ??
+                              selectedOrgDetail.avatar)!
                           }
                           alt={selectedOrgDetail.name}
                           className="w-full max-w-md rounded-lg object-cover"

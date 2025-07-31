@@ -3,7 +3,6 @@ import type { LeafletMouseEvent } from "leaflet";
 import type L from "leaflet";
 import type { PropertyData } from "./types";
 import { getImageUrl } from "~/lib/image-utils";
-import Image from "next/image";
 
 interface PropertyPolygonsProps {
   parcelData?: PropertyData[];
