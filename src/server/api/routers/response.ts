@@ -385,6 +385,7 @@ export const responseRouter = createTRPCRouter({
         address: true,
         lat: true,
         lng: true,
+        url: true,
         propertyBoundary: true,
         propertyType: true,
         buildingType: true,
@@ -424,6 +425,7 @@ export const responseRouter = createTRPCRouter({
     // Parse the JSON boundary data for frontend use
     return parcels.map((parcel) => ({
       ...parcel,
+      imageUrl: parcel.url,
       propertyBoundary: parcel.propertyBoundary
         ? (JSON.parse(parcel.propertyBoundary as string) as GeoJSON.Polygon)
         : null,
