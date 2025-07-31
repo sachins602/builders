@@ -2,12 +2,27 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { api } from "~/trpc/react";
 import type { ChatState, ChatData, ResponseWithImage } from "~/types/chat";
 
-export function useChat(continueFromResponse?: {
-  id: number;
-  prompt: string;
-  url: string;
-  sourceImageId: number | null;
-}) {
+export function useChat(
+  continueFromResponse?: {
+    id: number;
+    prompt: string;
+    url: string;
+    sourceImageId: number | null;
+  },
+  sourceImageId?: number,
+  sourceImage?: {
+    id: number;
+    name: string | null;
+    url: string;
+    address: string | null;
+    lat: number;
+    lng: number;
+    propertyType: string | null;
+    buildingType: string | null;
+    buildingArea: number | null;
+    createdAt: Date;
+  },
+) {
   const [state, setState] = useState<ChatState>({
     prompt: "",
     selectedResponseId: continueFromResponse?.id ?? null,
@@ -20,7 +35,7 @@ export function useChat(continueFromResponse?: {
     api.response.getChatData.useQuery();
 
   // Memoize these to prevent infinite re-renders
-  const lastImage = apiChatData?.lastImage ?? null;
+  const lastImage = sourceImage ?? apiChatData?.lastImage ?? null;
 
   const responseHistory = useMemo(
     () => apiChatData?.responseHistory ?? [],

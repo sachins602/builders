@@ -13,10 +13,31 @@ interface ChatInterfaceProps {
     url: string;
     sourceImageId: number | null;
   };
+  sourceImageId?: number;
+  sourceImage?: {
+    id: number;
+    name: string | null;
+    url: string;
+    address: string | null;
+    lat: number;
+    lng: number;
+    propertyType: string | null;
+    buildingType: string | null;
+    buildingArea: number | null;
+    createdAt: Date;
+  };
 }
 
-export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
-  const { state, chatData, actions, isLoading } = useChat(continueFromResponse);
+export function ChatInterface({
+  continueFromResponse,
+  sourceImageId,
+  sourceImage,
+}: ChatInterfaceProps) {
+  const { state, chatData, actions, isLoading } = useChat(
+    continueFromResponse,
+    sourceImageId,
+    sourceImage,
+  );
 
   const { mutate: deleteResponse } = api.response.deleteResponse.useMutation({
     onSuccess: () => {

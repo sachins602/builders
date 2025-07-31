@@ -1,6 +1,8 @@
 import { api } from "~/trpc/server";
 import { getImageUrl } from "~/lib/image-utils";
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "~/app/_components/ui/button";
+import ResponseChains from "./_components/ResponseChains";
 
 interface RemixPageProps {
   params: Promise<{
@@ -24,8 +26,11 @@ export default async function RemixPage({ params }: RemixPageProps) {
     );
   }
 
-  // Fetch the image data
-  const image = await api.response.getImageById({ id: imageId });
+  // Fetch the image data and response chains
+  const [image, responseChains] = await Promise.all([
+    api.response.getImageById({ id: imageId }).catch(() => null),
+    api.response.getResponseChainsByImageId({ imageId }).catch(() => []),
+  ]);
 
   if (!image) {
     return (
@@ -47,65 +52,71 @@ export default async function RemixPage({ params }: RemixPageProps) {
         <p className="text-gray-600">Transform this street view image</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Image Display */}
-        <div className="space-y-4">
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-xl font-semibold">Original Image</h2>
-            <img
-              src={getImageUrl(image.url)}
-              alt={image.address ?? "Street view"}
-              className="h-auto w-full rounded-lg shadow-md"
-            />
-          </div>
-
-          {/* Image Details */}
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-3 text-lg font-semibold">Image Details</h3>
-            <div className="space-y-2 text-sm">
-              <p>
-                <span className="font-medium">Address:</span>{" "}
-                {image.address ?? "Unknown"}
-              </p>
-              <p>
-                <span className="font-medium">Property Type:</span>{" "}
-                {image.propertyType ?? "N/A"}
-              </p>
-              <p>
-                <span className="font-medium">Building Type:</span>{" "}
-                {image.buildingType ?? "N/A"}
-              </p>
-              {image.buildingArea && (
+      <div className="grid grid-cols-1 gap-6">
+        {/* Original Image Section */}
+        <div className="rounded-lg bg-white p-6 shadow-lg">
+          <h2 className="mb-4 text-xl font-semibold">Original Image</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <img
+                src={getImageUrl(image.url)}
+                alt={image.address ?? "Street view"}
+                className="h-96 w-full rounded-lg shadow-md"
+              />
+            </div>
+            <div>
+              <h3 className="mb-3 text-lg font-semibold">Image Details</h3>
+              <div className="space-y-2 text-sm">
                 <p>
-                  <span className="font-medium">Building Area:</span>{" "}
-                  {image.buildingArea} m²
+                  <span className="font-medium">Address:</span>{" "}
+                  {image.address ?? "Unknown"}
                 </p>
-              )}
-              <p>
-                <span className="font-medium">Coordinates:</span> {image.lat},{" "}
-                {image.lng}
-              </p>
+                <p>
+                  <span className="font-medium">Property Type:</span>{" "}
+                  {image.propertyType ?? "N/A"}
+                </p>
+                <p>
+                  <span className="font-medium">Building Type:</span>{" "}
+                  {image.buildingType ?? "N/A"}
+                </p>
+                {image.buildingArea && (
+                  <p>
+                    <span className="font-medium">Building Area:</span>{" "}
+                    {image.buildingArea} m²
+                  </p>
+                )}
+                <p>
+                  <span className="font-medium">Coordinates:</span> {image.lat},{" "}
+                  {image.lng}
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Remix Controls */}
-        <div className="space-y-4">
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="mb-4 text-lg font-semibold">Start Remixing</h3>
-            <p className="mb-4 text-gray-600">
-              Use AI to transform this street view image. Describe what changes
-              you&apos;d like to make.
-            </p>
+        {/* Create New Response Chain Section */}
+        <div className="rounded-lg bg-white p-6 shadow-lg">
+          <h3 className="mb-4 text-xl font-semibold">
+            Create New Response Chain
+          </h3>
+          <p className="mb-4 text-gray-600">
+            Start a new AI-powered response chain from this original image. This
+            will create a new independent chain separate from any existing
+            responses.
+          </p>
+          <Link href={`/create/from-image/${imageId}`}>
+            <Button className="w-full" size="lg">
+              Start New Chain
+            </Button>
+          </Link>
+        </div>
 
-            {/* TODO: Add remix interface here */}
-            <div className="rounded-lg bg-gray-50 p-4 text-center">
-              <p className="text-gray-500">Remix interface coming soon...</p>
-              <p className="mt-2 text-sm text-gray-400">
-                This will connect to the AI image editing functionality
-              </p>
-            </div>
-          </div>
+        {/* Existing Response Chains Section */}
+        <div className="rounded-lg bg-white p-6 shadow-lg">
+          <h3 className="mb-4 text-xl font-semibold">
+            Existing Response Chains ({responseChains.length})
+          </h3>
+          <ResponseChains chains={responseChains} />
         </div>
       </div>
     </div>

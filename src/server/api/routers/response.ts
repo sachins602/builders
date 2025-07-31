@@ -333,6 +333,45 @@ export const responseRouter = createTRPCRouter({
       return response;
     }),
 
+  getResponseChainsByImageId: protectedProcedure
+    .input(z.object({ imageId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      // Get all responses for this image (both root and chained)
+      const allResponses = await ctx.db.response.findMany({
+        where: {
+          sourceImageId: input.imageId,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      // Group responses into chains starting from root responses
+      const rootResponses = allResponses.filter(
+        (r) => r.previousResponseId === null,
+      );
+      const chains = [];
+
+      for (const root of rootResponses) {
+        const chain = [root];
+        let currentId = root.id;
+
+        // Follow the chain by finding responses that reference the current response
+        while (true) {
+          const nextResponse = allResponses.find(
+            (r) => r.previousResponseId === currentId,
+          );
+          if (!nextResponse) break;
+
+          chain.push(nextResponse);
+          currentId = nextResponse.id;
+        }
+
+        chains.push(chain);
+      }
+
+      return chains;
+    }),
+
   getPlacesDetails: publicProcedure
     .input(z.object({ address: z.string() }))
     .mutation(async ({ input }) => {
@@ -459,15 +498,17 @@ export const responseRouter = createTRPCRouter({
         prompt: z.string(),
         url: z.string(),
         sourceImageId: z.number(),
+        previousResponseId: z.number().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { prompt, url, sourceImageId } = input;
+      const { prompt, url, sourceImageId, previousResponseId } = input;
       return ctx.db.response.create({
         data: {
           prompt,
           url,
           sourceImageId,
+          previousResponseId,
           createdById: ctx.session.user.id,
         },
       });
