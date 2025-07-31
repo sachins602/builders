@@ -7,6 +7,8 @@ import { Button } from "~/app/_components/ui/button";
 import { Input } from "~/app/_components/ui/input";
 import { Label } from "~/app/_components/ui/label";
 import { Loading } from "~/app/_components/ui/loading";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 type ResponseData = {
   id: number;
@@ -100,13 +102,11 @@ function ResponseItem({
       {isLast && (
         <div className="mt-3">
           {!showContinueForm ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowContinueForm(true)}
-            >
-              Continue Chain
-            </Button>
+            <Link href={`/create/${response.id}`}>
+              <Button variant="outline" size="sm">
+                <ArrowRight className="h-4 w-4" /> Continue
+              </Button>
+            </Link>
           ) : (
             <div className="space-y-3 rounded-lg border bg-white p-3">
               <div>
@@ -173,10 +173,8 @@ export default function ResponseChains({
     }
   };
 
-
-
   // Filter out empty chains and ensure we only show valid chains
-  const validChains = chains.filter(chain => chain.length > 0);
+  const validChains = chains.filter((chain) => chain.length > 0);
 
   if (validChains.length === 0) {
     return (
