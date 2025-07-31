@@ -58,7 +58,12 @@ export function PropertyPolygons({
             >
               <Popup
                 eventHandlers={{
-                  popupclose: () => onPopupClose(),
+                  popupclose: () => {
+                    onPopupClose();
+                  },
+                  popupopen: () => {
+                    // Popup opened
+                  },
                 }}
               >
                 <div className="p-2">
