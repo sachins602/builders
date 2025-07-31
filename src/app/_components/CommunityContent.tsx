@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
-import { Loader2 } from "lucide-react";
 import { CommunityPost } from "./CommunityPost/CommunityPost";
+import { Loading } from "./ui/loading";
 interface CommunityContentProps {
   session: { user: { id: string } };
 }
@@ -49,7 +49,7 @@ export default function CommunityPageContent({
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loading />
           <p className="text-muted-foreground">Loading community posts...</p>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function CommunityPageContent({
                 >
                   {isFetchingNextPage ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loading />
                       <span>Loading more...</span>
                     </>
                   ) : (

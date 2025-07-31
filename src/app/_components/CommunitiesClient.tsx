@@ -25,6 +25,7 @@ import {
   ArrowLeft,
   Plus,
 } from "lucide-react";
+import { Loading } from "./ui/loading";
 
 interface Organization {
   id: string;
@@ -237,7 +238,9 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
               </li>
             ))}
             {loading && (
-              <li className="px-4 py-2 text-sm text-gray-400">Loading...</li>
+              <li className="px-4 py-2 text-sm text-gray-400">
+                <Loading />
+              </li>
             )}
           </ul>
         )}
@@ -544,6 +547,7 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                 </DialogHeader>
                 {isLoadingDetail ? (
                   <div className="flex h-96 items-center justify-center">
+                    <Loading />
                     Loading organization details...
                   </div>
                 ) : selectedOrgDetail ? (

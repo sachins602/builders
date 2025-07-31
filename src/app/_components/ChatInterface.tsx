@@ -4,6 +4,7 @@ import { ChatArea } from "./chat/ChatArea";
 import { MessageInput } from "./chat/MessageInput";
 import ResponseAction from "./chat/ResponseAction";
 import { api } from "~/trpc/react";
+import { Loading } from "./ui/loading";
 
 interface ChatInterfaceProps {
   continueFromResponse?: {
@@ -30,7 +31,7 @@ export function ChatInterface({ continueFromResponse }: ChatInterfaceProps) {
   if (isLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <p>Loading chat...</p>
+        <Loading />
       </div>
     );
   }
