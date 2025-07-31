@@ -117,7 +117,8 @@ export function useChat(
         const imageUrl = sourceImage?.url ?? lastImage?.url;
         if (!imageUrl) {
           setState((prev) => ({ ...prev, isGenerating: false }));
-          alert("No image URL available for generation.");
+          console.error("No image URL available for generation");
+          alert("No image URL available for generation. Please try again.");
           return;
         }
 
@@ -146,6 +147,9 @@ export function useChat(
       setState((prev) => ({ ...prev, isGenerating: false }));
       console.error("Failed to generate image:", error);
       alert("Failed to generate image. Please try again.");
+      // Note: The database record created by createNewChainMutation
+      // will remain with an empty URL, but this is acceptable as it represents
+      // a failed generation attempt that can be cleaned up later if needed.
     },
   });
 
@@ -154,9 +158,23 @@ export function useChat(
     api.response.continueChainFromResponse.useMutation({
       onSuccess: (newResponse) => {
         // After creating the response record, generate the image
+        // Use the selected response's URL as the previous image URL for chain continuation
+        const selectedResponse = responseHistory.find(
+          (r) => r.id === state.selectedResponseId,
+        );
+
+        if (!selectedResponse?.url) {
+          setState((prev) => ({ ...prev, isGenerating: false }));
+          console.error(
+            "No selected response URL available for chain continuation",
+          );
+          alert("Failed to continue chain: No previous response found.");
+          return;
+        }
+
         generateFromResponseMutation.mutate({
           responseId: newResponse.id,
-          previousImageUrl: lastImage!.url,
+          previousImageUrl: selectedResponse.url,
         });
       },
       onError: (error) => {
@@ -180,6 +198,9 @@ export function useChat(
         setState((prev) => ({ ...prev, isGenerating: false }));
         console.error("Failed to generate image:", error);
         alert("Failed to generate image. Please try again.");
+        // Note: The database record created by continueChainFromResponseMutation
+        // will remain with an empty URL, but this is acceptable as it represents
+        // a failed generation attempt that can be cleaned up later if needed.
       },
     });
 
