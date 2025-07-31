@@ -1,6 +1,8 @@
 import { api } from "~/trpc/server";
 import { getImageUrl } from "~/lib/image-utils";
-import { RemixClient } from "./_components/RemixClient";
+import { Button } from "~/app/_components/ui/button";
+import Link from "next/link";
+import ResponseChains from "../../_components/ResponseChains";
 
 interface RemixPageProps {
   params: Promise<{
@@ -92,8 +94,30 @@ export default async function RemixPage({ params }: RemixPageProps) {
           </div>
         </div>
 
-        {/* Client-side remix functionality */}
-        <RemixClient image={image} responseChains={responseChains} />
+        {/* Create New Response Chain Section */}
+        <div className="rounded-lg bg-white p-6 shadow-lg">
+          <h3 className="mb-4 text-xl font-semibold">
+            Create New Response Chain
+          </h3>
+          <p className="mb-4 text-gray-600">
+            Start a new AI-powered response chain from this original image. This
+            will create a new independent chain separate from any existing
+            responses.
+          </p>
+          <Link href={`/create/from-image/${imageId}`}>
+            <Button className="w-full" size="lg">
+              Start New Chain
+            </Button>
+          </Link>
+        </div>
+
+        {/* Existing Response Chains */}
+        <div className="rounded-lg bg-white p-6 shadow-lg">
+          <h3 className="mb-4 text-xl font-semibold">
+            Existing Response Chains ({responseChains.length})
+          </h3>
+          <ResponseChains chains={responseChains} />
+        </div>
       </div>
     </div>
   );
