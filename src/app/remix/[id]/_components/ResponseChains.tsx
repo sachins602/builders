@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
+import { api } from "~/trpc/react";
 import { getImageUrl } from "~/lib/image-utils";
-import Link from "next/link";
 import { Button } from "~/app/_components/ui/button";
+import { Input } from "~/app/_components/ui/input";
+import { Label } from "~/app/_components/ui/label";
+import { Loading } from "~/app/_components/ui/loading";
 
 type ResponseData = {
   id: number;
@@ -14,16 +18,56 @@ type ResponseData = {
 
 type ResponseChain = ResponseData[];
 
-interface ResponseChainsProps {
-  chains: ResponseChain[];
-}
-
 interface ResponseItemProps {
   response: ResponseData;
   isLast: boolean;
+  onChainContinued: () => void;
 }
 
-function ResponseItem({ response, isLast }: ResponseItemProps) {
+function ResponseItem({
+  response,
+  isLast,
+  onChainContinued,
+}: ResponseItemProps) {
+  const [showContinueForm, setShowContinueForm] = useState(false);
+  const [continuePrompt, setContinuePrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Mutations for continuing chains
+  const continueChainMutation =
+    api.response.continueChainFromResponse.useMutation();
+  const generateFromResponseMutation =
+    api.openai.generateFromResponse.useMutation();
+
+  const handleContinueChain = async () => {
+    if (!continuePrompt.trim()) return;
+
+    setIsGenerating(true);
+    try {
+      // Step 1: Create the response record
+      const newResponse = await continueChainMutation.mutateAsync({
+        responseId: response.id,
+        prompt: continuePrompt.trim(),
+      });
+
+      // Step 2: Generate the image and update the response
+      await generateFromResponseMutation.mutateAsync({
+        responseId: newResponse.id,
+        previousImageUrl: response.url,
+      });
+
+      // Reset form and refresh data
+      setContinuePrompt("");
+      setShowContinueForm(false);
+      onChainContinued();
+    } catch (error) {
+      console.error("Failed to continue chain:", error);
+      alert("Failed to continue chain. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="mb-4 rounded-lg bg-gray-50 p-4">
       <div className="flex items-start justify-between">
@@ -47,26 +91,88 @@ function ResponseItem({ response, isLast }: ResponseItemProps) {
           <img
             src={getImageUrl(response.url)}
             alt={`Response ${response.id}`}
-            className="h-auto max-w-full rounded-lg shadow-sm"
+            className="h-auto max-w-full rounded-lg object-cover shadow-sm"
             style={{ maxHeight: "200px" }}
           />
         </div>
       </div>
 
       {isLast && (
-        <div className="mt-3 flex gap-2">
-          <Link href={`/create/${response.id}`}>
-            <Button variant="outline" size="sm">
+        <div className="mt-3">
+          {!showContinueForm ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowContinueForm(true)}
+            >
               Continue Chain
             </Button>
-          </Link>
+          ) : (
+            <div className="space-y-3 rounded-lg border bg-white p-3">
+              <div>
+                <Label htmlFor={`continue-prompt-${response.id}`}>
+                  Continue with prompt:
+                </Label>
+                <Input
+                  id={`continue-prompt-${response.id}`}
+                  type="text"
+                  placeholder="Describe the next transformation..."
+                  value={continuePrompt}
+                  onChange={(e) => setContinuePrompt(e.target.value)}
+                  disabled={isGenerating}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleContinueChain}
+                  disabled={!continuePrompt.trim() || isGenerating}
+                  size="sm"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loading className="mr-2 h-4 w-4" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowContinueForm(false);
+                    setContinuePrompt("");
+                  }}
+                  disabled={isGenerating}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export default function ResponseChains({ chains }: ResponseChainsProps) {
+interface ResponseChainsProps {
+  chains: ResponseChain[];
+  onChainUpdated?: () => void;
+}
+
+export default function ResponseChains({
+  chains,
+  onChainUpdated,
+}: ResponseChainsProps) {
+  const handleChainContinued = () => {
+    if (onChainUpdated) {
+      onChainUpdated();
+    }
+  };
+
   if (chains.length === 0) {
     return (
       <div className="rounded-lg bg-gray-50 p-8 text-center">
@@ -99,6 +205,7 @@ export default function ResponseChains({ chains }: ResponseChainsProps) {
                   <ResponseItem
                     response={response}
                     isLast={responseIndex === chain.length - 1}
+                    onChainContinued={handleChainContinued}
                   />
                 </div>
               </div>
