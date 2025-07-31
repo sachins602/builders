@@ -54,10 +54,10 @@ export default function ImageTapper() {
   ];
 
   const instructionTexts = [
-    "Welcome to Builders!",
-    "Explore the map to find interesting locations",
-    "Generate AI-powered images from street views",
-    "Share your creations with the community",
+    "Start by selecting a parcel.",
+    "Choose whether to generate a new image or work off a community member's work",
+    "Generate an image with the chat prompt to envision medium density housing in your community.",
+    "Share your creations with the community, local government, and your friends!",
   ];
 
   // Render the instruction overlay for first-time visitors
@@ -86,24 +86,42 @@ export default function ImageTapper() {
         className="pointer-events-none absolute inset-0 z-10 bg-white opacity-0 transition-opacity duration-300"
         id="covering-id"
       />
-
       {/* Display the current instruction text */}
       <div className="absolute top-4 left-1/2 z-10 -translate-x-1/2 transform text-center text-3xl text-gray-800">
-        {instructionTexts[current]}
+      <h1 className="text-4xl font-bold text-center">Welcome to Our Missing Middle</h1>
+        <p>{instructionTexts[current]}</p>
       </div>
 
       {/* Render the current instruction image */}
-      {instructionImages[current] && (
-        <Image
-          src={instructionImages[current]}
-          alt={`Instruction ${current + 1}`}
-          className="h-full w-full object-contain"
-          draggable={false}
-          fill
-          sizes="100vw"
-          priority
-        />
-      )}
+      <div className="relative flex items-center justify-center w-full h-full">
+        {instructionImages[current] && (
+          <div
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Image
+              src={instructionImages[current]}
+              alt={`Instruction ${current + 1}`}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                width: "auto",
+                height: "auto",
+              }}
+              className="object-contain"
+              draggable={false}
+              width={600} // set to your actual image width
+              height={400} // set to your actual image height
+              priority
+            />
+          </div>
+        )}
+      </div>
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 transform text-xl">
         <button

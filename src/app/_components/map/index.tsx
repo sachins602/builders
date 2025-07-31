@@ -18,7 +18,13 @@ import { env } from "~/env";
 import { api } from "~/trpc/react";
 
 // Types and constants
-import { TORONTO_CENTER, INITIAL_ZOOM, ZOOM_LIMIT, outerBounds } from "./types";
+import {
+  TORONTO_CENTER,
+  INITIAL_ZOOM,
+  ZOOM_LIMIT,
+  outerBounds,
+  type PropertyData,
+} from "./types";
 
 // Components
 import { SearchBar } from "./SearchBar";
@@ -43,6 +49,7 @@ interface SelectionState {
   position: [number, number] | null;
   isFromSearch: boolean;
   hasParcelData: boolean;
+  selectedParcel?: PropertyData | null; // Track the selected parcel data
 }
 
 export default function MapComponent() {
@@ -56,6 +63,7 @@ export default function MapComponent() {
     position: null,
     isFromSearch: false,
     hasParcelData: false,
+    selectedParcel: null,
   });
 
   // Refs
@@ -63,6 +71,16 @@ export default function MapComponent() {
 
   // Custom hooks
   const { showMapToast } = useMapToast();
+
+  // Helper function to clear selection
+  const clearSelection = useCallback(() => {
+    setSelection({
+      position: null,
+      isFromSearch: false,
+      hasParcelData: false,
+      selectedParcel: null,
+    });
+  }, []);
 
   // API hooks
   const utils = api.useUtils();
@@ -75,11 +93,7 @@ export default function MapComponent() {
     onError: (error) => {
       console.error("Error fetching image:", error);
       // Clear selection on error
-      setSelection({
-        position: null,
-        isFromSearch: false,
-        hasParcelData: false,
-      });
+      clearSelection();
     },
   });
 
@@ -109,7 +123,7 @@ export default function MapComponent() {
       const position: [number, number] = [lat, lng];
 
       // Check if there's parcel data at the searched location
-      const hasParcelData = parcelData.data?.some((parcel) => {
+      const clickedParcel = parcelData.data?.find((parcel) => {
         if (
           parcel.propertyBoundary?.coordinates &&
           Array.isArray(parcel.propertyBoundary.coordinates[0])
@@ -124,15 +138,23 @@ export default function MapComponent() {
         return false;
       });
 
-      // For search, set position to show build/edit buttons and potentially popup
-      setSelection({
-        position,
-        isFromSearch: true,
-        hasParcelData: !!hasParcelData,
-      });
-
-      // Only fetch image if there's no parcel data (PropertyPopup will need it)
-      if (!hasParcelData) {
+      if (clickedParcel) {
+        // If there's parcel data at the searched location, select the parcel (show Remix button)
+        setSelection({
+          position: null,
+          isFromSearch: true,
+          hasParcelData: true,
+          selectedParcel: clickedParcel,
+        });
+      } else {
+        // If there's no parcel data, show PropertyPopup (show Build button)
+        setSelection({
+          position,
+          isFromSearch: true,
+          hasParcelData: false,
+          selectedParcel: null,
+        });
+        // Only fetch image if there's no parcel data (PropertyPopup will need it)
         image.mutate({ lat, lng });
       }
 
@@ -149,13 +171,16 @@ export default function MapComponent() {
     [handleSearchSelect],
   );
 
-  // Handler for when a property polygon is clicked - clear popup selection
-  const handlePolygonClick = useCallback(() => {
+  // Handler for when a property polygon is clicked - now receives parcel data
+  const handlePolygonClick = useCallback((parcel: PropertyData) => {
     setSelection({
       position: null,
       isFromSearch: false,
-      hasParcelData: false,
+      hasParcelData: true,
+      selectedParcel: parcel,
     });
+    // Hide search bar when a parcel is clicked
+    setShowSearchBar(false);
   }, []);
 
   // Search functionality
@@ -177,14 +202,10 @@ export default function MapComponent() {
       setCurrentZoom(zoom);
       // Clear selection if zoomed out too far and not from search
       if (zoom < ZOOM_LIMIT && !selection.isFromSearch) {
-        setSelection({
-          position: null,
-          isFromSearch: false,
-          hasParcelData: false,
-        });
+        clearSelection();
       }
     },
-    [selection],
+    [selection, clearSelection],
   );
 
   const handleMapRef = useCallback((map: L.Map) => {
@@ -197,27 +218,19 @@ export default function MapComponent() {
 
   const handleSearchClick = useCallback(() => {
     setShowSearchBar(true);
-    setSelection({
-      position: null,
-      isFromSearch: false,
-      hasParcelData: false,
-    });
-  }, []);
+    clearSelection();
+  }, [clearSelection]);
 
   const handleSearchBarClose = useCallback(() => {
     setShowSearchBar(false);
-    setSelection({
-      position: null,
-      isFromSearch: false,
-      hasParcelData: false,
-    });
-  }, []);
+    clearSelection();
+  }, [clearSelection]);
 
-  // Handler for map clicks - only show popup when no parcel data exists
+  // Handler for map clicks - handle both parcel and non-parcel locations
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
       // Check if there's parcel data at this location using proper polygon boundaries
-      const hasParcelData = parcelData.data?.some((parcel) => {
+      const clickedParcel = parcelData.data?.find((parcel) => {
         if (
           parcel.propertyBoundary?.coordinates &&
           Array.isArray(parcel.propertyBoundary.coordinates[0])
@@ -232,20 +245,36 @@ export default function MapComponent() {
         return false;
       });
 
-      // Only show PropertyPopup when there's no parcel data
-      if (!hasParcelData) {
+      // If there's already a selection and we're clicking elsewhere, clear it
+      if (selection.selectedParcel || selection.position) {
+        clearSelection();
+        return;
+      }
+
+      if (clickedParcel) {
+        // If there's parcel data at this location, select the parcel (show Remix button)
+        setSelection({
+          position: null,
+          isFromSearch: false,
+          hasParcelData: true,
+          selectedParcel: clickedParcel,
+        });
+        setShowSearchBar(false);
+      } else {
+        // If there's no parcel data, show PropertyPopup (show Build button)
         const position: [number, number] = [lat, lng];
         setSelection({
           position,
           isFromSearch: false,
           hasParcelData: false,
+          selectedParcel: null,
         });
         // Fetch street view image
         image.mutate({ lat, lng });
         setShowSearchBar(false);
       }
     },
-    [parcelData.data, image, isPointInPolygon],
+    [parcelData.data, image, isPointInPolygon, selection, clearSelection],
   );
 
   // Show initial toast
@@ -292,13 +321,11 @@ export default function MapComponent() {
           />
 
           <PropertyPolygons
-            onPopupClose={() =>
-              setSelection({
-                position: null,
-                isFromSearch: false,
-                hasParcelData: false,
-              })
-            }
+            onPopupClose={() => {
+              // Always clear selection when any popup is closed
+              // This will make the buttons disappear
+              clearSelection();
+            }}
             parcelData={parcelData.data}
             onPolygonClick={handlePolygonClick}
           />
@@ -312,7 +339,15 @@ export default function MapComponent() {
           />
 
           {selection.position && !selection.hasParcelData && (
-            <Popup position={selection.position}>
+            <Popup
+              position={selection.position}
+              eventHandlers={{
+                popupclose: () => {
+                  // Clear selection when PropertyPopup is closed
+                  clearSelection();
+                },
+              }}
+            >
               <PropertyPopup
                 isLoadingImage={image.isPending}
                 imageData={image.data}
@@ -327,12 +362,18 @@ export default function MapComponent() {
           <SearchBar onSearch={handleSearch} onClose={handleSearchBarClose} />
         )}
         {!showSearchBar && (
-          <ToolBar
-            onSearchClick={handleSearchClick}
-            showBuildEditButtons={selection.position !== null}
-            existingImageId={null}
-            buildExists={true} // Placeholder, replace with actual logic to check if a build exists for the current address
-          />
+          <>
+            <ToolBar
+              onSearchClick={handleSearchClick}
+              showBuildEditButtons={
+                selection.position !== null || selection.selectedParcel !== null
+              }
+              existingImageId={selection.selectedParcel?.id ?? null}
+              buildExists={selection.selectedParcel !== null}
+              selectedParcel={selection.selectedParcel}
+              hasParcelData={selection.hasParcelData}
+            />
+          </>
         )}
       </div>
       {/* Spacer - Builds to go here */}

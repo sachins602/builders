@@ -243,6 +243,27 @@ export const responseRouter = createTRPCRouter({
     });
   }),
 
+  getImageById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const image = await ctx.db.images.findUnique({
+        where: { id: input.id, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          address: true,
+          lat: true,
+          lng: true,
+          propertyType: true,
+          buildingType: true,
+          buildingArea: true,
+          createdAt: true,
+        },
+      });
+      return image;
+    }),
+
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
     const image = await ctx.db.images.findFirst({
       orderBy: { createdAt: "desc" },
@@ -310,6 +331,46 @@ export const responseRouter = createTRPCRouter({
         where: { sourceImageId: input.imageId, deletedAt: null },
       });
       return response;
+    }),
+
+  getResponseChainsByImageId: protectedProcedure
+    .input(z.object({ imageId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      // Get all responses for this image (both root and chained)
+      const allResponses = await ctx.db.response.findMany({
+        where: {
+          sourceImageId: input.imageId,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      // Group responses into chains starting from root responses
+      const rootResponses = allResponses.filter(
+        (r) => r.previousResponseId === null,
+      );
+      const chains = [];
+
+      for (const root of rootResponses) {
+        const chain = [root];
+        let currentId = root.id;
+
+        // Follow the chain by finding responses that reference the current response
+        while (true) {
+          const nextResponse = allResponses.find(
+            (r) => r.previousResponseId === currentId,
+          );
+          if (!nextResponse) break;
+
+          chain.push(nextResponse);
+          currentId = nextResponse.id;
+        }
+
+        chains.push(chain);
+      }
+
+      // Return all chains (all chains are guaranteed to have at least one response since they start with root responses)
+      return chains;
     }),
 
   getPlacesDetails: publicProcedure
@@ -385,6 +446,7 @@ export const responseRouter = createTRPCRouter({
         address: true,
         lat: true,
         lng: true,
+        url: true,
         propertyBoundary: true,
         propertyType: true,
         buildingType: true,
@@ -424,6 +486,7 @@ export const responseRouter = createTRPCRouter({
     // Parse the JSON boundary data for frontend use
     return parcels.map((parcel) => ({
       ...parcel,
+      imageUrl: parcel.url,
       propertyBoundary: parcel.propertyBoundary
         ? (JSON.parse(parcel.propertyBoundary as string) as GeoJSON.Polygon)
         : null,
@@ -436,15 +499,17 @@ export const responseRouter = createTRPCRouter({
         prompt: z.string(),
         url: z.string(),
         sourceImageId: z.number(),
+        previousResponseId: z.number().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { prompt, url, sourceImageId } = input;
+      const { prompt, url, sourceImageId, previousResponseId } = input;
       return ctx.db.response.create({
         data: {
           prompt,
           url,
           sourceImageId,
+          previousResponseId,
           createdById: ctx.session.user.id,
         },
       });
@@ -466,6 +531,88 @@ export const responseRouter = createTRPCRouter({
       const { id } = input;
       return await ctx.db.sharedChain.findFirst({
         where: { responseId: id, deletedAt: null },
+      });
+    }),
+
+  // Simplified endpoints for remix flow
+  createNewChainFromImage: protectedProcedure
+    .input(
+      z.object({
+        imageId: z.number(),
+        prompt: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify the image exists and user has access
+      const image = await ctx.db.images.findUnique({
+        where: { id: input.imageId, deletedAt: null },
+      });
+
+      if (!image) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Image not found",
+        });
+      }
+
+      // Create response linked to the original image (start of new chain)
+      return ctx.db.response.create({
+        data: {
+          prompt: input.prompt,
+          url: "", // Will be updated after image generation
+          sourceImageId: input.imageId,
+          createdById: ctx.session.user.id,
+        },
+      });
+    }),
+
+  continueChainFromResponse: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.number(),
+        prompt: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify the response exists and user has access
+      const previousResponse = await ctx.db.response.findUnique({
+        where: { id: input.responseId, deletedAt: null },
+        include: { sourceImage: true },
+      });
+
+      if (!previousResponse) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Previous response not found",
+        });
+      }
+
+      // Create response linked to previous response (continue chain)
+      return ctx.db.response.create({
+        data: {
+          prompt: input.prompt,
+          url: "", // Will be updated after image generation
+          sourceImageId: previousResponse.sourceImageId,
+          previousResponseId: input.responseId,
+          createdById: ctx.session.user.id,
+        },
+      });
+    }),
+
+  updateResponseUrl: protectedProcedure
+    .input(
+      z.object({
+        responseId: z.number(),
+        url: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.response.update({
+        where: {
+          id: input.responseId,
+          createdById: ctx.session.user.id, // Ensure user owns this response
+        },
+        data: { url: input.url },
       });
     }),
 });

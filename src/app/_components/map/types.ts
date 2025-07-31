@@ -11,6 +11,7 @@ export type PropertyData = {
   buildingType?: string | null;
   buildingArea?: number | null;
   propertyType?: string | null;
+  imageUrl: string;
   propertyBoundary?: {
     coordinates: number[][][];
   } | null;

@@ -1,4 +1,5 @@
 import { getImageUrl } from "~/lib/image-utils";
+import Loading from "../ui/loading";
 
 interface PropertyPopupProps {
   isLoadingImage: boolean;
@@ -14,7 +15,9 @@ export function PropertyPopup({
   return (
     <div className="flex w-64 flex-col gap-2">
       {isLoadingImage ? (
-        <div className="h-48 w-64 animate-pulse rounded-lg bg-gray-300" />
+        <div className="flex h-48 w-64 items-center justify-center">
+          <Loading />
+        </div>
       ) : imageData ? (
         <img
           className="h-48 w-64 rounded-lg"

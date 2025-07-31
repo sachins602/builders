@@ -2,8 +2,9 @@
 
 import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
-import { Loader2, Heart } from "lucide-react";
 import { CommunityPost } from "../_components/CommunityPost/CommunityPost";
+import { Loading } from "../_components/ui/loading";
+import { Heart } from "lucide-react";
 
 export default function LikesPage() {
   const {
@@ -27,7 +28,7 @@ export default function LikesPage() {
         <div className="mx-auto max-w-2xl px-4 py-8">
           <div className="flex h-64 items-center justify-center">
             <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin" />
+              <Loading />
               <p className="text-muted-foreground">
                 Loading your liked posts...
               </p>

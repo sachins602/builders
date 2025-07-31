@@ -35,6 +35,7 @@ export function MessageInput({
       e.preventDefault();
       if (prompt.trim() && !isGenerating && canGenerate) {
         onGenerate();
+        onPromptChange("");
       }
     }
   };

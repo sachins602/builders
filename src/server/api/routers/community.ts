@@ -883,6 +883,7 @@ export const communityRouter = createTRPCRouter({
         website: z.string().url().optional(),
         phone: z.string().optional(),
         avatar: z.string().url().optional(),
+        imageUrl: z.string().url().optional(),
         address: z.string().optional(),
         lat: z.number().optional(),
         lng: z.number().optional(),

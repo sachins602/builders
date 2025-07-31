@@ -10,7 +10,7 @@ export interface ResponseWithImage {
 
 export interface Image {
   id: number;
-  name: string;
+  name: string | null;
   url: string;
   address: string | null;
   lat: number | null;
