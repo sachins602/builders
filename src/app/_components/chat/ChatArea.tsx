@@ -33,6 +33,7 @@ export function ChatArea({
 
   // Navigation state
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
 
   // Create array of all images (original + generated)
   const allImages = React.useMemo((): ImageData[] => {
@@ -65,7 +66,14 @@ export function ChatArea({
     }
   }, [responseChain.length, allImages.length]);
 
-  const showWelcomeMessage = originalImage && !isGenerating;
+  const showWelcomeMessage = originalImage && !isGenerating && !hasShownWelcome;
+
+  // Mark welcome message as shown when it's displayed
+  useEffect(() => {
+    if (showWelcomeMessage) {
+      setHasShownWelcome(true);
+    }
+  }, [showWelcomeMessage]);
   const hasMultipleImages = allImages.length > 1;
   const currentImageData = allImages[currentIndex];
 
