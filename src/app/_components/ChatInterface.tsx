@@ -19,8 +19,8 @@ interface ChatInterfaceProps {
     name: string | null;
     url: string;
     address: string | null;
-    lat: number;
-    lng: number;
+    lat: number | null;
+    lng: number | null;
     propertyType: string | null;
     buildingType: string | null;
     buildingArea: number | null;

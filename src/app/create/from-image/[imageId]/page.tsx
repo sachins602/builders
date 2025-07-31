@@ -1,7 +1,7 @@
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
 import { HydrateClient } from "~/trpc/server";
-import { CreateFromImageClient } from "../../../_components/CreateFromImageClient";
+import { ChatInterface } from "../../../_components/ChatInterface";
 
 interface PageProps {
   params: Promise<{
@@ -62,7 +62,7 @@ export default async function CreateFromImagePage({ params }: PageProps) {
 
   return (
     <HydrateClient>
-      <CreateFromImageClient image={image} />
+      <ChatInterface sourceImageId={imageId} sourceImage={image} />
     </HydrateClient>
   );
 }
