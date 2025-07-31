@@ -1,5 +1,6 @@
 import { z } from "zod";
 import OpenAI, { toFile } from "openai";
+import { TRPCError } from "@trpc/server";
 import { env } from "~/env";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -22,13 +23,19 @@ export const openaiRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       if (!input.imageUrl) {
-        throw new Error("No image provided");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No image provided",
+        });
       }
 
       // Fetch the image from UploadThing URL
       const imageResponse = await fetch(input.imageUrl);
       if (!imageResponse.ok) {
-        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to fetch image: ${imageResponse.status}`,
+        });
       }
 
       // Get the image as buffer and convert to File
@@ -47,13 +54,19 @@ export const openaiRouter = createTRPCRouter({
         quality: "low",
       });
       if (!response.data) {
-        throw new Error("No image generated");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image generated",
+        });
       }
 
       // Check if b64_json exists before processing
       const imageData = response.data[0]?.b64_json;
       if (!imageData) {
-        throw new Error("No image data received from OpenAI");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image data received from OpenAI",
+        });
       }
 
       // Use StorageService to save the image (local or cloud based on environment)
@@ -64,7 +77,10 @@ export const openaiRouter = createTRPCRouter({
       );
 
       if (!uploadResult.success) {
-        throw new Error(`Failed to save image: ${uploadResult.error}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save image: ${uploadResult.error}`,
+        });
       }
 
       const imagePathDb = uploadResult.url;
@@ -94,9 +110,10 @@ export const openaiRouter = createTRPCRouter({
           },
         });
       } else {
-        throw new Error(
-          "Either imageId or previousResponseId must be provided",
-        );
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Either imageId or previousResponseId must be provided",
+        });
       }
     }),
 
@@ -115,15 +132,19 @@ export const openaiRouter = createTRPCRouter({
       });
 
       if (!previousResponse) {
-        throw new Error("Previous response not found");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Previous response not found",
+        });
       }
 
       // Fetch the previous image from UploadThing URL
       const imageResponse = await fetch(previousResponse.url);
       if (!imageResponse.ok) {
-        throw new Error(
-          `Failed to fetch previous image: ${imageResponse.status}`,
-        );
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to fetch previous image: ${imageResponse.status}`,
+        });
       }
 
       // Get the image as buffer and convert to File
@@ -143,13 +164,19 @@ export const openaiRouter = createTRPCRouter({
       });
 
       if (!response.data) {
-        throw new Error("No image generated");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image generated",
+        });
       }
 
       // Check if b64_json exists before processing
       const imageData = response.data[0]?.b64_json;
       if (!imageData) {
-        throw new Error("No image data received from OpenAI");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image data received from OpenAI",
+        });
       }
 
       // Use StorageService to save the image (local or cloud based on environment)
@@ -160,7 +187,10 @@ export const openaiRouter = createTRPCRouter({
       );
 
       if (!uploadResult.success) {
-        throw new Error(`Failed to save image: ${uploadResult.error}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save image: ${uploadResult.error}`,
+        });
       }
 
       // Save the path to the database
@@ -195,13 +225,19 @@ export const openaiRouter = createTRPCRouter({
       });
 
       if (!response) {
-        throw new Error("Response not found");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Response not found",
+        });
       }
 
       // Fetch the image from URL
       const imageResponse = await fetch(input.imageUrl);
       if (!imageResponse.ok) {
-        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to fetch image: ${imageResponse.status}`,
+        });
       }
 
       // Get the image as buffer and convert to File
@@ -221,12 +257,18 @@ export const openaiRouter = createTRPCRouter({
       });
 
       if (!openaiResponse.data) {
-        throw new Error("No image generated");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image generated",
+        });
       }
 
       const imageData = openaiResponse.data[0]?.b64_json;
       if (!imageData) {
-        throw new Error("No image data received from OpenAI");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image data received from OpenAI",
+        });
       }
 
       // Save the generated image
@@ -237,7 +279,10 @@ export const openaiRouter = createTRPCRouter({
       );
 
       if (!uploadResult.success) {
-        throw new Error(`Failed to save image: ${uploadResult.error}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save image: ${uploadResult.error}`,
+        });
       }
 
       // Update the response with the generated image URL
@@ -264,13 +309,19 @@ export const openaiRouter = createTRPCRouter({
       });
 
       if (!response) {
-        throw new Error("Response not found");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Response not found",
+        });
       }
 
       // Fetch the previous image
       const imageResponse = await fetch(input.previousImageUrl);
       if (!imageResponse.ok) {
-        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Failed to fetch image: ${imageResponse.status}`,
+        });
       }
 
       // Get the image as buffer and convert to File
@@ -290,12 +341,18 @@ export const openaiRouter = createTRPCRouter({
       });
 
       if (!openaiResponse.data) {
-        throw new Error("No image generated");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image generated",
+        });
       }
 
       const imageData = openaiResponse.data[0]?.b64_json;
       if (!imageData) {
-        throw new Error("No image data received from OpenAI");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No image data received from OpenAI",
+        });
       }
 
       // Save the generated image
@@ -306,7 +363,10 @@ export const openaiRouter = createTRPCRouter({
       );
 
       if (!uploadResult.success) {
-        throw new Error(`Failed to save image: ${uploadResult.error}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save image: ${uploadResult.error}`,
+        });
       }
 
       // Update the response with the generated image URL
