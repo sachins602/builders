@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -40,6 +41,7 @@ interface User {
 }
 
 export function ShareDialog({ responseId, children }: ShareDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -60,7 +62,7 @@ export function ShareDialog({ responseId, children }: ShareDialogProps) {
     );
 
   const shareResponse = api.community.shareResponse.useMutation({
-    onSuccess: () => {
+    onSuccess: (sharedChain) => {
       setOpen(false);
       setTitle("");
       setDescription("");
@@ -68,12 +70,13 @@ export function ShareDialog({ responseId, children }: ShareDialogProps) {
       setSelectedUsers([]);
       setSearchQuery("");
       setShowUserSearch(false);
-      // You could add a toast notification here
+      // Redirect to the build page with the shared chain ID
+      router.push(`/build/${sharedChain.responseId}`);
     },
   });
 
   const handleShare = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !responseId || responseId <= 0) return;
 
     shareResponse.mutate({
       responseId,
@@ -290,6 +293,8 @@ export function ShareDialog({ responseId, children }: ShareDialogProps) {
             onClick={handleShare}
             disabled={
               !title.trim() ||
+              !responseId ||
+              responseId <= 0 ||
               shareResponse.isPending ||
               (!isPublic && selectedUsers.length === 0)
             }
