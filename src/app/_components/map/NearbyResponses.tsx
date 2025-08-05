@@ -37,7 +37,7 @@ export function NearbyResponses({
                 key={sharedResponse.id}
                 className="flex cursor-pointer flex-col rounded-xl border transition-colors hover:bg-gray-200"
                 onClick={() => {
-                  window.location.href = `/community/${sharedResponse.id}`;
+                  window.location.href = `/build/${sharedResponse.responseId}`;
                 }}
               >
                 {/* Thumbnail */}
