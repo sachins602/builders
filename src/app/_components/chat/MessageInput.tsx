@@ -183,15 +183,6 @@ export function MessageInput({
           onChange={(e) => onPromptChange(e.target.value)}
           onKeyDown={(e) => {
             handleKeyDown(e);
-            if (
-              e.key === "Enter" &&
-              !e.shiftKey &&
-              prompt.trim() &&
-              !isGenerating &&
-              canGenerate
-            ) {
-              onGenerate(); // Trigger generation logic
-            }
           }}
           placeholder={getPlaceholderText()}
           className="sm:rows-1 w-full resize-none rounded-lg border bg-gray-50 p-3 pr-12 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
