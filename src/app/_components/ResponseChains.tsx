@@ -93,8 +93,7 @@ function ResponseItem({
           <img
             src={getImageUrl(response.url)}
             alt={`Response ${response.id}`}
-            className="h-auto max-w-full rounded-lg object-cover shadow-sm"
-            style={{ maxHeight: "200px" }}
+            className="h-28 w-36 rounded-lg object-cover shadow-sm"
           />
         </div>
       </div>
@@ -199,20 +198,24 @@ export default function ResponseChains({
             {chain.length !== 1 ? "s" : ""})
           </h4>
           <div className="space-y-3">
-            {chain.map((response, responseIndex) => (
-              <div key={response.id} className="flex items-start gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-medium text-blue-700">
-                  {responseIndex + 1}
+            {(chain.length > 1 ? [chain[chain.length - 1]] : chain)
+              .filter(
+                (response): response is ResponseData => response !== undefined,
+              )
+              .map((response) => (
+                <div key={response.id} className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-medium text-blue-700">
+                    {chain.length}
+                  </div>
+                  <div className="flex-1">
+                    <ResponseItem
+                      response={response}
+                      isLast={true}
+                      onChainContinued={handleChainContinued}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <ResponseItem
-                    response={response}
-                    isLast={responseIndex === chain.length - 1}
-                    onChainContinued={handleChainContinued}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       ))}
