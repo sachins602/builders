@@ -185,11 +185,11 @@ export function PropertyPolygons({
                 },
               }}
             >
-              <div className="p-2">
+              <div className="h-52 w-60">
                 <img
                   src={getImageUrl(parcel.imageUrl)}
                   alt="Property"
-                  className="h-48 w-64 rounded-lg"
+                  className="h-48 w-60 rounded-lg"
                 />
                 <h3 className="text-sm font-semibold">
                   {parcel.address ?? "Unknown Address"}
