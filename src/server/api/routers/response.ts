@@ -56,58 +56,6 @@ interface Location {
 
 export const responseRouter = createTRPCRouter({
   saveStreetViewImage: protectedProcedure
-    .input(z.object({ lat: z.number(), lng: z.number(), heading: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const { lat, lng, heading } = input;
-      const imageName = String(lat + lng);
-
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=${heading}&pitch=-0.76&key=${env.GOOGLE_API_KEY}`,
-      );
-      if (!response.ok) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Google API responded with ${response.status}`,
-        });
-      }
-
-      const imageBuffer = await response.arrayBuffer();
-
-      if (!imageBuffer) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch image data",
-        });
-      }
-
-      // Use StorageService to save the image
-      const uploadResult = await StorageService.saveBufferImage(
-        imageBuffer,
-        imageName,
-      );
-
-      if (!uploadResult.success) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to save image: ${uploadResult.error}`,
-        });
-      }
-
-      // write the file path to the database and return the file path
-      const image = await ctx.db.images.create({
-        data: {
-          lat: lat,
-          lng: lng,
-          name: imageName,
-          url: uploadResult.url,
-          createdBy: { connect: { id: ctx.session.user.id } },
-        },
-      });
-
-      return image;
-    }),
-
-  saveStreetViewImageAddress: protectedProcedure
     .input(
       z.object({
         address: z.string().optional(),
@@ -147,10 +95,6 @@ export const responseRouter = createTRPCRouter({
           message: "Apartments are not supported.",
         });
       }
-
-      console.log(
-        `Using OSM boundary data for building: ${propertyBoundary.properties.buildingType}`,
-      );
 
       // Get address information from Google (for street view image)
       const addressResponse = await fetch(
