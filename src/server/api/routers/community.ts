@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { Visibility, OrganizationMemberRole } from "@prisma/client";
+import { Visibility } from "@prisma/client";
 import {
   createTRPCRouter,
   protectedProcedure,

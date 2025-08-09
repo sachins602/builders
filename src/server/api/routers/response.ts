@@ -1,5 +1,3 @@
-// import { promises as fs } from "fs";
-// import path from "path";
 import { z } from "zod";
 import { env } from "~/env";
 import { getPropertyBoundary } from "~/lib/propertyBoundaryService";
@@ -11,6 +9,10 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import type {
+  Image as ImageModel,
+  Response as ResponseModel,
+} from "@prisma/client";
 
 interface GoogleGeocodingResponse {
   results: GeoCodeResponse[];
@@ -218,7 +220,7 @@ export const responseRouter = createTRPCRouter({
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
     const image = await ctx.db.image.findFirst({
       orderBy: { createdAt: "desc" },
-      where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
+      where: { createdById: ctx.session.user.id, deletedAt: null },
     });
     return image ?? null;
   }),
@@ -233,37 +235,71 @@ export const responseRouter = createTRPCRouter({
 
   // New combined endpoint for better performance
   getChatData: protectedProcedure.query(async ({ ctx }) => {
-    const [lastImage, responseHistory] = await Promise.all([
+    const [lastImage, responses] = await Promise.all([
       ctx.db.image.findFirst({
         orderBy: { createdAt: "desc" },
-        where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
+        where: { createdById: ctx.session.user.id, deletedAt: null },
       }),
       ctx.db.response.findMany({
-        orderBy: { createdAt: "desc" },
-        where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
-        include: {
-          sourceImage: true, // Include the original image data
-        },
+        where: { createdById: ctx.session.user.id, deletedAt: null },
+        orderBy: [{ createdAt: "desc" }],
+        include: { chain: { include: { rootImage: true } } },
       }),
     ]);
 
-    return {
-      lastImage: lastImage ?? null,
-      responseHistory,
+    // Compute previousResponseId per chain using step ordering for client compatibility
+    type ResponseWithChain = ResponseModel & {
+      chain: { rootImage: ImageModel | null };
     };
+    const responsesByChain = new Map<string, ResponseWithChain[]>();
+    for (const r of responses as ResponseWithChain[]) {
+      const list =
+        responsesByChain.get(r.chainId) ?? ([] as ResponseWithChain[]);
+      list.push(r);
+      responsesByChain.set(r.chainId, list);
+    }
+
+    const responseHistory = (responses as ResponseWithChain[]).map((r) => {
+      const chainResponses =
+        responsesByChain.get(r.chainId) ?? ([] as ResponseWithChain[]);
+      const prev = chainResponses.find((cr) => cr.step === r.step - 1) ?? null;
+      const root = r.chain.rootImage ?? null;
+      return {
+        id: r.id,
+        prompt: r.prompt,
+        url: r.url,
+        createdAt: r.createdAt,
+        // Derived fields for backward compatibility with client types
+        previousResponseId: prev ? prev.id : null,
+        sourceImageId: root ? root.id : null,
+        sourceImage: root,
+      } as const;
+    });
+
+    return { lastImage: lastImage ?? null, responseHistory };
   }),
 
   getResponsesByUserId: protectedProcedure.query(async ({ ctx }) => {
+    // Return only first-step responses per chain for a concise history
     const responses = await ctx.db.response.findMany({
-      where: {
-        createdBy: { id: ctx.session.user.id },
-        deletedAt: null,
-        previousResponseId: null,
-      },
-      include: { sourceImage: true },
+      where: { createdById: ctx.session.user.id, deletedAt: null, step: 1 },
+      include: { chain: { include: { rootImage: true } } },
       orderBy: { createdAt: "desc" },
     });
-    return responses;
+
+    return (
+      responses as Array<
+        ResponseModel & { chain: { rootImage: ImageModel | null } }
+      >
+    ).map((r) => ({
+      id: r.id,
+      prompt: r.prompt,
+      url: r.url,
+      createdAt: r.createdAt,
+      previousResponseId: null,
+      sourceImageId: r.chain.rootImage ? r.chain.rootImage.id : null,
+      sourceImage: r.chain.rootImage ?? null,
+    }));
   }),
 
   getResponseById: protectedProcedure
@@ -278,50 +314,41 @@ export const responseRouter = createTRPCRouter({
   getResponseByImageId: protectedProcedure
     .input(z.object({ imageId: z.number() }))
     .query(async ({ ctx, input }) => {
-      const response = await ctx.db.response.findFirst({
-        where: { sourceImageId: input.imageId, deletedAt: null },
+      // Find the most recent chain for this image and return its latest response
+      const chain = await ctx.db.chain.findFirst({
+        where: { rootImageId: input.imageId, deletedAt: null },
+        orderBy: { createdAt: "desc" },
       });
-      return response;
+      if (!chain) return null;
+      const response = await ctx.db.response.findFirst({
+        where: { chainId: chain.id, deletedAt: null },
+        orderBy: { step: "desc" },
+      });
+      return response ?? null;
     }),
 
   getResponseChainsByImageId: protectedProcedure
     .input(z.object({ imageId: z.number() }))
     .query(async ({ ctx, input }) => {
-      // Get all responses for this image (both root and chained)
-      const allResponses = await ctx.db.response.findMany({
-        where: {
-          sourceImageId: input.imageId,
-          deletedAt: null,
+      // Fetch all chains for this image with their responses in step order
+      const chains = await ctx.db.chain.findMany({
+        where: { rootImageId: input.imageId, deletedAt: null },
+        include: {
+          responses: { where: { deletedAt: null }, orderBy: { step: "asc" } },
         },
         orderBy: { createdAt: "asc" },
       });
 
-      // Group responses into chains starting from root responses
-      const rootResponses = allResponses.filter(
-        (r) => r.previousResponseId === null,
+      // Map to the legacy shape expected by the client (with derived previousResponseId)
+      return chains.map((c) =>
+        c.responses.map((r, idx) => ({
+          id: r.id,
+          prompt: r.prompt,
+          url: r.url,
+          createdAt: r.createdAt,
+          previousResponseId: idx > 0 ? c.responses[idx - 1]!.id : null,
+        })),
       );
-      const chains = [] as (typeof allResponses)[];
-
-      for (const root of rootResponses) {
-        const chain = [root];
-        let currentId = root.id;
-
-        // Follow the chain by finding responses that reference the current response
-        while (true) {
-          const nextResponse = allResponses.find(
-            (r) => r.previousResponseId === currentId,
-          );
-          if (!nextResponse) break;
-
-          chain.push(nextResponse);
-          currentId = nextResponse.id;
-        }
-
-        chains.push(chain);
-      }
-
-      // Return all chains (all chains are guaranteed to have at least one response since they start with root responses)
-      return chains;
     }),
 
   getPlacesDetails: publicProcedure
@@ -370,7 +397,7 @@ export const responseRouter = createTRPCRouter({
     .input(z.object({ lat: z.number(), lng: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const { lat, lng } = input;
-      const nearbyImages = await ctx.db.images.findMany({
+      const nearbyImages = await ctx.db.image.findMany({
         where: {
           lat: {
             gte: lat - 0.01,
@@ -391,6 +418,7 @@ export const responseRouter = createTRPCRouter({
   }),
 
   getEnhancedParcelData: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
     const parcels = await ctx.db.image.findMany({
       select: {
         id: true,
@@ -402,28 +430,43 @@ export const responseRouter = createTRPCRouter({
         propertyType: true,
         buildingType: true,
         buildingArea: true,
+        chains: {
+          select: {
+            id: true,
+            responses: {
+              where: { deletedAt: null },
+              select: { id: true, createdById: true },
+            },
+            shares: {
+              where: { deletedAt: null },
+              select: {
+                id: true,
+                visibility: true,
+                recipients: { select: { userId: true } },
+              },
+            },
+          },
+        },
       },
       where: {
         deletedAt: null,
         OR: [
+          // Images created by user with any responses (owned data)
+          { createdById: userId },
+          // Images that have at least one response by the user
           {
-            createdBy: { id: ctx.session.user.id },
-            responses: { some: { createdBy: { id: ctx.session.user.id } } },
+            chains: { some: { responses: { some: { createdById: userId } } } },
           },
-          // Images with responses that are shared to the user
+          // Images that are shared to the user or public via their chains
           {
-            responses: {
+            chains: {
               some: {
-                sharedChains: {
+                shares: {
                   some: {
                     deletedAt: null,
                     OR: [
-                      { isPublic: true },
-                      {
-                        sharedToUsers: {
-                          some: { userId: ctx.session.user.id },
-                        },
-                      },
+                      { visibility: "PUBLIC" },
+                      { recipients: { some: { userId } } },
                     ],
                   },
                 },
@@ -434,37 +477,27 @@ export const responseRouter = createTRPCRouter({
       },
     });
 
-    // Parse the JSON boundary data for frontend use
-    return parcels.map((parcel) => ({
-      ...parcel,
-      imageUrl: parcel.url,
-      propertyBoundary: parcel.propertyBoundary
-        ? (JSON.parse(parcel.propertyBoundary as string) as GeoJSON.Polygon)
-        : null,
+    // Parse boundary, and strip internal relations
+    return parcels.map((p) => ({
+      id: p.id,
+      address: p.address,
+      lat: p.lat,
+      lng: p.lng,
+      url: p.url,
+      imageUrl: p.url,
+      propertyType: p.propertyType,
+      buildingType: p.buildingType,
+      buildingArea: p.buildingArea,
+      propertyBoundary:
+        p.propertyBoundary == null
+          ? null
+          : typeof p.propertyBoundary === "string"
+            ? (JSON.parse(p.propertyBoundary) as GeoJSON.Polygon)
+            : (p.propertyBoundary as unknown as GeoJSON.Polygon),
     }));
   }),
 
-  createResponse: protectedProcedure
-    .input(
-      z.object({
-        prompt: z.string(),
-        url: z.string(),
-        sourceImageId: z.number(),
-        previousResponseId: z.number().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { prompt, url, sourceImageId, previousResponseId } = input;
-      return ctx.db.response.create({
-        data: {
-          prompt,
-          url,
-          sourceImageId,
-          previousResponseId,
-          createdById: ctx.session.user.id,
-        },
-      });
-    }),
+  // Removed deprecated createResponse in favor of chain-based flows
 
   deleteResponse: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -479,9 +512,13 @@ export const responseRouter = createTRPCRouter({
   getSharedStatusWithId: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const { id } = input;
-      return await ctx.db.sharedChain.findFirst({
-        where: { responseId: id, deletedAt: null },
+      // Find the response to get its chain, then check if that chain has a Share
+      const response = await ctx.db.response.findFirst({
+        where: { id: input.id, deletedAt: null },
+      });
+      if (!response) return null;
+      return await ctx.db.share.findFirst({
+        where: { chainId: response.chainId, deletedAt: null },
       });
     }),
 
@@ -495,7 +532,7 @@ export const responseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Verify the image exists and user has access
-      const image = await ctx.db.images.findFirst({
+      const image = await ctx.db.image.findFirst({
         where: { id: input.imageId, deletedAt: null },
       });
 
@@ -506,12 +543,21 @@ export const responseRouter = createTRPCRouter({
         });
       }
 
-      // Create response linked to the original image (start of new chain)
+      // Create a new chain rooted at this image
+      const chain = await ctx.db.chain.create({
+        data: {
+          rootImageId: input.imageId,
+          createdById: ctx.session.user.id,
+        },
+      });
+
+      // Create first response in the chain (step = 1)
       return ctx.db.response.create({
         data: {
           prompt: input.prompt,
           url: "", // Will be updated after image generation
-          sourceImageId: input.imageId,
+          chainId: chain.id,
+          step: 1,
           createdById: ctx.session.user.id,
         },
       });
@@ -526,9 +572,8 @@ export const responseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Verify the response exists and user has access
-      const previousResponse = await ctx.db.response.findUnique({
+      const previousResponse = await ctx.db.response.findFirst({
         where: { id: input.responseId, deletedAt: null },
-        include: { sourceImage: true },
       });
 
       if (!previousResponse) {
@@ -538,13 +583,20 @@ export const responseRouter = createTRPCRouter({
         });
       }
 
-      // Create response linked to previous response (continue chain)
+      // Compute next step within the same chain
+      const last = await ctx.db.response.findFirst({
+        where: { chainId: previousResponse.chainId, deletedAt: null },
+        orderBy: { step: "desc" },
+      });
+      const nextStep = (last?.step ?? 0) + 1;
+
+      // Create response linked to the same chain (continue chain)
       return ctx.db.response.create({
         data: {
           prompt: input.prompt,
           url: "", // Will be updated after image generation
-          sourceImageId: previousResponse.sourceImageId,
-          previousResponseId: input.responseId,
+          chainId: previousResponse.chainId,
+          step: nextStep,
           createdById: ctx.session.user.id,
         },
       });
