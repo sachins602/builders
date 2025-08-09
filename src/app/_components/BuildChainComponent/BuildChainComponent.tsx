@@ -86,14 +86,14 @@ export function BuildChainComponent({
           )}
         </Avatar>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">
               {post.sharedBy.name ?? "Anonymous"}
             </p>
             {post.isPublic ? (
-              <Globe className="h-3 w-3 text-blue-500" />
+              <Globe className="h-5 w-5 text-blue-500" />
             ) : (
-              <Lock className="h-3 w-3 text-amber-500" />
+              <Lock className="h-5 w-5 text-amber-500" />
             )}
           </div>
           <p className="text-muted-foreground text-xs">
