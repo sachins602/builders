@@ -2,14 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { api } from "~/trpc/react";
 import type { ChatState, ChatData, ResponseWithImage } from "~/types/chat";
 
-export function useChat(
-  continueFromResponse?: {
-    id: number;
-    prompt: string;
-    url: string;
-    sourceImageId: number | null;
-  },
-  sourceImageId?: number,
+type UseChatOptions = {
+  continueFromResponseId?: number;
+  sourceImageId?: number;
   sourceImage?: {
     id: number;
     name: string | null;
@@ -21,100 +16,152 @@ export function useChat(
     buildingType: string | null;
     buildingArea: number | null;
     createdAt: Date;
-  },
-) {
+  };
+};
+
+export function useChat(options?: UseChatOptions) {
+  const continueFromResponseId = options?.continueFromResponseId;
+  const sourceImageId = options?.sourceImageId;
+  const sourceImage = options?.sourceImage;
+
   const [state, setState] = useState<ChatState>({
     prompt: "",
-    selectedResponseId: continueFromResponse?.id ?? null,
+    selectedResponseId: continueFromResponseId ?? null,
     isGenerating: false,
     responseChain: [],
   });
 
-  // API queries - using combined endpoint for better performance
-  const { data: apiChatData, refetch: refetchChatData } =
-    api.response.getChatData.useQuery();
+  // Primary chat data (user's last image and history)
+  const {
+    data: apiChatData,
+    refetch: refetchChatData,
+    isLoading: isChatLoading,
+  } = api.response.getChatData.useQuery();
 
-  // Memoize these to prevent infinite re-renders
-  const lastImage = sourceImage ?? apiChatData?.lastImage ?? null;
-
+  // Base data from server
+  const baseLastImage = apiChatData?.lastImage ?? null;
   const responseHistory = useMemo(
     () => apiChatData?.responseHistory ?? [],
     [apiChatData?.responseHistory],
   );
 
-  // Helper function to build response chain
-  const buildResponseChain = useCallback(
-    (selected: ResponseWithImage, history: ResponseWithImage[]) => {
-      const chain: ResponseWithImage[] = [];
-      let current = selected;
+  // Determine the current image context for chains
+  const currentImageId = useMemo(() => {
+    if (sourceImageId) return sourceImageId;
+    if (continueFromResponseId) {
+      const r = responseHistory.find((x) => x.id === continueFromResponseId);
+      if (r?.sourceImageId) return r.sourceImageId;
+    }
+    if (state.selectedResponseId) {
+      const r = responseHistory.find((x) => x.id === state.selectedResponseId);
+      if (r?.sourceImageId) return r.sourceImageId;
+    }
+    return baseLastImage?.id ?? null;
+  }, [
+    sourceImageId,
+    continueFromResponseId,
+    state.selectedResponseId,
+    responseHistory,
+    baseLastImage,
+  ]);
 
-      // Traverse backwards to build chain
-      while (current) {
-        chain.unshift(current);
-        if (!current.previousResponseId) break;
-        const prev = history.find((r) => r.id === current.previousResponseId);
-        if (!prev) break;
-        current = prev;
-      }
-
-      // Traverse forwards from selected response
-      let lastInChain = selected;
-      while (true) {
-        const nextInBranch = history.find(
-          (r) => r.previousResponseId === lastInChain.id,
-        );
-        if (nextInBranch && !chain.find((c) => c.id === nextInBranch.id)) {
-          chain.push(nextInBranch);
-          lastInChain = nextInBranch;
-        } else {
-          break;
-        }
-      }
-
-      return chain;
-    },
-    [],
+  // Fetch all chains for the current image (server computes order/links)
+  const {
+    data: chainsForImage,
+    refetch: refetchChains,
+    isLoading: isChainsLoading,
+  } = api.response.getResponseChainsByImageId.useQuery(
+    { imageId: currentImageId! },
+    { enabled: !!currentImageId },
   );
 
-  // API mutations - using new simplified flow when sourceImageId is provided
-  const generateImageMutation = api.openai.generateImage.useMutation({
-    onSuccess: (data) => {
-      setState((prev) => ({
-        ...prev,
-        isGenerating: false,
-        selectedResponseId: data.id,
-      }));
-      void refetchChatData();
-    },
-    onError: (error) => {
-      setState((prev) => ({ ...prev, isGenerating: false }));
-      console.error("Failed to generate image:", error);
-    },
-  });
+  // Resolve the root image of the current context
+  const historyRootImage = useMemo(() => {
+    if (!currentImageId) return null;
+    const withRoot = responseHistory.find(
+      (r) => r.sourceImageId === currentImageId && r.sourceImage,
+    );
+    return withRoot?.sourceImage ?? null;
+  }, [currentImageId, responseHistory]);
 
-  const continueFromResponseMutation =
-    api.openai.continueFromResponse.useMutation({
-      onSuccess: (data) => {
-        setState((prev) => ({
-          ...prev,
-          isGenerating: false,
-          selectedResponseId: data.id,
-        }));
-        void refetchChatData();
-      },
-      onError: (error) => {
-        setState((prev) => ({ ...prev, isGenerating: false }));
-        console.error("Failed to continue image generation:", error);
-      },
-    });
+  const shouldFetchImageById = useMemo(() => {
+    if (!currentImageId) return false;
+    if (sourceImage && sourceImage.id === currentImageId) return false;
+    if (baseLastImage && baseLastImage.id === currentImageId) return false;
+    if (historyRootImage && historyRootImage.id === currentImageId)
+      return false;
+    return true;
+  }, [currentImageId, sourceImage, baseLastImage, historyRootImage]);
 
-  // New simplified mutations for remix flow
+  const { data: fetchedRootImage } = api.response.getImageById.useQuery(
+    { id: currentImageId! },
+    { enabled: shouldFetchImageById },
+  );
+
+  // Resolve the actual root image for the current context (used by UI and generation)
+  const rootImage = useMemo(() => {
+    if (sourceImage && (!currentImageId || sourceImage.id === currentImageId)) {
+      return sourceImage;
+    }
+    if (currentImageId) {
+      if (baseLastImage && baseLastImage.id === currentImageId)
+        return baseLastImage;
+      if (historyRootImage && historyRootImage.id === currentImageId)
+        return historyRootImage;
+      if (fetchedRootImage && fetchedRootImage.id === currentImageId)
+        return fetchedRootImage;
+    }
+    return sourceImage ?? baseLastImage;
+  }, [
+    sourceImage,
+    currentImageId,
+    baseLastImage,
+    historyRootImage,
+    fetchedRootImage,
+  ]);
+
+  // Keep responseChain and selectedResponseId in sync with server-provided chains
+  useEffect(() => {
+    if (!chainsForImage || chainsForImage.length === 0) {
+      setState((prev) => ({ ...prev, responseChain: [] }));
+      return;
+    }
+
+    const findChainContaining = (id: number) =>
+      chainsForImage.find((chain) => chain.some((r) => r.id === id)) ?? null;
+
+    const preferredId =
+      state.selectedResponseId ?? continueFromResponseId ?? null;
+    let chain: ResponseWithImage[] | null = null;
+
+    if (preferredId) {
+      chain = findChainContaining(preferredId);
+    }
+
+    // Default to the latest chain (router orders by createdAt asc)
+    chain ??= chainsForImage[chainsForImage.length - 1] ?? null;
+
+    const selectedId =
+      preferredId && chain?.some((r) => r.id === preferredId)
+        ? preferredId
+        : chain && chain.length > 0
+          ? chain[chain.length - 1]!.id
+          : null;
+
+    setState((prev) => ({
+      ...prev,
+      responseChain: chain ?? [],
+      selectedResponseId: selectedId,
+    }));
+  }, [chainsForImage, continueFromResponseId, state.selectedResponseId]);
+
+  // Mutations
   const createNewChainMutation =
     api.response.createNewChainFromImage.useMutation({
       onSuccess: (newResponse) => {
-        // After creating the response record, generate the image
-        // Use sourceImage URL when available, otherwise fallback to lastImage
-        const imageUrl = sourceImage?.url ?? lastImage?.url;
+        // Resolve source image URL for initial generation
+        const imageUrl = rootImage?.url ?? null;
+
         if (!imageUrl) {
           setState((prev) => ({ ...prev, isGenerating: false }));
           console.error("No image URL available for generation");
@@ -124,7 +171,7 @@ export function useChat(
 
         generateFromImageMutation.mutate({
           responseId: newResponse.id,
-          imageUrl: imageUrl,
+          imageUrl,
         });
       },
       onError: (error) => {
@@ -142,39 +189,40 @@ export function useChat(
         selectedResponseId: data.id,
       }));
       void refetchChatData();
+      void refetchChains();
     },
     onError: (error) => {
       setState((prev) => ({ ...prev, isGenerating: false }));
       console.error("Failed to generate image:", error);
       alert("Failed to generate image. Please try again.");
-      // Note: The database record created by createNewChainMutation
-      // will remain with an empty URL, but this is acceptable as it represents
-      // a failed generation attempt that can be cleaned up later if needed.
     },
   });
 
-  // New simplified mutations for continuing chains
   const continueChainFromResponseMutation =
     api.response.continueChainFromResponse.useMutation({
       onSuccess: (newResponse) => {
-        // After creating the response record, generate the image
-        // Use the selected response's URL as the previous image URL for chain continuation
-        const selectedResponse = responseHistory.find(
-          (r) => r.id === state.selectedResponseId,
-        );
-
-        if (!selectedResponse?.url) {
-          setState((prev) => ({ ...prev, isGenerating: false }));
-          console.error(
-            "No selected response URL available for chain continuation",
+        // Determine the previous image URL from current chain or history
+        const prevUrl = (() => {
+          const fromChain = state.responseChain.find(
+            (r) => r.id === state.selectedResponseId,
+          )?.url;
+          if (fromChain) return fromChain;
+          return (
+            responseHistory.find((r) => r.id === state.selectedResponseId)
+              ?.url ?? null
           );
+        })();
+
+        if (!prevUrl) {
+          setState((prev) => ({ ...prev, isGenerating: false }));
+          console.error("No selected response URL available for continuation");
           alert("Failed to continue chain: No previous response found.");
           return;
         }
 
         generateFromResponseMutation.mutate({
           responseId: newResponse.id,
-          previousImageUrl: selectedResponse.url,
+          previousImageUrl: prevUrl,
         });
       },
       onError: (error) => {
@@ -193,85 +241,14 @@ export function useChat(
           selectedResponseId: data.id,
         }));
         void refetchChatData();
+        void refetchChains();
       },
       onError: (error) => {
         setState((prev) => ({ ...prev, isGenerating: false }));
         console.error("Failed to generate image:", error);
         alert("Failed to generate image. Please try again.");
-        // Note: The database record created by continueChainFromResponseMutation
-        // will remain with an empty URL, but this is acceptable as it represents
-        // a failed generation attempt that can be cleaned up later if needed.
       },
     });
-
-  // Build response chain when selection changes OR when data loads
-  useEffect(() => {
-    if (responseHistory.length === 0) {
-      setState((prev) => ({ ...prev, responseChain: [] }));
-      return;
-    }
-
-    if (state.selectedResponseId) {
-      const selected = responseHistory.find(
-        (r) => r.id === state.selectedResponseId,
-      );
-      if (!selected) {
-        setState((prev) => ({ ...prev, responseChain: [] }));
-        return;
-      }
-
-      const chain = buildResponseChain(selected, responseHistory);
-      setState((prev) => ({ ...prev, responseChain: chain }));
-    } else {
-      // If no response is selected but we have a last image,
-      // automatically show any responses associated with that image
-      // BUT only if we're not starting a new chain (sourceImageId provided)
-      if (lastImage && responseHistory.length > 0 && !sourceImageId) {
-        // Find responses that were generated from the last image
-        const responsesForLastImage = responseHistory.filter(
-          (response) => response.sourceImageId === lastImage.id,
-        );
-
-        if (responsesForLastImage.length > 0) {
-          // Find the latest response chain for this image
-          // Look for the most recent response that doesn't have a next response
-          const latestResponse = responsesForLastImage
-            .filter((response) => {
-              // Find responses that are not referenced by other responses as previousResponseId
-              return !responsesForLastImage.some(
-                (r) => r.previousResponseId === response.id,
-              );
-            })
-            .sort(
-              (a, b) =>
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime(),
-            )[0];
-
-          if (latestResponse) {
-            // Build the chain for this latest response
-            const chain = buildResponseChain(latestResponse, responseHistory);
-            setState((prev) => ({
-              ...prev,
-              responseChain: chain,
-              selectedResponseId: latestResponse.id,
-            }));
-          }
-        } else {
-          setState((prev) => ({ ...prev, responseChain: [] }));
-        }
-      } else {
-        // When sourceImageId is provided (from remix page), start with empty chain
-        setState((prev) => ({ ...prev, responseChain: [] }));
-      }
-    }
-  }, [
-    state.selectedResponseId,
-    responseHistory,
-    lastImage,
-    sourceImageId,
-    buildResponseChain,
-  ]);
 
   // Actions
   const generateImage = useCallback(() => {
@@ -279,46 +256,29 @@ export function useChat(
 
     setState((prev) => ({ ...prev, isGenerating: true }));
 
-    // When sourceImageId is provided (from remix page), use new simplified flow for ALL cases
-    if (sourceImageId) {
-      if (state.selectedResponseId) {
-        // Continue chain using new simplified flow
-        continueChainFromResponseMutation.mutate({
-          responseId: state.selectedResponseId,
-          prompt: state.prompt,
-        });
-      } else {
-        // Start new chain using new simplified flow
-        createNewChainMutation.mutate({
-          imageId: sourceImageId,
-          prompt: state.prompt,
-        });
-      }
+    if (state.selectedResponseId) {
+      // Continue within the same chain
+      continueChainFromResponseMutation.mutate({
+        responseId: state.selectedResponseId,
+        prompt: state.prompt,
+      });
+    } else if (currentImageId) {
+      // Start a new chain from the current image
+      createNewChainMutation.mutate({
+        imageId: currentImageId,
+        prompt: state.prompt,
+      });
     } else {
-      // Use old flow for regular create page
-      if (state.selectedResponseId) {
-        continueFromResponseMutation.mutate({
-          prompt: state.prompt,
-          previousResponseId: state.selectedResponseId,
-        });
-      } else if (lastImage) {
-        generateImageMutation.mutate({
-          prompt: state.prompt,
-          imageUrl: lastImage.url,
-          imageId: lastImage.id,
-        });
-      }
+      // No image context available
+      setState((prev) => ({ ...prev, isGenerating: false }));
+      alert("No image selected. Please choose an image first.");
     }
   }, [
     state.prompt,
     state.selectedResponseId,
-    lastImage,
-    sourceImageId,
-    continueFromResponseMutation,
-    generateImageMutation,
-    createNewChainMutation,
+    currentImageId,
     continueChainFromResponseMutation,
-    generateFromResponseMutation,
+    createNewChainMutation,
   ]);
 
   const selectResponse = useCallback((responseId: number) => {
@@ -334,7 +294,7 @@ export function useChat(
     });
   }, []);
 
-  // Reset to start fresh when sourceImageId is provided (new chain)
+  // Reset to start fresh when a specific source image is provided (remix)
   useEffect(() => {
     if (sourceImageId) {
       setState({
@@ -350,13 +310,9 @@ export function useChat(
     setState((prev) => ({ ...prev, prompt }));
   }, []);
 
-  // Memoize chatData to prevent unnecessary re-renders
   const chatData: ChatData = useMemo(
-    () => ({
-      lastImage,
-      responseHistory,
-    }),
-    [lastImage, responseHistory],
+    () => ({ lastImage: rootImage ?? null, responseHistory }),
+    [rootImage, responseHistory],
   );
 
   return {
@@ -368,6 +324,6 @@ export function useChat(
       resetSelection,
       setPrompt,
     },
-    isLoading: apiChatData === undefined,
+    isLoading: isChatLoading || (!!currentImageId && isChainsLoading),
   };
 }

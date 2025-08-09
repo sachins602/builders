@@ -28,8 +28,7 @@ export function ChatArea({
   responseChain,
   isGenerating,
 }: ChatAreaProps) {
-  const originalImage =
-    responseChain.find((r) => !r.previousResponseId)?.sourceImage ?? lastImage;
+  const originalImage = lastImage;
 
   // Navigation state
   const [currentIndex, setCurrentIndex] = useState(0);

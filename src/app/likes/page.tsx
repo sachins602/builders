@@ -2,7 +2,7 @@
 
 import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
-import { CommunityPost } from "../_components/CommunityPost/CommunityPost";
+import { BuildChainComponent } from "../_components/BuildChainComponent/BuildChainComponent";
 import { Loading } from "../_components/ui/loading";
 import { Heart } from "lucide-react";
 
@@ -13,14 +13,32 @@ export default function LikesPage() {
     isError,
     refetch,
   } = api.community.getUserLikedResponses.useQuery();
-
-  // Get user likes for all visible posts
-  const { data: userLikes } = api.community.getUserLikes.useQuery(
-    { sharedChainIds: likedPosts?.map((post) => post.id) ?? [] },
-    {
-      enabled: (likedPosts?.length ?? 0) > 0,
-    },
-  );
+  const posts = (likedPosts ?? []).map((s) => {
+    const responses = s.chain.responses ?? [];
+    const lastResponse = responses[responses.length - 1];
+    return {
+      id: s.id,
+      title: s.title,
+      isPublic: s.visibility === "PUBLIC",
+      createdAt: s.createdAt,
+      sharedBy: s.sharedBy,
+      heroImageUrl: lastResponse?.url ?? s.chain.rootImage?.url ?? "",
+      sourceImage: s.chain.rootImage
+        ? {
+            id: s.chain.rootImage.id,
+            url: s.chain.rootImage.url,
+            address: s.chain.rootImage.address,
+          }
+        : null,
+      prompt: lastResponse?.prompt ?? null,
+      stats: {
+        views: s.viewCount,
+        likes: s.likeCount,
+        comments: s.commentCount,
+      },
+      likedByMe: true,
+    };
+  });
 
   if (isLoading) {
     return (
@@ -65,7 +83,7 @@ export default function LikesPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-2xl px-4 py-8">
         {/* Content */}
-        {!likedPosts || likedPosts.length === 0 ? (
+        {posts.length === 0 ? (
           <div className="py-12 text-center">
             <div className="mb-4 flex justify-center">
               <Heart className="h-16 w-16 text-gray-300" />
@@ -77,7 +95,7 @@ export default function LikesPage() {
               Start exploring the community and like posts that inspire you!
             </p>
             <Button
-              onClick={() => (window.location.href = "/community")}
+              onClick={() => (window.location.href = "/mycommunity")}
               className="bg-blue-600 hover:bg-blue-700"
             >
               Explore Community
@@ -86,15 +104,8 @@ export default function LikesPage() {
         ) : (
           <div className="space-y-6">
             {/* Posts */}
-            {likedPosts.map((post) => (
-              <CommunityPost
-                key={post.id}
-                post={post}
-                userLikes={
-                  userLikes?.filter((like): like is string => like !== null) ??
-                  []
-                }
-              />
+            {posts.map((post) => (
+              <BuildChainComponent key={post.id} post={post} />
             ))}
           </div>
         )}
