@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
-import { Visibility } from "@prisma/client";
+import { Visibility, OrganizationMemberRole } from "@prisma/client";
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -522,39 +522,38 @@ export const communityRouter = createTRPCRouter({
     }),
 
   getUserLikedResponses: protectedProcedure.query(async ({ ctx }) => {
-    const likes = await ctx.db.shareLike.findMany({
-      where: { userId: ctx.session.user.id },
+    const shares = await ctx.db.share.findMany({
+      where: {
+        deletedAt: null,
+        likes: { some: { userId: ctx.session.user.id } },
+      },
       include: {
-        share: {
-          where: { deletedAt: null },
+        chain: {
           include: {
-            chain: {
-              include: {
-                rootImage: true,
-                responses: {
-                  where: { deletedAt: null },
-                  orderBy: { step: "asc" },
-                },
-              },
-            },
-            sharedBy: { select: { id: true, name: true, image: true } },
-            recipients: {
-              include: { user: { select: { id: true, name: true } } },
-            },
-            comments: {
+            rootImage: true,
+            responses: {
               where: { deletedAt: null },
-              include: {
-                author: { select: { id: true, name: true, image: true } },
-              },
-              orderBy: { createdAt: "asc" },
+              orderBy: { step: "asc" },
             },
-            _count: { select: { likes: true, comments: true } },
           },
         },
+        sharedBy: { select: { id: true, name: true, image: true } },
+        recipients: {
+          include: { user: { select: { id: true, name: true } } },
+        },
+        comments: {
+          where: { deletedAt: null },
+          include: {
+            author: { select: { id: true, name: true, image: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+        _count: { select: { likes: true, comments: true } },
       },
+      orderBy: { createdAt: "desc" },
     });
 
-    return likes.map((l) => l.share).filter((s) => s !== null);
+    return shares;
   }),
 
   getNearbySharedResponses: publicProcedure
@@ -669,13 +668,7 @@ export const communityRouter = createTRPCRouter({
         website: z.string().url().optional(),
         phone: z.string().optional(),
         avatar: z.string().url().optional(),
-        imageUrl: z.string().url().optional(),
         address: z.string().optional(),
-        lat: z.number().optional(),
-        lng: z.number().optional(),
-        neighbourhood: z.string().optional(),
-        borough: z.string().optional(),
-        city: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -686,12 +679,12 @@ export const communityRouter = createTRPCRouter({
         },
       });
 
-      // Automatically make the creator a member with "owner" role
+      // Automatically make the creator a member with OWNER role
       await ctx.db.organizationMember.create({
         data: {
           organizationId: organization.id,
           userId: ctx.session.user.id,
-          role: "owner",
+          role: OrganizationMemberRole.OWNER,
         },
       });
 
@@ -701,14 +694,12 @@ export const communityRouter = createTRPCRouter({
   getOrganizations: publicProcedure
     .input(
       z.object({
-        userLat: z.number().optional(),
-        userLng: z.number().optional(),
         limit: z.number().min(1).max(50).default(20),
         cursor: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { userLat, userLng, limit, cursor } = input;
+      const { limit, cursor } = input;
       const currentUserId = ctx.session?.user?.id;
 
       const organizations = await ctx.db.organization.findMany({
@@ -759,47 +750,8 @@ export const communityRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
-      // Group organizations by location if user coordinates are provided
-      const groupedOrganizations =
-        userLat && userLng
-          ? {
-              neighbourhood: [] as typeof organizations,
-              borough: [] as typeof organizations,
-              city: [] as typeof organizations,
-              other: [] as typeof organizations,
-            }
-          : null;
-
-      if (groupedOrganizations && userLat && userLng) {
-        organizations.forEach((org) => {
-          if (org.lat && org.lng) {
-            // Calculate distance (simple approximation)
-            const distance = Math.sqrt(
-              Math.pow(org.lat - userLat, 2) + Math.pow(org.lng - userLng, 2),
-            );
-
-            // Group by proximity (these thresholds can be adjusted)
-            if (distance < 0.01) {
-              // ~1km
-              groupedOrganizations.neighbourhood.push(org);
-            } else if (distance < 0.05) {
-              // ~5km
-              groupedOrganizations.borough.push(org);
-            } else if (distance < 0.1) {
-              // ~10km
-              groupedOrganizations.city.push(org);
-            } else {
-              groupedOrganizations.other.push(org);
-            }
-          } else {
-            groupedOrganizations.other.push(org);
-          }
-        });
-      }
-
       return {
         items: organizations,
-        grouped: groupedOrganizations,
         nextCursor,
       };
     }),
@@ -921,7 +873,7 @@ export const communityRouter = createTRPCRouter({
           data: {
             organizationId,
             userId,
-            role: "member",
+            role: OrganizationMemberRole.MEMBER,
           },
         });
       }
@@ -949,7 +901,7 @@ export const communityRouter = createTRPCRouter({
       }
 
       // Prevent owner from leaving (they need to transfer ownership first)
-      if (membership.role === "owner") {
+      if (membership.role === OrganizationMemberRole.OWNER) {
         throw new Error(
           "Organization owner cannot leave. Please transfer ownership first.",
         );
