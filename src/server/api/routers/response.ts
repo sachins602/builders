@@ -4,11 +4,7 @@ import { getPropertyBoundary } from "~/lib/propertyBoundaryService";
 import { StorageService } from "~/lib/storage";
 
 import { TRPCError } from "@trpc/server";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type {
   Image as ImageModel,
   Response as ResponseModel,
@@ -295,22 +291,6 @@ export const responseRouter = createTRPCRouter({
       return response;
     }),
 
-  getResponseByImageId: protectedProcedure
-    .input(z.object({ imageId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      // Find the most recent chain for this image and return its latest response
-      const chain = await ctx.db.chain.findFirst({
-        where: { rootImageId: input.imageId, deletedAt: null },
-        orderBy: { createdAt: "desc" },
-      });
-      if (!chain) return null;
-      const response = await ctx.db.response.findFirst({
-        where: { chainId: chain.id, deletedAt: null },
-        orderBy: { step: "desc" },
-      });
-      return response ?? null;
-    }),
-
   getResponseChainsByImageId: protectedProcedure
     .input(z.object({ imageId: z.number() }))
     .query(async ({ ctx, input }) => {
@@ -336,72 +316,6 @@ export const responseRouter = createTRPCRouter({
         })),
       );
     }),
-
-  getPlacesDetails: publicProcedure
-    .input(z.object({ address: z.string() }))
-    .mutation(async ({ input }) => {
-      const { address } = input;
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        `${address}, Toronto`,
-      )}&key=${env.GOOGLE_API_KEY}`;
-
-      const response = (await (
-        await fetch(url)
-      ).json()) as GoogleGeocodingResponse;
-      if (response.status !== "OK") {
-        if (response.error_message) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: response.error_message,
-          });
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Geocoding API request failed.",
-        });
-      }
-
-      const result = response?.results[0];
-
-      if (!result?.geometry?.location) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Could not find location for the given address.",
-        });
-      }
-
-      const formattedGeoCodeData = {
-        lat: result.geometry.location.lat,
-        lng: result.geometry.location.lng,
-        formattedAddress: result.formatted_address,
-      };
-
-      return formattedGeoCodeData;
-    }),
-
-  getNearbyImages: protectedProcedure
-    .input(z.object({ lat: z.number(), lng: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const { lat, lng } = input;
-      const nearbyImages = await ctx.db.image.findMany({
-        where: {
-          lat: {
-            gte: lat - 0.01,
-            lte: lat + 0.01,
-          },
-          lng: {
-            gte: lng - 0.01,
-            lte: lng + 0.01,
-          },
-        },
-        take: 4,
-      });
-      return nearbyImages;
-    }),
-
-  getSecretMessage: protectedProcedure.query(() => {
-    return "you can now see this secret message!";
-  }),
 
   getEnhancedParcelData: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
@@ -482,8 +396,6 @@ export const responseRouter = createTRPCRouter({
             : (p.propertyBoundary as unknown as GeoJSON.Polygon),
     }));
   }),
-
-  // Removed deprecated createResponse in favor of chain-based flows
 
   deleteResponse: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -585,33 +497,6 @@ export const responseRouter = createTRPCRouter({
           step: nextStep,
           createdById: ctx.session.user.id,
         },
-      });
-    }),
-
-  updateResponseUrl: protectedProcedure
-    .input(
-      z.object({
-        responseId: z.number(),
-        url: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const owned = await ctx.db.response.findFirst({
-        where: {
-          id: input.responseId,
-          createdById: ctx.session.user.id,
-          deletedAt: null,
-        },
-      });
-      if (!owned) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You do not have permission to update this response",
-        });
-      }
-      return ctx.db.response.update({
-        where: { id: input.responseId },
-        data: { url: input.url },
       });
     }),
 });
