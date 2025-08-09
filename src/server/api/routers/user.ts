@@ -111,48 +111,63 @@ export const userRouter = createTRPCRouter({
   getUserProfile: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
-    const [
-      imageCountRows,
-      responseCountRows,
-      shareCountRows,
-      responseLikesRows,
-      shareLikesRows,
-      responseCommentsRows,
-      shareCommentsRows,
-    ] = await Promise.all([
-      ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
-        SELECT COUNT(*) AS cnt FROM Image WHERE createdById = ${userId} AND deletedAt IS NULL
-      `),
-      ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
-        SELECT COUNT(*) AS cnt FROM Response WHERE createdById = ${userId} AND deletedAt IS NULL
-      `),
-      ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
-        SELECT COUNT(*) AS cnt FROM Share WHERE sharedById = ${userId} AND deletedAt IS NULL
-      `),
-      ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
-        SELECT COUNT(*) AS cnt FROM ResponseLike WHERE userId = ${userId}
-      `),
-      ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
-        SELECT COUNT(*) AS cnt FROM ShareLike WHERE userId = ${userId}
-      `),
-      ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
-        SELECT COUNT(*) AS cnt FROM ResponseComment WHERE authorId = ${userId} AND deletedAt IS NULL
-      `),
-      ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
-        SELECT COUNT(*) AS cnt FROM ShareComment WHERE authorId = ${userId} AND deletedAt IS NULL
+    const [user] = await Promise.all([
+      ctx.db.$queryRaw<
+        Array<{
+          id: string;
+          name: string | null;
+          email: string | null;
+          image: string | null;
+          bio: string | null;
+        }>
+      >(Prisma.sql`
+        SELECT id, name, email, image, bio
+        FROM User
+        WHERE id = ${userId}
+        LIMIT 1
       `),
     ]);
 
+    const [imagesRow, responsesRow, sharesRow, likesRow, commentsRow] =
+      await Promise.all([
+        ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
+        SELECT COUNT(*) AS cnt FROM Image WHERE createdById = ${userId} AND deletedAt IS NULL
+      `),
+        ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
+        SELECT COUNT(*) AS cnt FROM Response WHERE createdById = ${userId} AND deletedAt IS NULL
+      `),
+        ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
+        SELECT COUNT(*) AS cnt FROM Share WHERE sharedById = ${userId} AND deletedAt IS NULL
+      `),
+        // total likes the user has given (responses + shares)
+        ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
+        SELECT (
+          (SELECT COUNT(*) FROM ResponseLike WHERE userId = ${userId}) +
+          (SELECT COUNT(*) FROM ShareLike WHERE userId = ${userId})
+        ) AS cnt
+      `),
+        // total comments the user has authored (responses + shares)
+        ctx.db.$queryRaw<Array<{ cnt: number }>>(Prisma.sql`
+        SELECT (
+          (SELECT COUNT(*) FROM ResponseComment WHERE authorId = ${userId} AND deletedAt IS NULL) +
+          (SELECT COUNT(*) FROM ShareComment WHERE authorId = ${userId} AND deletedAt IS NULL)
+        ) AS cnt
+      `),
+      ]);
+
+    const u = user?.[0];
     return {
       id: userId,
-      counts: {
-        images: imageCountRows[0]?.cnt ?? 0,
-        responses: responseCountRows[0]?.cnt ?? 0,
-        shares: shareCountRows[0]?.cnt ?? 0,
-        responseLikes: responseLikesRows[0]?.cnt ?? 0,
-        shareLikes: shareLikesRows[0]?.cnt ?? 0,
-        responseComments: responseCommentsRows[0]?.cnt ?? 0,
-        shareComments: shareCommentsRows[0]?.cnt ?? 0,
+      name: u?.name ?? null,
+      email: u?.email ?? null,
+      image: u?.image ?? null,
+      bio: u?.bio ?? null,
+      stats: {
+        images: imagesRow[0]?.cnt ?? 0,
+        responses: responsesRow[0]?.cnt ?? 0,
+        shares: sharesRow[0]?.cnt ?? 0,
+        likes: likesRow[0]?.cnt ?? 0,
+        comments: commentsRow[0]?.cnt ?? 0,
       },
     };
   }),
