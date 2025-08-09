@@ -115,10 +115,19 @@ export const communityRouter = createTRPCRouter({
           id: s.id,
           title: s.title,
           visibility: s.visibility,
+          isPublic: s.visibility === "PUBLIC",
           createdAt: s.createdAt,
           sharedBy: s.sharedBy,
           heroImageUrl: lastResponse?.url ?? s.chain.rootImage.url,
+          // keep rootImage for backward compatibility, but also provide sourceImage for UI components
           rootImage: s.chain.rootImage,
+          sourceImage: s.chain.rootImage
+            ? {
+                id: s.chain.rootImage.id,
+                url: s.chain.rootImage.url,
+                address: s.chain.rootImage.address,
+              }
+            : null,
           prompt: lastResponse?.prompt ?? null,
           stats: {
             views: s.viewCount,

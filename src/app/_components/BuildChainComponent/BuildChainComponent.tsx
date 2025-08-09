@@ -25,9 +25,13 @@ type SimplePost = {
 
 interface FeedPostProps {
   post: SimplePost;
+  disableInteractions?: boolean;
 }
 
-export function BuildChainComponent({ post }: FeedPostProps) {
+export function BuildChainComponent({
+  post,
+  disableInteractions = false,
+}: FeedPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [likeCount, setLikeCount] = useState(post.stats.likes);
@@ -127,29 +131,33 @@ export function BuildChainComponent({ post }: FeedPostProps) {
 
       <CardFooter className="flex-col items-start space-y-3 pt-0">
         <div className="flex w-full items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLike}
-            disabled={toggleLike.isPending}
-            className={cn(
-              "flex items-center space-x-1",
-              liked && "text-red-500",
-            )}
-          >
-            <Heart className={cn("h-4 w-4", liked && "fill-current")} />
-            <span>{likeCount}</span>
-          </Button>
+          {!disableInteractions && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLike}
+                disabled={toggleLike.isPending}
+                className={cn(
+                  "flex items-center space-x-1",
+                  liked && "text-red-500",
+                )}
+              >
+                <Heart className={cn("h-4 w-4", liked && "fill-current")} />
+                <span>{likeCount}</span>
+              </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center space-x-1"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span>{post.stats.comments}</span>
-          </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowComments(!showComments)}
+                className="flex items-center space-x-1"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span>{post.stats.comments}</span>
+              </Button>
+            </>
+          )}
 
           <div className="text-muted-foreground ml-auto flex items-center space-x-1 text-sm">
             <Eye className="h-4 w-4" />
@@ -157,7 +165,7 @@ export function BuildChainComponent({ post }: FeedPostProps) {
           </div>
         </div>
 
-        {showComments && (
+        {showComments && !disableInteractions && (
           <form onSubmit={handleComment} className="flex w-full space-x-2">
             <Input
               placeholder="Add a comment..."
