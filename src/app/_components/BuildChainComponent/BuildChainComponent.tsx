@@ -27,7 +27,7 @@ interface FeedPostProps {
   post: SimplePost;
 }
 
-export function CommunityPost({ post }: FeedPostProps) {
+export function BuildChainComponent({ post }: FeedPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [likeCount, setLikeCount] = useState(post.stats.likes);

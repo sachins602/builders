@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
-import { CommunityPost } from "./CommunityPost/CommunityPost";
+import { BuildChainComponent } from "./BuildChainComponent/BuildChainComponent";
 import { Loading } from "./ui/loading";
 interface CommunityContentProps {
   session: { user: { id: string } };
@@ -68,7 +68,7 @@ export default function CommunityPageContent({
         ) : (
           <div className="space-y-6">
             {posts.map((post) => (
-              <CommunityPost key={post.id} post={post as any} />
+              <BuildChainComponent key={post.id} post={post as any} />
             ))}
           </div>
         )}

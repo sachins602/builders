@@ -1,4 +1,4 @@
-import { CommunityPost } from "~/app/_components/CommunityPost/CommunityPost";
+import { BuildChainComponent } from "~/app/_components/BuildChainComponent/BuildChainComponent";
 import { api, HydrateClient } from "~/trpc/server";
 import { auth } from "~/server/auth";
 
@@ -21,7 +21,7 @@ export default async function Popular() {
       <div className="flex h-full w-full flex-col">
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
           {popularPosts.items.map((post) => (
-            <CommunityPost key={post.id} post={post as any} />
+            <BuildChainComponent key={post.id} post={post as any} />
           ))}
         </div>
       </div>

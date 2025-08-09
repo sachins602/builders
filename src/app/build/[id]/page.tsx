@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { CommunityPost } from "~/app/_components/CommunityPost/CommunityPost";
 import { HydrateClient } from "~/trpc/server";
 import { api } from "~/trpc/server";
 import { ShareButton } from "~/app/_components/ShareButton";
+import { BuildChainComponent } from "~/app/_components/BuildChainComponent/BuildChainComponent";
 
 interface BuildPageProps {
   params: Promise<{
@@ -22,7 +22,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
     <HydrateClient>
       <div className="flex flex-row justify-center gap-4">
         <div className="max-w-2xl">
-          <CommunityPost post={post} />
+          <BuildChainComponent post={post} />
         </div>
         <ShareButton />
       </div>

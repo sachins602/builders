@@ -2,7 +2,7 @@
 
 import { api } from "~/trpc/react";
 import { Button } from "../_components/ui/button";
-import { CommunityPost } from "../_components/CommunityPost/CommunityPost";
+import { BuildChainComponent } from "../_components/BuildChainComponent/BuildChainComponent";
 import { Loading } from "../_components/ui/loading";
 import { Heart } from "lucide-react";
 
@@ -87,7 +87,7 @@ export default function LikesPage() {
           <div className="space-y-6">
             {/* Posts */}
             {likedPosts.map((post) => (
-              <CommunityPost
+              <BuildChainComponent
                 key={post.id}
                 post={post}
                 userLikes={
