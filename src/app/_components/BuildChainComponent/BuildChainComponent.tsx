@@ -34,7 +34,9 @@ export function BuildChainComponent({
 }: FeedPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [likeCount, setLikeCount] = useState(post.stats.likes);
+  const [likeCount, setLikeCount] = useState<number>(
+    Number(post.stats.likes ?? 0),
+  );
   const [liked, setLiked] = useState(post.likedByMe);
 
   // Cache invalidation utilities

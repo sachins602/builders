@@ -166,11 +166,11 @@ export const userRouter = createTRPCRouter({
       image: u?.image ?? null,
       bio: u?.bio ?? null,
       stats: {
-        images: imagesRow[0]?.cnt ?? 0,
-        responses: responsesRow[0]?.cnt ?? 0,
-        shares: sharesRow[0]?.cnt ?? 0,
-        likes: likesRow[0]?.cnt ?? 0,
-        comments: commentsRow[0]?.cnt ?? 0,
+        images: Number(imagesRow[0]?.cnt ?? 0),
+        responses: Number(responsesRow[0]?.cnt ?? 0),
+        shares: Number(sharesRow[0]?.cnt ?? 0),
+        likes: Number(likesRow[0]?.cnt ?? 0),
+        comments: Number(commentsRow[0]?.cnt ?? 0),
       },
     };
   }),
@@ -304,8 +304,8 @@ export const userRouter = createTRPCRouter({
             },
           })),
           _count: {
-            likes: likesCountRows[0]?.cnt ?? 0,
-            comments: commentsCountRows[0]?.cnt ?? 0,
+            likes: Number(likesCountRows[0]?.cnt ?? 0),
+            comments: Number(commentsCountRows[0]?.cnt ?? 0),
           },
         };
       }
