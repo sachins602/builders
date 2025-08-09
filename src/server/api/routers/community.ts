@@ -127,6 +127,89 @@ async function getFullResponseChain(
 }
 
 export const communityRouter = createTRPCRouter({
+  // Simple feed: returns already-shaped posts without full chains
+  getFeedSimple: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(10),
+        sort: z.enum(["latest", "popular"]).default("latest"),
+        cursor: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { limit, sort, cursor } = input;
+      const currentUserId = ctx.session.user.id;
+
+      const whereClause = {
+        deletedAt: null,
+        OR: [
+          { isPublic: true },
+          { sharedById: currentUserId },
+          {
+            isPublic: false,
+            sharedToUsers: {
+              some: { userId: currentUserId },
+            },
+          },
+        ],
+      } as const;
+
+      const shared = await ctx.db.sharedChain.findMany({
+        where: {
+          ...whereClause,
+          response: { deletedAt: null },
+        },
+        include: {
+          response: {
+            select: {
+              id: true,
+              prompt: true,
+              url: true,
+              sourceImage: { select: { id: true, url: true, address: true } },
+            },
+          },
+          sharedBy: { select: { id: true, name: true, image: true } },
+        },
+        orderBy:
+          sort === "popular"
+            ? [{ likeCount: "desc" }, { createdAt: "desc" }]
+            : [{ createdAt: "desc" }],
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+      });
+
+      let nextCursor: string | undefined = undefined;
+      if (shared.length > limit) {
+        const next = shared.pop();
+        nextCursor = next?.id;
+      }
+
+      const shareIds = shared.map((s) => s.id);
+      const likes = await ctx.db.like.findMany({
+        where: { userId: currentUserId, sharedChainId: { in: shareIds } },
+        select: { sharedChainId: true },
+      });
+      const likedSet = new Set(likes.map((l) => l.sharedChainId));
+
+      const items = shared.map((s) => ({
+        id: s.id,
+        title: s.title,
+        isPublic: s.isPublic,
+        createdAt: s.createdAt,
+        sharedBy: s.sharedBy,
+        heroImageUrl: s.response.url,
+        sourceImage: s.response.sourceImage,
+        prompt: s.response.prompt,
+        stats: {
+          views: s.viewCount,
+          likes: s.likeCount,
+          comments: s.commentCount,
+        },
+        likedByMe: likedSet.has(s.id),
+      }));
+
+      return { items, nextCursor };
+    }),
   // Search users for sharing
   searchUsers: protectedProcedure
     .input(z.object({ query: z.string().min(1) }))
