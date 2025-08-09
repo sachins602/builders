@@ -73,14 +73,21 @@ export const responseRouter = createTRPCRouter({
       }
       const imageName = ctx.session.user.id + lat + lng;
 
-      const propertyBoundary = await getPropertyBoundary(lat, lng);
+      const boundaryResult = await getPropertyBoundary(lat, lng);
 
-      if (!propertyBoundary) {
+      if (!boundaryResult.ok) {
+        const code =
+          boundaryResult.code === "NO_BUILDINGS_FOUND" ||
+          boundaryResult.code === "NO_GEOMETRY_ON_CLOSEST_BUILDING"
+            ? "NOT_FOUND"
+            : "INTERNAL_SERVER_ERROR";
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "No property boundary found at this location.",
+          code,
+          message: boundaryResult.message,
         });
       }
+
+      const propertyBoundary = boundaryResult.boundary;
 
       if (propertyBoundary.properties.propertyType !== "residential") {
         throw new TRPCError({
@@ -190,7 +197,7 @@ export const responseRouter = createTRPCRouter({
   getImageById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const image = await ctx.db.images.findUnique({
+      const image = await ctx.db.images.findFirst({
         where: { id: input.id, deletedAt: null },
         select: {
           id: true,
@@ -219,7 +226,7 @@ export const responseRouter = createTRPCRouter({
   getResponseHistory: protectedProcedure.query(async ({ ctx }) => {
     const responses = await ctx.db.response.findMany({
       orderBy: { createdAt: "desc" },
-      where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
+      where: { createdById: ctx.session.user.id, deletedAt: null },
     });
     return responses;
   }),
@@ -262,7 +269,7 @@ export const responseRouter = createTRPCRouter({
   getResponseById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const response = await ctx.db.response.findUnique({
+      const response = await ctx.db.response.findFirst({
         where: { id: input.id, deletedAt: null },
       });
       return response;
@@ -293,7 +300,7 @@ export const responseRouter = createTRPCRouter({
       const rootResponses = allResponses.filter(
         (r) => r.previousResponseId === null,
       );
-      const chains = [];
+      const chains = [] as (typeof allResponses)[];
 
       for (const root of rootResponses) {
         const chain = [root];
@@ -488,7 +495,7 @@ export const responseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Verify the image exists and user has access
-      const image = await ctx.db.images.findUnique({
+      const image = await ctx.db.images.findFirst({
         where: { id: input.imageId, deletedAt: null },
       });
 
@@ -551,11 +558,21 @@ export const responseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.response.update({
+      const owned = await ctx.db.response.findFirst({
         where: {
           id: input.responseId,
-          createdById: ctx.session.user.id, // Ensure user owns this response
+          createdById: ctx.session.user.id,
+          deletedAt: null,
         },
+      });
+      if (!owned) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to update this response",
+        });
+      }
+      return ctx.db.response.update({
+        where: { id: input.responseId },
         data: { url: input.url },
       });
     }),

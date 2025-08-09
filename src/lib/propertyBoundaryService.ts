@@ -9,6 +9,22 @@ export interface PropertyBoundary {
   };
 }
 
+export type PropertyBoundaryErrorCode =
+  | "OSM_API_ERROR"
+  | "NO_BUILDINGS_FOUND"
+  | "NO_GEOMETRY_ON_CLOSEST_BUILDING"
+  | "OSM_QUERY_FAILED"
+  | "UNKNOWN_ERROR";
+
+export type PropertyBoundaryResult =
+  | { ok: true; boundary: PropertyBoundary }
+  | {
+      ok: false;
+      code: PropertyBoundaryErrorCode;
+      message: string;
+      status?: number;
+    };
+
 interface OSMElement {
   id: number;
   type: "way" | "relation" | "node";
@@ -20,7 +36,7 @@ interface OSMElement {
 export const getPropertyBoundary = async (
   lat: number,
   lng: number,
-): Promise<PropertyBoundary | null> => {
+): Promise<PropertyBoundaryResult> => {
   try {
     // Query OSM for buildings within 50m of the clicked point
     const query = `
@@ -39,15 +55,18 @@ export const getPropertyBoundary = async (
     });
 
     if (!response.ok) {
-      console.error(`OSM API error: ${response.status}`);
-      return null;
+      const status = response.status;
+      const message = `OSM API error: ${status}`;
+      console.error(message);
+      return { ok: false, code: "OSM_API_ERROR", message, status };
     }
 
     const data = (await response.json()) as { elements: OSMElement[] };
 
     if (!data.elements?.length) {
-      console.log("No buildings found at this location");
-      return null;
+      const message = "No buildings found at this location.";
+      console.log(message);
+      return { ok: false, code: "NO_BUILDINGS_FOUND", message };
     }
 
     // Find the closest building
@@ -75,7 +94,13 @@ export const getPropertyBoundary = async (
       }
     }
 
-    if (!closestBuilding?.geometry) return null;
+    if (!closestBuilding?.geometry) {
+      return {
+        ok: false,
+        code: "NO_GEOMETRY_ON_CLOSEST_BUILDING",
+        message: "Unable to determine building geometry at this location.",
+      };
+    }
 
     // Convert to GeoJSON polygon
     const coordinates = closestBuilding.geometry.map(
@@ -96,21 +121,27 @@ export const getPropertyBoundary = async (
     const buildingType = tags.building ?? "yes";
 
     return {
-      geometry: {
-        type: "Polygon",
-        coordinates: [coordinates],
-      },
-      properties: {
-        osmId: closestBuilding.id.toString(),
-        buildingType,
-        propertyType: getPropertyType(buildingType),
-        address: formatAddress(tags),
-        buildingArea: calculateArea(coordinates),
+      ok: true,
+      boundary: {
+        geometry: {
+          type: "Polygon",
+          coordinates: [coordinates],
+        },
+        properties: {
+          osmId: closestBuilding.id.toString(),
+          buildingType,
+          propertyType: getPropertyType(buildingType),
+          address: formatAddress(tags),
+          buildingArea: calculateArea(coordinates),
+        },
       },
     };
   } catch (error) {
-    console.error("Error fetching OSM data:", error);
-    return null;
+    const message = `Error fetching OSM data: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
+    console.error(message);
+    return { ok: false, code: "UNKNOWN_ERROR", message };
   }
 };
 
