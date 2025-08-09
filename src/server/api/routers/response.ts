@@ -331,6 +331,8 @@ export const responseRouter = createTRPCRouter({
           url: r.url,
           createdAt: r.createdAt,
           previousResponseId: idx > 0 ? c.responses[idx - 1]!.id : null,
+          // Provide source image id for type compatibility and client convenience
+          sourceImageId: input.imageId,
         })),
       );
     }),

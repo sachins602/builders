@@ -40,15 +40,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <HydrateClient>
-      <ChatInterface
-        continueFromResponse={{
-          id: response.id,
-          prompt: response.prompt,
-          url: response.url,
-          // We can derive the source image on the client via getChatData; not needed here
-          sourceImageId: null,
-        }}
-      />
+      <ChatInterface continueFromResponseId={response.id} />
     </HydrateClient>
   );
 }
