@@ -27,7 +27,7 @@ Unit tests are co-located with their components in the same folder for better or
 
 - `src/app/_components/footer/footer.test.tsx` - Tests for Footer component
 - `src/app/_components/counter/Counter.test.tsx` - Example counter component test
-- `src/app/_components/CommunityPost/CommunityPost.test.tsx` - Tests with mocked tRPC mutations
+- `src/app/_components/BuildChainComponent/BuildChainComponent.test.tsx` - Tests with mocked tRPC mutations
 
 ### E2E Tests (Playwright)
 
@@ -44,7 +44,7 @@ E2E tests are located in the `tests/e2e` directory:
 
 All external API calls are mocked to ensure tests are reliable and don't depend on external services:
 
-1. **tRPC Mocks**: See `CommunityPost.test.tsx` for examples of mocking tRPC mutations
+1. **tRPC Mocks**: See `BuildChainComponent.test.tsx` for examples of mocking tRPC mutations
 2. **Test Utilities**: Helper functions in `src/test-utils/trpc-mocks.ts`
 
 ### Component Testing Best Practices

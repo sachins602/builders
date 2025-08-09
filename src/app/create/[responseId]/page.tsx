@@ -40,7 +40,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <HydrateClient>
-      <ChatInterface continueFromResponse={response} />
+      <ChatInterface continueFromResponseId={response.id} />
     </HydrateClient>
   );
 }

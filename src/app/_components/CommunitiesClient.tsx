@@ -35,13 +35,7 @@ interface Organization {
   website?: string | null;
   phone?: string | null;
   avatar?: string | null;
-  imageUrl?: string | null;
   address?: string | null;
-  lat?: number | null;
-  lng?: number | null;
-  neighbourhood?: string | null;
-  borough?: string | null;
-  city?: string | null;
   createdAt: Date;
   createdBy: {
     id: string;
@@ -53,12 +47,12 @@ interface Organization {
   };
   members?: Array<{
     id: string;
-    role: string;
+    role: "MEMBER" | "ADMIN" | "OWNER";
     joinedAt: Date;
   }>;
   currentUserMembership?: {
     id: string;
-    role: string;
+    role: "MEMBER" | "ADMIN" | "OWNER";
     joinedAt: Date;
   } | null;
 }
@@ -257,44 +251,14 @@ function AddressSearch({ onAddressSelect }: AddressSearchProps) {
 
 export default function CommunitiesClient({ session }: CommunitiesClientProps) {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [userLocation, setUserLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
-  const [selectedCoordinates, setSelectedCoordinates] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-
-  // Get user's geolocation
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          // Default to Toronto if geolocation fails
-          setUserLocation({ lat: 43.6532, lng: -79.3832 });
-        },
-      );
-    }
-  }, []);
 
   const {
     data: organizationsData,
     isLoading: isLoadingOrgs,
     refetch: refetchOrganizations,
-  } = api.community.getOrganizations.useQuery({
-    userLat: userLocation?.lat,
-    userLng: userLocation?.lng,
-  });
+  } = api.community.getOrganizations.useQuery({});
 
   const {
     data: selectedOrgDetail,
@@ -327,7 +291,6 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
   });
 
   const organizations = organizationsData?.items ?? [];
-  const groupedOrgs = organizationsData?.grouped;
 
   const handleCreateOrganization = (formData: FormData) => {
     const data = {
@@ -336,21 +299,15 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
       email: (formData.get("email") as string) || undefined,
       website: (formData.get("website") as string) || undefined,
       phone: (formData.get("phone") as string) || undefined,
-      imageUrl: (formData.get("imageUrl") as string) || undefined,
+      avatar: (formData.get("avatar") as string) || undefined,
       address: selectedAddress || undefined,
-      lat: selectedCoordinates?.lat ?? userLocation?.lat,
-      lng: selectedCoordinates?.lng ?? userLocation?.lng,
-      neighbourhood: undefined, // Will be extracted from address if needed
-      borough: undefined, // Will be extracted from address if needed
-      city: undefined, // Will be extracted from address if needed
     };
 
     createOrgMutation.mutate(data);
   };
 
-  const handleAddressSelect = (address: string, lat: number, lng: number) => {
+  const handleAddressSelect = (address: string, _lat: number, _lng: number) => {
     setSelectedAddress(address);
-    setSelectedCoordinates({ lat, lng });
   };
 
   const handleJoinOrganization = () => {
@@ -375,9 +332,9 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
     >
       <div className="flex items-start space-x-3">
         <Avatar className="h-12 w-12">
-          {(org.imageUrl ?? org.avatar) ? (
+          {org.avatar ? (
             <img
-              src={(org.imageUrl ?? org.avatar)!}
+              src={org.avatar}
               alt={org.name}
               className="h-full w-full object-cover"
             />
@@ -418,13 +375,6 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
         </div>
       </div>
     </Card>
-  );
-
-  const renderOrganizationGroup = (title: string, orgs: Organization[]) => (
-    <div className="mb-6">
-      <h3 className="mb-3 text-lg font-semibold text-gray-800">{title}</h3>
-      <div className="space-y-3">{orgs.map(renderOrganizationCard)}</div>
-    </div>
   );
 
   return (
@@ -481,8 +431,8 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                   <div>
                     <Label htmlFor="imageUrl">Organization Image URL</Label>
                     <Input
-                      id="imageUrl"
-                      name="imageUrl"
+                      id="avatar"
+                      name="avatar"
                       type="url"
                       placeholder="https://example.com/image.jpg"
                     />
@@ -515,29 +465,6 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                 <div className="py-8 text-center text-gray-500">
                   No organizations found. Be the first to create one!
                 </div>
-              ) : groupedOrgs ? (
-                <div className="space-y-6">
-                  {groupedOrgs.neighbourhood.length > 0 &&
-                    renderOrganizationGroup(
-                      "🏘️ Your Neighbourhood",
-                      groupedOrgs.neighbourhood,
-                    )}
-                  {groupedOrgs.borough.length > 0 &&
-                    renderOrganizationGroup(
-                      "🏙️ In Your Borough",
-                      groupedOrgs.borough,
-                    )}
-                  {groupedOrgs.city.length > 0 &&
-                    renderOrganizationGroup(
-                      "🌆 In Your City",
-                      groupedOrgs.city,
-                    )}
-                  {groupedOrgs.other.length > 0 &&
-                    renderOrganizationGroup(
-                      "🌍 Other Areas",
-                      groupedOrgs.other,
-                    )}
-                </div>
               ) : (
                 <div className="space-y-3">
                   {organizations.map(renderOrganizationCard)}
@@ -566,13 +493,9 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4">
                         <Avatar className="h-16 w-16">
-                          {(selectedOrgDetail.imageUrl ??
-                          selectedOrgDetail.avatar) ? (
+                          {selectedOrgDetail.avatar ? (
                             <img
-                              src={
-                                (selectedOrgDetail.imageUrl ??
-                                  selectedOrgDetail.avatar)!
-                              }
+                              src={selectedOrgDetail.avatar}
                               alt={selectedOrgDetail.name}
                               className="h-full w-full object-cover"
                             />
@@ -601,17 +524,13 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                     </div>
 
                     {/* Organization Image */}
-                    {(selectedOrgDetail.imageUrl ??
-                      selectedOrgDetail.avatar) && (
+                    {selectedOrgDetail.avatar && (
                       <div className="space-y-2">
                         <h3 className="text-lg font-semibold">
                           Organization Image
                         </h3>
                         <img
-                          src={
-                            (selectedOrgDetail.imageUrl ??
-                              selectedOrgDetail.avatar)!
-                          }
+                          src={selectedOrgDetail.avatar}
                           alt={selectedOrgDetail.name}
                           className="w-full max-w-md rounded-lg object-cover"
                         />
@@ -682,7 +601,7 @@ export default function CommunitiesClient({ session }: CommunitiesClientProps) {
                               </Badge>
                             </div>
                             {selectedOrgDetail.currentUserMembership.role !==
-                              "owner" && (
+                              "OWNER" && (
                               <Button
                                 variant="outline"
                                 onClick={handleLeaveOrganization}

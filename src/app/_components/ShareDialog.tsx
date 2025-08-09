@@ -51,6 +51,13 @@ export function ShareDialog({ responseId, children }: ShareDialogProps) {
   const [showUserSearch, setShowUserSearch] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch response to get chainId under the new schema
+  const { data: responseData } = api.response.getResponseById.useQuery(
+    { id: responseId },
+    { enabled: !!responseId && responseId > 0 },
+  );
+  const chainId = responseData?.chainId;
+
   // Debounced user search
   const { data: searchResults = [], isLoading: isSearching } =
     api.community.searchUsers.useQuery(
@@ -62,7 +69,7 @@ export function ShareDialog({ responseId, children }: ShareDialogProps) {
     );
 
   const shareResponse = api.community.shareResponse.useMutation({
-    onSuccess: (sharedChain) => {
+    onSuccess: () => {
       setOpen(false);
       setTitle("");
       setDescription("");
@@ -70,19 +77,19 @@ export function ShareDialog({ responseId, children }: ShareDialogProps) {
       setSelectedUsers([]);
       setSearchQuery("");
       setShowUserSearch(false);
-      // Redirect to the build page with the shared chain ID
-      router.push(`/build/${sharedChain.responseId}`);
+      // Redirect to the build page using the current responseId (build page expects a response id)
+      router.push(`/build/${responseId}`);
     },
   });
 
   const handleShare = () => {
-    if (!title.trim() || !responseId || responseId <= 0) return;
+    if (!title.trim() || !responseId || responseId <= 0 || !chainId) return;
 
     shareResponse.mutate({
-      responseId,
+      chainId,
       title: title.trim(),
       description: description.trim() || undefined,
-      isPublic,
+      visibility: isPublic ? "PUBLIC" : "PRIVATE",
       selectedUserIds: selectedUsers.map((user) => user.id),
     });
   };
@@ -295,6 +302,7 @@ export function ShareDialog({ responseId, children }: ShareDialogProps) {
               !title.trim() ||
               !responseId ||
               responseId <= 0 ||
+              !chainId ||
               shareResponse.isPending ||
               (!isPublic && selectedUsers.length === 0)
             }

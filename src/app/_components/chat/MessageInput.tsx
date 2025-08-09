@@ -16,7 +16,6 @@ interface MessageInputProps {
   prompt: string;
   onPromptChange: (prompt: string) => void;
   onGenerate: () => void;
-  onReset: () => void;
   isGenerating: boolean;
   canGenerate: boolean;
   hasActiveConversation: boolean;

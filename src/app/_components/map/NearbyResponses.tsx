@@ -37,12 +37,19 @@ export function NearbyResponses({
                 key={sharedResponse.id}
                 className="flex cursor-pointer flex-col rounded-xl border transition-colors hover:bg-gray-200"
                 onClick={() => {
-                  window.location.href = `/build/${sharedResponse.responseId}`;
+                  const lastResponseId =
+                    sharedResponse.chain.responses.at(-1)?.id;
+                  if (lastResponseId) {
+                    window.location.href = `/build/${lastResponseId}`;
+                  }
                 }}
               >
                 {/* Thumbnail */}
                 <img
-                  src={getImageUrl(sharedResponse.response.url)}
+                  src={getImageUrl(
+                    sharedResponse.chain.responses.at(-1)?.url ??
+                      sharedResponse.chain.rootImage.url,
+                  )}
                   alt="Response thumbnail"
                   className="h-14 w-20 object-cover"
                 />
@@ -53,7 +60,7 @@ export function NearbyResponses({
                     {sharedResponse.distance}km
                   </div>
                   <div className="text-xs text-gray-400">
-                    {sharedResponse._count.likes} likes
+                    {sharedResponse._count?.likes ?? 0} likes
                   </div>
                 </div>
               </div>

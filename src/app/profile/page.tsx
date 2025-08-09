@@ -18,12 +18,12 @@ export default async function ProfilePage() {
         <Avatar className="h-24 w-24">
           {profileData.image ? (
             <AvatarImage
-              src={getImageUrl(profileData.image)}
+              src={getImageUrl(profileData.image ?? "")}
               alt={profileData.name ?? "User"}
             />
           ) : (
             <AvatarFallback className="text-3xl">
-              {profileData.name?.[0]?.toUpperCase() ?? "U"}
+              {profileData.name ? profileData.name[0]?.toUpperCase() : "U"}
             </AvatarFallback>
           )}
         </Avatar>
@@ -41,31 +41,31 @@ export default async function ProfilePage() {
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-center">
           <div>
             <span className="block text-lg font-semibold">
-              {profileData._count.images}
+              {profileData.stats.images}
             </span>
             <span className="text-xs text-gray-500">Images</span>
           </div>
           <div>
             <span className="block text-lg font-semibold">
-              {profileData._count.responses}
+              {profileData.stats.responses}
             </span>
             <span className="text-xs text-gray-500">Responses</span>
           </div>
           <div>
             <span className="block text-lg font-semibold">
-              {profileData._count.sharedChains}
+              {profileData.stats.shares}
             </span>
             <span className="text-xs text-gray-500">Shared Chains</span>
           </div>
           <div>
             <span className="block text-lg font-semibold">
-              {profileData._count.likes}
+              {profileData.stats.likes}
             </span>
             <span className="text-xs text-gray-500">Likes</span>
           </div>
           <div>
             <span className="block text-lg font-semibold">
-              {profileData._count.comments}
+              {profileData.stats.comments}
             </span>
             <span className="text-xs text-gray-500">Comments</span>
           </div>

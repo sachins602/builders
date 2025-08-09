@@ -7,12 +7,30 @@ generator client {
 
 datasource db {
     provider = "mysql"
-    relationMode = "prisma"
+    relationMode = "foreignKeys"
     // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
     // Further reading:
     // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
     // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
     url      = env("DATABASE_URL")
+}
+
+// Enums
+
+enum UserRole {
+    USER
+    ADMIN
+}
+
+enum Visibility {
+    PUBLIC
+    PRIVATE
+}
+
+enum OrganizationMemberRole {
+    MEMBER
+    ADMIN
+    OWNER
 }
 
 // Necessary for Next auth
@@ -51,7 +69,7 @@ model User {
     name          String?
     email         String?   @unique
     emailVerified DateTime?
-    role          String?   @default("user")
+    role          UserRole  @default(USER)
     image         String?
     bio           String?   // User bio for profile
     isPublic      Boolean   @default(true) // Privacy setting
@@ -64,18 +82,23 @@ model User {
     // Relations
     accounts      Account[]
     sessions      Session[]
-    images        Images[]
+    images        Image[]
     responses     Response[]
     
-    // Sharing features
-    sharedChains     SharedChain[]
-    likes           Like[]
-    comments        Comment[]
-    sharedToMe      SharedChainUser[] // Chains shared specifically to this user
+    // Sharing & interactions
+    createdShares       Share[]           @relation(name: "UserCreatedShares")
+    shareLikes          ShareLike[]
+    shareComments       ShareComment[]
+    responseLikes       ResponseLike[]
+    responseComments    ResponseComment[]
+    receivedShares      ShareRecipient[]  // Shares targeted to this user
     
     // Community Organization relations
-    createdOrganizations Organization[] @relation(name: "OrganizationCreator")
-    organizationMemberships OrganizationMember[]
+    createdOrganizations     Organization[]    @relation(name: "OrganizationCreator")
+    organizationMemberships  OrganizationMember[]
+
+    // New back-relation for chains created by this user
+    createdChains Chain[] @relation(name: "UserCreatedChains")
     
     @@index([email])
     @@index([deletedAt])
@@ -90,7 +113,7 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
-model Images {
+model Image {
     id        Int      @id @default(autoincrement())
     name      String
     url       String
@@ -113,9 +136,35 @@ model Images {
     // Relations
     createdBy   User   @relation(fields: [createdById], references: [id])
     createdById String
-    responses   Response[]
+    // Chains that branch from this image (no direct Response relation)
+    chains      Chain[]   @relation(name: "RootImageChains")
     
     @@index([name])
+    @@index([createdById])
+    @@index([deletedAt])
+}
+
+model Chain {
+    id           String   @id @default(cuid())
+
+    // The original image this chain starts from (branching at image level)
+    rootImage    Image   @relation(name: "RootImageChains", fields: [rootImageId], references: [id])
+    rootImageId  Int
+
+    // Who created/started this chain
+    createdBy    User    @relation(name: "UserCreatedChains", fields: [createdById], references: [id])
+    createdById  String
+
+    // Timestamps and soft delete
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    deletedAt    DateTime?
+
+    // Relations
+    responses    Response[]
+    shares       Share[]
+
+    @@index([rootImageId])
     @@index([createdById])
     @@index([deletedAt])
 }
@@ -134,130 +183,124 @@ model Response {
     createdBy   User   @relation(fields: [createdById], references: [id])
     createdById String
     
-    // Reference to the original image (if this is the first response in a chain)
-    sourceImage   Images?   @relation(fields: [sourceImageId], references: [id])
-    sourceImageId Int?
-    
-    // Reference to the previous response (if this is a follow-up response)
-    previousResponse   Response?   @relation(name: "ResponseChain", fields: [previousResponseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-    previousResponseId Int?
-    
-    // Responses that were generated from this response
-    nextResponses Response[] @relation(name: "ResponseChain")
-    
-    // Sharing features
-    sharedChains SharedChain[]
-    likes       Like[]
-    comments    Comment[]
+    // Chain linkage (required) — enables linear ordering without recursion
+    chain     Chain   @relation(fields: [chainId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    chainId   String
+    step      Int
+
+    // Interactions
+    responseLikes    ResponseLike[]
+    responseComments ResponseComment[]
     
     @@index([prompt(length: 300)])
-    @@index([previousResponseId])
-    @@index([sourceImageId])
+    @@unique([chainId, step])
     @@index([createdById])
     @@index([deletedAt])
 }
 
-// Sharing models
+// Sharing & interactions (best-version)
 
-model SharedChain {
-    id          String    @id @default(cuid())
-    title       String    // User-defined title for the shared chain
-    description String?   @db.Text // Optional description
-    isPublic    Boolean   @default(true) // Public (everyone can see) or private (specific users only)
-    
-    // The response that starts this shared chain (usually the final result)
-    response    Response  @relation(fields: [responseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    responseId  Int
-    
-    // The user who shared this chain
-    sharedBy    User      @relation(fields: [sharedById], references: [id])
+model Share {
+    id          String     @id @default(cuid())
+    title       String
+    description String?    @db.Text
+    visibility  Visibility @default(PUBLIC)
+
+    chain       Chain      @relation(fields: [chainId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    chainId     String
+
+    sharedBy    User       @relation(name: "UserCreatedShares", fields: [sharedById], references: [id])
     sharedById  String
-    
-    // Analytics
-    viewCount   Int       @default(0)
-    likeCount   Int       @default(0)
-    commentCount Int      @default(0)
-    
-    // Timestamps and soft delete
+
+    // Analytics (optional counters)
+    viewCount    Int       @default(0)
+    likeCount    Int       @default(0)
+    commentCount Int       @default(0)
+
     createdAt   DateTime  @default(now())
     updatedAt   DateTime  @updatedAt
-    deletedAt   DateTime? // Soft delete
-    
-    // Relations
-    likes       Like[]
-    comments    Comment[]
-    sharedToUsers SharedChainUser[] // For private sharing to specific users
-    
-    @@index([responseId])
+    deletedAt   DateTime?
+
+    recipients  ShareRecipient[]
+    likes       ShareLike[]
+    comments    ShareComment[]
+
+    @@index([chainId])
     @@index([sharedById])
-    @@index([isPublic])
+    @@index([visibility])
     @@index([deletedAt])
     @@index([createdAt])
 }
 
-// For sharing to specific users when isPublic = false
-model SharedChainUser {
-    id            String      @id @default(cuid())
-    
-    sharedChain   SharedChain @relation(fields: [sharedChainId], references: [id])
-    sharedChainId String
-    
-    user          User        @relation(fields: [userId], references: [id])
-    userId        String
-    
-    createdAt     DateTime    @default(now())
-    
-    @@unique([sharedChainId, userId])
-    @@index([sharedChainId])
-    @@index([userId])
-}
-
-model Like {
-    id        String   @id @default(cuid())
-    
-    // What is being liked (either a response or shared chain)
-    response    Response? @relation(fields: [responseId], references: [id])
-    responseId  Int?
-    sharedChain SharedChain? @relation(fields: [sharedChainId], references: [id])
-    sharedChainId String?
-    
-    // Who liked it
-    user      User     @relation(fields: [userId], references: [id])
+model ShareRecipient {
+    id        String @id @default(cuid())
+    share     Share  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+    shareId   String
+    user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId    String
-    
     createdAt DateTime @default(now())
-    
-    @@unique([userId, responseId])
-    @@unique([userId, sharedChainId])
-    @@index([responseId])
-    @@index([sharedChainId])
+
+    @@unique([shareId, userId])
+    @@index([shareId])
     @@index([userId])
 }
 
-model Comment {
-    id        String   @id @default(cuid())
-    content   String   @db.Text
-    
-    // What is being commented on (either a response or shared chain)
-    response    Response? @relation(fields: [responseId], references: [id])
-    responseId  Int?
-    sharedChain SharedChain? @relation(fields: [sharedChainId], references: [id])
-    sharedChainId String?
-    
-    // Who commented
-    author    User     @relation(fields: [authorId], references: [id])
-    authorId  String
-    
-    // Timestamps and soft delete
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    deletedAt DateTime? // Soft delete
-    
+model ResponseLike {
+    id         String   @id @default(cuid())
+    response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+    responseId Int
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId     String
+    createdAt  DateTime @default(now())
+
+    @@unique([userId, responseId])
     @@index([responseId])
-    @@index([sharedChainId])
+    @@index([userId])
+}
+
+model ResponseComment {
+    id         String   @id @default(cuid())
+    response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+    responseId Int
+    author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    authorId   String
+    content    String   @db.Text
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+    deletedAt  DateTime?
+
+    @@index([responseId])
     @@index([authorId])
     @@index([deletedAt])
-    @@index([createdAt])
+}
+
+model ShareLike {
+    id        String @id @default(cuid())
+    share     Share  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+    shareId   String
+    user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId    String
+    createdAt DateTime @default(now())
+
+    @@unique([userId, shareId])
+    @@index([shareId])
+    @@index([userId])
+}
+
+model ShareComment {
+    id        String @id @default(cuid())
+    share     Share  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+    shareId   String
+    author    User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    authorId  String
+    content   String @db.Text
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    deletedAt DateTime?
+
+    @@index([shareId])
+    @@index([authorId])
+    @@index([deletedAt])
 }
 
 // Community Organization models
@@ -267,17 +310,11 @@ model Organization {
     description String   @db.Text // 250 character description
     email       String?
     website     String?
-    imageUrl    String? 
     phone       String?
     avatar      String?  // URL to organization avatar/logo
     
     // Location information
     address     String?
-    lat         Float?
-    lng         Float?
-    neighbourhood String? // Derived from coordinates
-    borough     String?   // Derived from coordinates  
-    city        String?   // Derived from coordinates
     
     // Timestamps and soft delete
     createdAt   DateTime @default(now())
@@ -289,11 +326,6 @@ model Organization {
     createdById String
     members     OrganizationMember[]
     
-    @@index([name])
-    @@index([lat, lng])
-    @@index([neighbourhood])
-    @@index([borough])
-    @@index([city])
     @@index([createdById])
     @@index([deletedAt])
 }
@@ -307,8 +339,8 @@ model OrganizationMember {
     user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId         String
     
-    // Member role (could be: member, admin, owner)
-    role           String       @default("member")
+    // Member role
+    role           OrganizationMemberRole @default(MEMBER)
     
     // Timestamps
     joinedAt       DateTime     @default(now())

@@ -7,12 +7,7 @@ import { api } from "~/trpc/react";
 import { Loading } from "./ui/loading";
 
 interface ChatInterfaceProps {
-  continueFromResponse?: {
-    id: number;
-    prompt: string;
-    url: string;
-    sourceImageId: number | null;
-  };
+  continueFromResponseId?: number;
   sourceImageId?: number;
   sourceImage?: {
     id: number;
@@ -29,15 +24,15 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({
-  continueFromResponse,
+  continueFromResponseId,
   sourceImageId,
   sourceImage,
 }: ChatInterfaceProps) {
-  const { state, chatData, actions, isLoading } = useChat(
-    continueFromResponse,
+  const { state, chatData, actions, isLoading } = useChat({
+    continueFromResponseId,
     sourceImageId,
     sourceImage,
-  );
+  });
 
   const { mutate: deleteResponse } = api.response.deleteResponse.useMutation({
     onSuccess: () => {
@@ -68,7 +63,6 @@ export function ChatInterface({
         prompt={state.prompt}
         onPromptChange={actions.setPrompt}
         onGenerate={actions.generateImage}
-        onReset={actions.resetSelection}
         isGenerating={state.isGenerating}
         canGenerate={!!(state.selectedResponseId ?? chatData.lastImage)}
         hasActiveConversation={state.responseChain.length > 0}

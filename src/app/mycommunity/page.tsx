@@ -7,5 +7,5 @@ export default async function MyCommunityPage() {
     return <div>not Authenticated</div>;
   }
 
-  return <CommunityPageContent session={session} />;
+  return <CommunityPageContent />;
 }

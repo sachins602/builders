@@ -1,16 +1,17 @@
-// import { promises as fs } from "fs";
-// import path from "path";
 import { z } from "zod";
 import { env } from "~/env";
-import { getPropertyBoundary } from "~/lib/propertyBoundaryService";
+import {
+  getPropertyBoundary,
+  type PropertyBoundaryErrorCode,
+} from "~/lib/propertyBoundaryService";
 import { StorageService } from "~/lib/storage";
 
 import { TRPCError } from "@trpc/server";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import type {
+  Image as ImageModel,
+  Response as ResponseModel,
+} from "@prisma/client";
 
 interface GoogleGeocodingResponse {
   results: GeoCodeResponse[];
@@ -54,60 +55,18 @@ interface Location {
   lng?: number;
 }
 
+// Maps domain-specific boundary errors to tRPC error codes
+function getBoundaryErrorCode(
+  code: PropertyBoundaryErrorCode,
+): "NOT_FOUND" | "INTERNAL_SERVER_ERROR" {
+  return code === "NO_BUILDINGS_FOUND" ||
+    code === "NO_GEOMETRY_ON_CLOSEST_BUILDING"
+    ? "NOT_FOUND"
+    : "INTERNAL_SERVER_ERROR";
+}
+
 export const responseRouter = createTRPCRouter({
   saveStreetViewImage: protectedProcedure
-    .input(z.object({ lat: z.number(), lng: z.number(), heading: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const { lat, lng, heading } = input;
-      const imageName = String(lat + lng);
-
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${lat},${lng}&heading=${heading}&pitch=-0.76&key=${env.GOOGLE_API_KEY}`,
-      );
-      if (!response.ok) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Google API responded with ${response.status}`,
-        });
-      }
-
-      const imageBuffer = await response.arrayBuffer();
-
-      if (!imageBuffer) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch image data",
-        });
-      }
-
-      // Use StorageService to save the image
-      const uploadResult = await StorageService.saveBufferImage(
-        imageBuffer,
-        imageName,
-      );
-
-      if (!uploadResult.success) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to save image: ${uploadResult.error}`,
-        });
-      }
-
-      // write the file path to the database and return the file path
-      const image = await ctx.db.images.create({
-        data: {
-          lat: lat,
-          lng: lng,
-          name: imageName,
-          url: uploadResult.url,
-          createdBy: { connect: { id: ctx.session.user.id } },
-        },
-      });
-
-      return image;
-    }),
-
-  saveStreetViewImageAddress: protectedProcedure
     .input(
       z.object({
         address: z.string().optional(),
@@ -125,14 +84,17 @@ export const responseRouter = createTRPCRouter({
       }
       const imageName = ctx.session.user.id + lat + lng;
 
-      const propertyBoundary = await getPropertyBoundary(lat, lng);
+      const boundaryResult = await getPropertyBoundary(lat, lng);
 
-      if (!propertyBoundary) {
+      if (!boundaryResult.ok) {
+        const code = getBoundaryErrorCode(boundaryResult.code);
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "No property boundary found at this location.",
+          code,
+          message: boundaryResult.message,
         });
       }
+
+      const propertyBoundary = boundaryResult.boundary;
 
       if (propertyBoundary.properties.propertyType !== "residential") {
         throw new TRPCError({
@@ -147,10 +109,6 @@ export const responseRouter = createTRPCRouter({
           message: "Apartments are not supported.",
         });
       }
-
-      console.log(
-        `Using OSM boundary data for building: ${propertyBoundary.properties.buildingType}`,
-      );
 
       // Get address information from Google (for street view image)
       const addressResponse = await fetch(
@@ -207,7 +165,7 @@ export const responseRouter = createTRPCRouter({
       }
 
       // Create enhanced image record with property boundary data
-      const image = await ctx.db.images.create({
+      const image = await ctx.db.image.create({
         data: {
           address: propertyBoundary.properties.address ?? formattedAddress,
           lat,
@@ -230,7 +188,7 @@ export const responseRouter = createTRPCRouter({
     }),
 
   getImages: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.images.findMany({
+    return ctx.db.image.findMany({
       select: {
         id: true,
         name: true,
@@ -246,7 +204,7 @@ export const responseRouter = createTRPCRouter({
   getImageById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const image = await ctx.db.images.findUnique({
+      const image = await ctx.db.image.findFirst({
         where: { id: input.id, deletedAt: null },
         select: {
           id: true,
@@ -264,71 +222,80 @@ export const responseRouter = createTRPCRouter({
       return image;
     }),
 
-  getLastImage: protectedProcedure.query(async ({ ctx }) => {
-    const image = await ctx.db.images.findFirst({
-      orderBy: { createdAt: "desc" },
-      where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
-    });
-    return image ?? null;
-  }),
-
-  getResponseHistory: protectedProcedure.query(async ({ ctx }) => {
-    const responses = await ctx.db.response.findMany({
-      orderBy: { createdAt: "desc" },
-      where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
-    });
-    return responses;
-  }),
-
   // New combined endpoint for better performance
   getChatData: protectedProcedure.query(async ({ ctx }) => {
-    const [lastImage, responseHistory] = await Promise.all([
-      ctx.db.images.findFirst({
+    const [lastImage, responses] = await Promise.all([
+      ctx.db.image.findFirst({
         orderBy: { createdAt: "desc" },
-        where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
+        where: { createdById: ctx.session.user.id, deletedAt: null },
       }),
       ctx.db.response.findMany({
-        orderBy: { createdAt: "desc" },
-        where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
-        include: {
-          sourceImage: true, // Include the original image data
-        },
+        where: { createdById: ctx.session.user.id, deletedAt: null },
+        orderBy: [{ createdAt: "desc" }],
+        include: { chain: { include: { rootImage: true } } },
       }),
     ]);
 
-    return {
-      lastImage: lastImage ?? null,
-      responseHistory,
+    // Compute previousResponseId per chain using step ordering for client compatibility
+    type ResponseWithChain = ResponseModel & {
+      chain: { rootImage: ImageModel | null };
     };
+    const responsesByChain = new Map<string, ResponseWithChain[]>();
+    for (const r of responses as ResponseWithChain[]) {
+      const list =
+        responsesByChain.get(r.chainId) ?? ([] as ResponseWithChain[]);
+      list.push(r);
+      responsesByChain.set(r.chainId, list);
+    }
+
+    const responseHistory = (responses as ResponseWithChain[]).map((r) => {
+      const chainResponses =
+        responsesByChain.get(r.chainId) ?? ([] as ResponseWithChain[]);
+      const prev = chainResponses.find((cr) => cr.step === r.step - 1) ?? null;
+      const root = r.chain.rootImage ?? null;
+      return {
+        id: r.id,
+        prompt: r.prompt,
+        url: r.url,
+        createdAt: r.createdAt,
+        // Derived fields for backward compatibility with client types
+        previousResponseId: prev ? prev.id : null,
+        sourceImageId: root ? root.id : null,
+        sourceImage: root,
+      } as const;
+    });
+
+    return { lastImage: lastImage ?? null, responseHistory };
   }),
 
   getResponsesByUserId: protectedProcedure.query(async ({ ctx }) => {
+    // Return only first-step responses per chain for a concise history
     const responses = await ctx.db.response.findMany({
-      where: {
-        createdBy: { id: ctx.session.user.id },
-        deletedAt: null,
-        previousResponseId: null,
-      },
-      include: { sourceImage: true },
+      where: { createdById: ctx.session.user.id, deletedAt: null, step: 1 },
+      include: { chain: { include: { rootImage: true } } },
       orderBy: { createdAt: "desc" },
     });
-    return responses;
+
+    return (
+      responses as Array<
+        ResponseModel & { chain: { rootImage: ImageModel | null } }
+      >
+    ).map((r) => ({
+      id: r.id,
+      prompt: r.prompt,
+      url: r.url,
+      createdAt: r.createdAt,
+      previousResponseId: null,
+      sourceImageId: r.chain.rootImage ? r.chain.rootImage.id : null,
+      sourceImage: r.chain.rootImage ?? null,
+    }));
   }),
 
   getResponseById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const response = await ctx.db.response.findUnique({
-        where: { id: input.id, deletedAt: null },
-      });
-      return response;
-    }),
-
-  getResponseByImageId: protectedProcedure
-    .input(z.object({ imageId: z.number() }))
-    .query(async ({ ctx, input }) => {
       const response = await ctx.db.response.findFirst({
-        where: { sourceImageId: input.imageId, deletedAt: null },
+        where: { id: input.id, deletedAt: null },
       });
       return response;
     }),
@@ -336,111 +303,32 @@ export const responseRouter = createTRPCRouter({
   getResponseChainsByImageId: protectedProcedure
     .input(z.object({ imageId: z.number() }))
     .query(async ({ ctx, input }) => {
-      // Get all responses for this image (both root and chained)
-      const allResponses = await ctx.db.response.findMany({
-        where: {
-          sourceImageId: input.imageId,
-          deletedAt: null,
+      // Fetch all chains for this image with their responses in step order
+      const chains = await ctx.db.chain.findMany({
+        where: { rootImageId: input.imageId, deletedAt: null },
+        include: {
+          responses: { where: { deletedAt: null }, orderBy: { step: "asc" } },
         },
         orderBy: { createdAt: "asc" },
       });
 
-      // Group responses into chains starting from root responses
-      const rootResponses = allResponses.filter(
-        (r) => r.previousResponseId === null,
+      // Map to the legacy shape expected by the client (with derived previousResponseId)
+      return chains.map((c) =>
+        c.responses.map((r, idx) => ({
+          id: r.id,
+          prompt: r.prompt,
+          url: r.url,
+          createdAt: r.createdAt,
+          previousResponseId: idx > 0 ? c.responses[idx - 1]!.id : null,
+          // Provide source image id for type compatibility and client convenience
+          sourceImageId: input.imageId,
+        })),
       );
-      const chains = [];
-
-      for (const root of rootResponses) {
-        const chain = [root];
-        let currentId = root.id;
-
-        // Follow the chain by finding responses that reference the current response
-        while (true) {
-          const nextResponse = allResponses.find(
-            (r) => r.previousResponseId === currentId,
-          );
-          if (!nextResponse) break;
-
-          chain.push(nextResponse);
-          currentId = nextResponse.id;
-        }
-
-        chains.push(chain);
-      }
-
-      // Return all chains (all chains are guaranteed to have at least one response since they start with root responses)
-      return chains;
     }),
-
-  getPlacesDetails: publicProcedure
-    .input(z.object({ address: z.string() }))
-    .mutation(async ({ input }) => {
-      const { address } = input;
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        `${address}, Toronto`,
-      )}&key=${env.GOOGLE_API_KEY}`;
-
-      const response = (await (
-        await fetch(url)
-      ).json()) as GoogleGeocodingResponse;
-      if (response.status !== "OK") {
-        if (response.error_message) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: response.error_message,
-          });
-        }
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Geocoding API request failed.",
-        });
-      }
-
-      const result = response?.results[0];
-
-      if (!result?.geometry?.location) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Could not find location for the given address.",
-        });
-      }
-
-      const formattedGeoCodeData = {
-        lat: result.geometry.location.lat,
-        lng: result.geometry.location.lng,
-        formattedAddress: result.formatted_address,
-      };
-
-      return formattedGeoCodeData;
-    }),
-
-  getNearbyImages: protectedProcedure
-    .input(z.object({ lat: z.number(), lng: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const { lat, lng } = input;
-      const nearbyImages = await ctx.db.images.findMany({
-        where: {
-          lat: {
-            gte: lat - 0.01,
-            lte: lat + 0.01,
-          },
-          lng: {
-            gte: lng - 0.01,
-            lte: lng + 0.01,
-          },
-        },
-        take: 4,
-      });
-      return nearbyImages;
-    }),
-
-  getSecretMessage: protectedProcedure.query(() => {
-    return "you can now see this secret message!";
-  }),
 
   getEnhancedParcelData: protectedProcedure.query(async ({ ctx }) => {
-    const parcels = await ctx.db.images.findMany({
+    const userId = ctx.session.user.id;
+    const parcels = await ctx.db.image.findMany({
       select: {
         id: true,
         address: true,
@@ -451,28 +339,43 @@ export const responseRouter = createTRPCRouter({
         propertyType: true,
         buildingType: true,
         buildingArea: true,
+        chains: {
+          select: {
+            id: true,
+            responses: {
+              where: { deletedAt: null },
+              select: { id: true, createdById: true },
+            },
+            shares: {
+              where: { deletedAt: null },
+              select: {
+                id: true,
+                visibility: true,
+                recipients: { select: { userId: true } },
+              },
+            },
+          },
+        },
       },
       where: {
         deletedAt: null,
         OR: [
+          // Images created by user with any responses (owned data)
+          { createdById: userId },
+          // Images that have at least one response by the user
           {
-            createdBy: { id: ctx.session.user.id },
-            responses: { some: { createdBy: { id: ctx.session.user.id } } },
+            chains: { some: { responses: { some: { createdById: userId } } } },
           },
-          // Images with responses that are shared to the user
+          // Images that are shared to the user or public via their chains
           {
-            responses: {
+            chains: {
               some: {
-                sharedChains: {
+                shares: {
                   some: {
                     deletedAt: null,
                     OR: [
-                      { isPublic: true },
-                      {
-                        sharedToUsers: {
-                          some: { userId: ctx.session.user.id },
-                        },
-                      },
+                      { visibility: "PUBLIC" },
+                      { recipients: { some: { userId } } },
                     ],
                   },
                 },
@@ -483,37 +386,25 @@ export const responseRouter = createTRPCRouter({
       },
     });
 
-    // Parse the JSON boundary data for frontend use
-    return parcels.map((parcel) => ({
-      ...parcel,
-      imageUrl: parcel.url,
-      propertyBoundary: parcel.propertyBoundary
-        ? (JSON.parse(parcel.propertyBoundary as string) as GeoJSON.Polygon)
-        : null,
+    // Parse boundary, and strip internal relations
+    return parcels.map((p) => ({
+      id: p.id,
+      address: p.address,
+      lat: p.lat,
+      lng: p.lng,
+      url: p.url,
+      imageUrl: p.url,
+      propertyType: p.propertyType,
+      buildingType: p.buildingType,
+      buildingArea: p.buildingArea,
+      propertyBoundary:
+        p.propertyBoundary == null
+          ? null
+          : typeof p.propertyBoundary === "string"
+            ? (JSON.parse(p.propertyBoundary) as GeoJSON.Polygon)
+            : (p.propertyBoundary as unknown as GeoJSON.Polygon),
     }));
   }),
-
-  createResponse: protectedProcedure
-    .input(
-      z.object({
-        prompt: z.string(),
-        url: z.string(),
-        sourceImageId: z.number(),
-        previousResponseId: z.number().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { prompt, url, sourceImageId, previousResponseId } = input;
-      return ctx.db.response.create({
-        data: {
-          prompt,
-          url,
-          sourceImageId,
-          previousResponseId,
-          createdById: ctx.session.user.id,
-        },
-      });
-    }),
 
   deleteResponse: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -528,9 +419,13 @@ export const responseRouter = createTRPCRouter({
   getSharedStatusWithId: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const { id } = input;
-      return await ctx.db.sharedChain.findFirst({
-        where: { responseId: id, deletedAt: null },
+      // Find the response to get its chain, then check if that chain has a Share
+      const response = await ctx.db.response.findFirst({
+        where: { id: input.id, deletedAt: null },
+      });
+      if (!response) return null;
+      return await ctx.db.share.findFirst({
+        where: { chainId: response.chainId, deletedAt: null },
       });
     }),
 
@@ -544,7 +439,7 @@ export const responseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Verify the image exists and user has access
-      const image = await ctx.db.images.findUnique({
+      const image = await ctx.db.image.findFirst({
         where: { id: input.imageId, deletedAt: null },
       });
 
@@ -555,12 +450,21 @@ export const responseRouter = createTRPCRouter({
         });
       }
 
-      // Create response linked to the original image (start of new chain)
+      // Create a new chain rooted at this image
+      const chain = await ctx.db.chain.create({
+        data: {
+          rootImageId: input.imageId,
+          createdById: ctx.session.user.id,
+        },
+      });
+
+      // Create first response in the chain (step = 1)
       return ctx.db.response.create({
         data: {
           prompt: input.prompt,
           url: "", // Will be updated after image generation
-          sourceImageId: input.imageId,
+          chainId: chain.id,
+          step: 1,
           createdById: ctx.session.user.id,
         },
       });
@@ -575,9 +479,8 @@ export const responseRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Verify the response exists and user has access
-      const previousResponse = await ctx.db.response.findUnique({
+      const previousResponse = await ctx.db.response.findFirst({
         where: { id: input.responseId, deletedAt: null },
-        include: { sourceImage: true },
       });
 
       if (!previousResponse) {
@@ -587,32 +490,22 @@ export const responseRouter = createTRPCRouter({
         });
       }
 
-      // Create response linked to previous response (continue chain)
+      // Compute next step within the same chain
+      const last = await ctx.db.response.findFirst({
+        where: { chainId: previousResponse.chainId, deletedAt: null },
+        orderBy: { step: "desc" },
+      });
+      const nextStep = (last?.step ?? 0) + 1;
+
+      // Create response linked to the same chain (continue chain)
       return ctx.db.response.create({
         data: {
           prompt: input.prompt,
           url: "", // Will be updated after image generation
-          sourceImageId: previousResponse.sourceImageId,
-          previousResponseId: input.responseId,
+          chainId: previousResponse.chainId,
+          step: nextStep,
           createdById: ctx.session.user.id,
         },
-      });
-    }),
-
-  updateResponseUrl: protectedProcedure
-    .input(
-      z.object({
-        responseId: z.number(),
-        url: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.response.update({
-        where: {
-          id: input.responseId,
-          createdById: ctx.session.user.id, // Ensure user owns this response
-        },
-        data: { url: input.url },
       });
     }),
 });

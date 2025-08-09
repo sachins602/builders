@@ -1,49 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
 import { api } from "~/trpc/react";
-import { Button } from "../_components/ui/button";
-import { CommunityPost } from "./CommunityPost/CommunityPost";
+import { BuildChainComponent } from "./BuildChainComponent/BuildChainComponent";
 import { Loading } from "./ui/loading";
-interface CommunityContentProps {
-  session: { user: { id: string } };
-}
 
-export default function CommunityPageContent({
-  session,
-}: CommunityContentProps) {
-  const {
-    data: postsData,
-    isLoading,
-    isError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = api.community.getSharedPosts.useInfiniteQuery(
-    { limit: 10 },
-    { getNextPageParam: (lastPage) => lastPage.nextCursor },
-  );
-
-  // Flatten all posts from paginated data
-  const posts = useMemo(
-    () => postsData?.pages.flatMap((page) => page.items) ?? [],
-    [postsData],
-  );
-
-  // Get user likes for all posts
-  const { data: userLikes = [] } = api.community.getUserLikes.useQuery(
-    { sharedChainIds: posts.map((post) => post.id) },
-    {
-      enabled: posts.length > 0 && !!session,
-      refetchOnWindowFocus: false,
-    },
-  );
-
-  // Filter out null likes
-  const filteredUserLikes = useMemo(
-    () => userLikes.filter((like): like is string => like !== null),
-    [userLikes],
-  );
+export default function CommunityPageContent() {
+  const { data, isLoading, isError } = api.community.getFeedSimple.useQuery({
+    limit: 10,
+    sort: "latest",
+  });
+  const posts = data?.items ?? [];
 
   if (isLoading) {
     return (
@@ -95,33 +61,8 @@ export default function CommunityPageContent({
         ) : (
           <div className="space-y-6">
             {posts.map((post) => (
-              <CommunityPost
-                key={post.id}
-                post={post}
-                userLikes={filteredUserLikes}
-                currentUserId={session.user.id}
-              />
+              <BuildChainComponent key={post.id} post={post} />
             ))}
-
-            {hasNextPage && (
-              <div className="flex justify-center py-6">
-                <Button
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                >
-                  {isFetchingNextPage ? (
-                    <>
-                      <Loading />
-                      <span>Loading more...</span>
-                    </>
-                  ) : (
-                    <span>Load more posts</span>
-                  )}
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>

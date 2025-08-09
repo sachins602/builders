@@ -86,7 +86,7 @@ export default function MapComponent() {
   const utils = api.useUtils();
   const parcelData = api.response.getEnhancedParcelData.useQuery();
 
-  const image = api.response.saveStreetViewImageAddress.useMutation({
+  const image = api.response.saveStreetViewImage.useMutation({
     onSuccess: () => {
       void utils.response.getChatData.invalidate();
     },
