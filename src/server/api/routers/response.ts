@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { env } from "~/env";
-import { getPropertyBoundary } from "~/lib/propertyBoundaryService";
+import {
+  getPropertyBoundary,
+  type PropertyBoundaryErrorCode,
+} from "~/lib/propertyBoundaryService";
 import { StorageService } from "~/lib/storage";
 
 import { TRPCError } from "@trpc/server";
@@ -52,6 +55,16 @@ interface Location {
   lng?: number;
 }
 
+// Maps domain-specific boundary errors to tRPC error codes
+function getBoundaryErrorCode(
+  code: PropertyBoundaryErrorCode,
+): "NOT_FOUND" | "INTERNAL_SERVER_ERROR" {
+  return code === "NO_BUILDINGS_FOUND" ||
+    code === "NO_GEOMETRY_ON_CLOSEST_BUILDING"
+    ? "NOT_FOUND"
+    : "INTERNAL_SERVER_ERROR";
+}
+
 export const responseRouter = createTRPCRouter({
   saveStreetViewImage: protectedProcedure
     .input(
@@ -74,11 +87,7 @@ export const responseRouter = createTRPCRouter({
       const boundaryResult = await getPropertyBoundary(lat, lng);
 
       if (!boundaryResult.ok) {
-        const code =
-          boundaryResult.code === "NO_BUILDINGS_FOUND" ||
-          boundaryResult.code === "NO_GEOMETRY_ON_CLOSEST_BUILDING"
-            ? "NOT_FOUND"
-            : "INTERNAL_SERVER_ERROR";
+        const code = getBoundaryErrorCode(boundaryResult.code);
         throw new TRPCError({
           code,
           message: boundaryResult.message,

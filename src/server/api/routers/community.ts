@@ -6,46 +6,6 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-// Local types for shaping query results (avoid implicit any)
-type UserLite = { id: string; name: string | null; image?: string | null };
-type RootImageLite = {
-  id: number;
-  url: string;
-  address: string | null;
-  lat: number | null;
-  lng: number | null;
-};
-type ResponseLite = {
-  id: number;
-  prompt: string;
-  url: string;
-  step: number;
-  createdAt: Date;
-  deletedAt: Date | null;
-};
-type ChainWithResponses = {
-  id: string;
-  rootImage: RootImageLite;
-  responses: ResponseLite[];
-};
-type ShareWithChain = {
-  id: string;
-  title: string;
-  description: string | null;
-  visibility: "PUBLIC" | "PRIVATE";
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-  viewCount: number;
-  likeCount: number;
-  commentCount: number;
-  sharedById: string;
-  chain: ChainWithResponses;
-  sharedBy: UserLite;
-  recipients?: { user: { id: string; name: string | null } }[];
-  comments?: { author: UserLite }[];
-  _count?: { likes: number; comments: number };
-};
 
 export const communityRouter = createTRPCRouter({
   // Simple feed of shares using Chain-based schema
@@ -389,7 +349,7 @@ export const communityRouter = createTRPCRouter({
         ],
       };
 
-      const nearbyShares = (await ctx.db.share.findMany({
+      const nearbyShares = await ctx.db.share.findMany({
         where: {
           ...whereClause,
           chain: {
@@ -423,7 +383,7 @@ export const communityRouter = createTRPCRouter({
         },
         orderBy: { createdAt: "desc" },
         take: limit,
-      })) as ShareWithChain[];
+      });
 
       // Calculate distance for each response and sort by proximity
       const responsesWithDistance = nearbyShares.map((share) => {

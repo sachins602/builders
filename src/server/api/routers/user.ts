@@ -20,10 +20,13 @@ type ResponseItem = {
 
 type ChainItem = SourceItem | ResponseItem;
 
+type SqlBindable = string | number | bigint | boolean | Date | Buffer | null;
+
 type Queryable = {
+  $queryRaw<T = unknown>(query: Prisma.Sql): Promise<T>;
   $queryRaw<T = unknown>(
-    query: TemplateStringsArray | Prisma.Sql,
-    ...values: unknown[]
+    query: TemplateStringsArray,
+    ...values: SqlBindable[]
   ): Promise<T>;
 };
 

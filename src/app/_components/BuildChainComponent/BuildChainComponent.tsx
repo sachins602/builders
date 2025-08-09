@@ -37,8 +37,8 @@ export function BuildChainComponent({
   const [likeCount, setLikeCount] = useState(post.stats.likes);
   const [liked, setLiked] = useState(post.likedByMe);
 
-  // Optional cache invalidation after comment
-  const utils = api.useUtils ? api.useUtils() : undefined;
+  // Cache invalidation utilities
+  const utils = api.useUtils();
 
   const toggleLike = api.community.toggleLike.useMutation({
     onSuccess: (data) => {
@@ -50,7 +50,7 @@ export function BuildChainComponent({
   const addComment = api.community.addComment.useMutation({
     onSuccess: () => {
       setNewComment("");
-      void utils?.community.getFeedSimple.invalidate();
+      void utils.community.getFeedSimple.invalidate();
     },
   });
 
