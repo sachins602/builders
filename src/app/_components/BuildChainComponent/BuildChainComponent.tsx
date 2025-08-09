@@ -50,7 +50,7 @@ export function BuildChainComponent({
   const addComment = api.community.addComment.useMutation({
     onSuccess: () => {
       setNewComment("");
-      utils?.community.getFeedSimple.invalidate();
+      void utils?.community.getFeedSimple.invalidate();
     },
   });
 

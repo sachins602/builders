@@ -21,7 +21,7 @@ export default async function Popular() {
       <div className="flex h-full w-full flex-col">
         <div className="mx-auto flex max-w-2xl flex-col gap-4">
           {popularPosts.items.map((post) => (
-            <BuildChainComponent key={post.id} post={post as any} />
+            <BuildChainComponent key={post.id} post={post} />
           ))}
         </div>
       </div>

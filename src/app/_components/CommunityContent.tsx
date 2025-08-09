@@ -1,17 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
 import { api } from "~/trpc/react";
-import { Button } from "../_components/ui/button";
 import { BuildChainComponent } from "./BuildChainComponent/BuildChainComponent";
 import { Loading } from "./ui/loading";
-interface CommunityContentProps {
-  session: { user: { id: string } };
-}
 
-export default function CommunityPageContent({
-  session,
-}: CommunityContentProps) {
+export default function CommunityPageContent() {
   const { data, isLoading, isError } = api.community.getFeedSimple.useQuery({
     limit: 10,
     sort: "latest",
@@ -68,7 +61,7 @@ export default function CommunityPageContent({
         ) : (
           <div className="space-y-6">
             {posts.map((post) => (
-              <BuildChainComponent key={post.id} post={post as any} />
+              <BuildChainComponent key={post.id} post={post} />
             ))}
           </div>
         )}
