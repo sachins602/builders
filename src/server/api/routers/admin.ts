@@ -1,5 +1,6 @@
 import { createTRPCRouter, adminProcedure } from "../trpc";
 import { z } from "zod";
+import { UserRole } from "@prisma/client";
 
 function formatDate(date: Date, type: "month" | "day") {
   if (type === "month") {
@@ -30,23 +31,18 @@ function getLastNDays(n: number) {
 }
 
 export const adminRouter = createTRPCRouter({
-  getUsers: adminProcedure.query(async ({ ctx }) => {
+  // Simple lists
+  listUsers: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.user.findMany();
   }),
-  getResponses: adminProcedure.query(async ({ ctx }) => {
+  listResponses: adminProcedure.query(async ({ ctx }) => {
     return ctx.db.response.findMany();
   }),
-  getImages: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.images.findMany();
+  listImages: adminProcedure.query(async ({ ctx }) => {
+    return ctx.db.image.findMany();
   }),
-  getSharedPosts: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.sharedChain.findMany();
-  }),
-  getSharedResponses: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.like.findMany();
-  }),
-  getSharedImages: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.comment.findMany();
+  listShares: adminProcedure.query(async ({ ctx }) => {
+    return ctx.db.share.findMany();
   }),
 
   // Assign admin privileges to a user by email
@@ -61,13 +57,13 @@ export const adminRouter = createTRPCRouter({
         throw new Error("User not found with this email address");
       }
 
-      if (user.role === "admin") {
+      if (user.role === UserRole.ADMIN) {
         throw new Error("User is already an admin");
       }
 
       const updatedUser = await ctx.db.user.update({
         where: { email: input.email },
-        data: { role: "admin" },
+        data: { role: UserRole.ADMIN },
       });
 
       return updatedUser;
@@ -91,7 +87,7 @@ export const adminRouter = createTRPCRouter({
 
   // Images generated per day (last 30 days)
   imagesPerDay: adminProcedure.query(async ({ ctx }) => {
-    const images = await ctx.db.images.findMany({
+    const images = await ctx.db.image.findMany({
       select: { createdAt: true },
     });
     const days = getLastNDays(30);
@@ -128,26 +124,36 @@ export const adminRouter = createTRPCRouter({
         id: true,
         name: true,
         email: true,
-        images: { select: { id: true } },
-        responses: { select: { id: true } },
-        likes: { select: { id: true } },
-        comments: { select: { id: true } },
+        _count: {
+          select: {
+            images: true,
+            responses: true,
+            shareLikes: true,
+            shareComments: true,
+            responseLikes: true,
+            responseComments: true,
+          },
+        },
       },
     });
-    return users.map((u) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      images: u.images.length,
-      responses: u.responses.length,
-      likes: u.likes.length,
-      comments: u.comments.length,
-    }));
+    return users.map((u) => {
+      const posts = u._count.images + u._count.responses;
+      const likes = u._count.shareLikes + u._count.responseLikes;
+      const comments = u._count.shareComments + u._count.responseComments;
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        posts,
+        likes,
+        comments,
+      };
+    });
   }),
 
-  // Engagement per post (likes/comments)
-  engagementPerPost: adminProcedure.query(async ({ ctx }) => {
-    const posts = await ctx.db.sharedChain.findMany({
+  // Engagement per shared post (likes/comments)
+  engagementPerShare: adminProcedure.query(async ({ ctx }) => {
+    const posts = await ctx.db.share.findMany({
       select: {
         id: true,
         title: true,
@@ -169,7 +175,7 @@ export const adminRouter = createTRPCRouter({
 
   // Shares per day (last 30 days)
   sharesPerDay: adminProcedure.query(async ({ ctx }) => {
-    const shares = await ctx.db.sharedChain.findMany({
+    const shares = await ctx.db.share.findMany({
       select: { createdAt: true },
     });
     const days = getLastNDays(30);
