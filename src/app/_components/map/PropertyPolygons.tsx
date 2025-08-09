@@ -6,6 +6,14 @@ import L from "leaflet";
 import type { PropertyData } from "./types";
 import { getImageUrl } from "~/lib/image-utils";
 
+// 156543.03392 is meters-per-pixel at zoom 0 on the equator for 256px tiles
+// Derived from Earth's circumference (2πR ≈ 40075016.686m) / 256
+const METERS_PER_PIXEL_AT_EQUATOR_ZOOM0 = 156543.03392;
+
+type MarkerClusterLike = {
+  getChildCount: () => number;
+};
+
 interface PropertyPolygonsProps {
   parcelData?: PropertyData[];
   onPopupClose: () => void;
@@ -56,7 +64,8 @@ export function PropertyPolygons({
   function getMaxClusterRadius(zoom: number): number {
     const latitudeForResolution = 43.7; // Toronto latitude
     const metersPerPixel =
-      (156543.03392 * Math.cos((latitudeForResolution * Math.PI) / 180)) /
+      (METERS_PER_PIXEL_AT_EQUATOR_ZOOM0 *
+        Math.cos((latitudeForResolution * Math.PI) / 180)) /
       Math.pow(2, zoom);
     const desiredMeters = 120; // cluster markers only when within ~120m
     const radiusInPixels = desiredMeters / metersPerPixel;
@@ -64,10 +73,8 @@ export function PropertyPolygons({
     return clamped;
   }
 
-  function createClusterIcon(cluster: unknown): L.DivIcon {
-    // The cluster instance comes from Leaflet.markercluster; we only need child count
-    const anyCluster = cluster as { getChildCount: () => number };
-    const count = anyCluster.getChildCount();
+  function createClusterIcon(cluster: MarkerClusterLike): L.DivIcon {
+    const count = cluster.getChildCount();
 
     const size = count < 10 ? 30 : count < 50 ? 36 : 42;
     const imageSize = Math.round(size * 0.65);
@@ -111,6 +118,18 @@ export function PropertyPolygons({
       );
   }, [parcelData]);
 
+  const parcelIcon = useMemo(
+    () =>
+      L.icon({
+        iconUrl: "/images/blueprint.png",
+        iconSize: [20, 20],
+        // Center the icon on the parcel centroid
+        iconAnchor: [10, 10],
+        popupAnchor: [0, -10],
+      }),
+    [],
+  );
+
   return (
     <>
       <MarkerClusterGroup
@@ -126,12 +145,7 @@ export function PropertyPolygons({
           <Marker
             key={`marker-${parcel.id}`}
             position={centroid}
-            icon={L.icon({
-              iconUrl: "/images/blueprint.png",
-              iconSize: [20, 20],
-              iconAnchor: [20, 40],
-              popupAnchor: [0, -10],
-            })}
+            icon={parcelIcon}
             eventHandlers={{
               click: (e: LeafletMouseEvent) => {
                 e.originalEvent.stopPropagation();
