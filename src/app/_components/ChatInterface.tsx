@@ -11,7 +11,7 @@ interface ChatInterfaceProps {
     id: number;
     prompt: string;
     url: string;
-    sourceImageId: number | null;
+    sourceImageId?: number | null;
   };
   sourceImageId?: number;
   sourceImage?: {

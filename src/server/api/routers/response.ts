@@ -217,22 +217,6 @@ export const responseRouter = createTRPCRouter({
       return image;
     }),
 
-  getLastImage: protectedProcedure.query(async ({ ctx }) => {
-    const image = await ctx.db.image.findFirst({
-      orderBy: { createdAt: "desc" },
-      where: { createdById: ctx.session.user.id, deletedAt: null },
-    });
-    return image ?? null;
-  }),
-
-  getResponseHistory: protectedProcedure.query(async ({ ctx }) => {
-    const responses = await ctx.db.response.findMany({
-      orderBy: { createdAt: "desc" },
-      where: { createdById: ctx.session.user.id, deletedAt: null },
-    });
-    return responses;
-  }),
-
   // New combined endpoint for better performance
   getChatData: protectedProcedure.query(async ({ ctx }) => {
     const [lastImage, responses] = await Promise.all([

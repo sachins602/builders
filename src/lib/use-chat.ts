@@ -7,7 +7,7 @@ export function useChat(
     id: number;
     prompt: string;
     url: string;
-    sourceImageId: number | null;
+    sourceImageId?: number | null;
   },
   sourceImageId?: number,
   sourceImage?: {
@@ -76,37 +76,7 @@ export function useChat(
     [],
   );
 
-  // API mutations - using new simplified flow when sourceImageId is provided
-  const generateImageMutation = api.openai.generateImage.useMutation({
-    onSuccess: (data) => {
-      setState((prev) => ({
-        ...prev,
-        isGenerating: false,
-        selectedResponseId: data.id,
-      }));
-      void refetchChatData();
-    },
-    onError: (error) => {
-      setState((prev) => ({ ...prev, isGenerating: false }));
-      console.error("Failed to generate image:", error);
-    },
-  });
-
-  const continueFromResponseMutation =
-    api.openai.continueFromResponse.useMutation({
-      onSuccess: (data) => {
-        setState((prev) => ({
-          ...prev,
-          isGenerating: false,
-          selectedResponseId: data.id,
-        }));
-        void refetchChatData();
-      },
-      onError: (error) => {
-        setState((prev) => ({ ...prev, isGenerating: false }));
-        console.error("Failed to continue image generation:", error);
-      },
-    });
+  // Removed legacy mutations; use unified two-step flow below
 
   // New simplified mutations for remix flow
   const createNewChainMutation =
@@ -295,17 +265,18 @@ export function useChat(
         });
       }
     } else {
-      // Use old flow for regular create page
+      // Use new two-step flow for regular create page as well
       if (state.selectedResponseId) {
-        continueFromResponseMutation.mutate({
+        // Continue chain within the same chain
+        continueChainFromResponseMutation.mutate({
+          responseId: state.selectedResponseId,
           prompt: state.prompt,
-          previousResponseId: state.selectedResponseId,
         });
       } else if (lastImage) {
-        generateImageMutation.mutate({
-          prompt: state.prompt,
-          imageUrl: lastImage.url,
+        // Start a new chain from the latest image
+        createNewChainMutation.mutate({
           imageId: lastImage.id,
+          prompt: state.prompt,
         });
       }
     }
@@ -314,8 +285,7 @@ export function useChat(
     state.selectedResponseId,
     lastImage,
     sourceImageId,
-    continueFromResponseMutation,
-    generateImageMutation,
+    // removed legacy mutations
     createNewChainMutation,
     continueChainFromResponseMutation,
     generateFromResponseMutation,
