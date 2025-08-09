@@ -76,6 +76,9 @@ model User {
     // Community Organization relations
     createdOrganizations Organization[] @relation(name: "OrganizationCreator")
     organizationMemberships OrganizationMember[]
+
+    // New back-relation for chains created by this user
+    createdChains Chain[] @relation(name: "UserCreatedChains")
     
     @@index([email])
     @@index([deletedAt])
@@ -114,8 +117,35 @@ model Images {
     createdBy   User   @relation(fields: [createdById], references: [id])
     createdById String
     responses   Response[]
+
+    // New back-relation for chains rooted at this image
+    chains      Chain[]   @relation(name: "RootImageChains")
     
     @@index([name])
+    @@index([createdById])
+    @@index([deletedAt])
+}
+
+model Chain {
+    id           String   @id @default(cuid())
+
+    // The original image this chain starts from (branching at image level)
+    rootImage    Images?  @relation(name: "RootImageChains", fields: [rootImageId], references: [id])
+    rootImageId  Int?
+
+    // Optional: who created/started this chain
+    createdBy    User?    @relation(name: "UserCreatedChains", fields: [createdById], references: [id])
+    createdById  String?
+
+    // Timestamps and soft delete
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    deletedAt    DateTime?
+
+    // Relations
+    responses    Response[]
+
+    @@index([rootImageId])
     @@index([createdById])
     @@index([deletedAt])
 }
@@ -134,6 +164,12 @@ model Response {
     createdBy   User   @relation(fields: [createdById], references: [id])
     createdById String
     
+    // New: explicit chain reference (optional for now to ease migration)
+    chain     Chain?   @relation(fields: [chainId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    chainId   String?
+    // New: linear order inside a chain (optional for now)
+    step      Int?
+
     // Reference to the original image (if this is the first response in a chain)
     sourceImage   Images?   @relation(fields: [sourceImageId], references: [id])
     sourceImageId Int?
@@ -154,6 +190,7 @@ model Response {
     @@index([previousResponseId])
     @@index([sourceImageId])
     @@index([createdById])
+    @@index([chainId])
     @@index([deletedAt])
 }
 
