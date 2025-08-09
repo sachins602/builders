@@ -124,8 +124,7 @@ export function PropertyPolygons({
         iconUrl: "/images/blueprint.png",
         iconSize: [20, 20],
         // Center the icon on the parcel centroid
-        iconAnchor: [10, 10],
-        popupAnchor: [0, -10],
+        iconAnchor: [20, 40],
       }),
     [],
   );
@@ -154,7 +153,7 @@ export function PropertyPolygons({
             }}
           >
             {parcel.address && (
-              <Tooltip direction="top" offset={[0, -10]}>
+              <Tooltip direction="top" offset={[-10, -40]}>
                 {parcel.address}
               </Tooltip>
             )}
