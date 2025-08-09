@@ -132,7 +132,7 @@ export default function AdminCharts() {
   const imagesPerDay = api.admin.imagesPerDay.useQuery();
   const responsesPerDay = api.admin.responsesPerDay.useQuery();
   const topUsers = api.admin.topUsers.useQuery();
-  const engagementPerPost = api.admin.engagementPerPost.useQuery();
+  const engagementPerShare = api.admin.engagementPerShare.useQuery();
   const sharesPerDay = api.admin.sharesPerDay.useQuery();
 
   if (
@@ -140,7 +140,7 @@ export default function AdminCharts() {
     imagesPerDay.isLoading ||
     responsesPerDay.isLoading ||
     topUsers.isLoading ||
-    engagementPerPost.isLoading ||
+    engagementPerShare.isLoading ||
     sharesPerDay.isLoading
   ) {
     return (
@@ -233,18 +233,18 @@ export default function AdminCharts() {
             <YAxis type="category" dataKey="name" width={100} />
             <Tooltip />
             <Bar
-              dataKey="responses"
+              dataKey="posts"
               fill="var(--color-posts)"
               radius={4}
-              name="Responses"
+              name="Posts"
             />
           </BarChart>
         </ChartContainer>
       </Card>
 
-      {/* Engagement Per Post */}
+      {/* Engagement Per Share */}
       <Card className="p-4">
-        <h2 className="mb-2 text-lg font-semibold">Engagement Per Post</h2>
+        <h2 className="mb-2 text-lg font-semibold">Engagement Per Share</h2>
         <ChartContainer
           config={{
             likes: { label: "Likes", color: "#f43f5e" },
@@ -252,7 +252,7 @@ export default function AdminCharts() {
           }}
           className="min-h-[200px] w-full"
         >
-          <BarChart data={engagementPerPost.data?.slice(0, 10)}>
+          <BarChart data={engagementPerShare.data?.slice(0, 10)}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="title"
