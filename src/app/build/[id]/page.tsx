@@ -81,8 +81,8 @@ export default async function BuildPage({ params }: BuildPageProps) {
     prompt: lastResponse?.prompt ?? null,
     stats: {
       views: 0,
-      likes: data.share._count?.likes ?? 0,
-      comments: data.share._count?.comments ?? 0,
+      likes: Number(data.share._count?.likes ?? 0),
+      comments: Number(data.share._count?.comments ?? 0),
     },
     likedByMe: false,
   };

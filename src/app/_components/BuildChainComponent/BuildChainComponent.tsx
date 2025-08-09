@@ -34,7 +34,9 @@ export function BuildChainComponent({
 }: FeedPostProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [likeCount, setLikeCount] = useState(post.stats.likes);
+  const [likeCount, setLikeCount] = useState<number>(
+    Number(post.stats.likes ?? 0),
+  );
   const [liked, setLiked] = useState(post.likedByMe);
 
   // Cache invalidation utilities
@@ -69,67 +71,56 @@ export function BuildChainComponent({
 
   return (
     <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center space-x-3">
-          <Avatar className="h-10 w-10">
-            {post.sharedBy.image ? (
-              <img
-                src={post.sharedBy.image}
-                alt={post.sharedBy.name ?? "User"}
-                className="h-full w-full rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gray-200">
-                <User className="h-5 w-5 text-gray-500" />
-              </div>
-            )}
-          </Avatar>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold">
-                {post.sharedBy.name ?? "Anonymous"}
-              </p>
-              {post.isPublic ? (
-                <Globe className="h-3 w-3 text-blue-500" />
-              ) : (
-                <Lock className="h-3 w-3 text-amber-500" />
-              )}
+      <CardHeader className="flex items-center space-x-3">
+        <Avatar className="h-10 w-10">
+          {post.sharedBy.image ? (
+            <img
+              src={post.sharedBy.image}
+              alt={post.sharedBy.name ?? "User"}
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gray-200">
+              <User className="h-5 w-5 text-gray-500" />
             </div>
-            <p className="text-muted-foreground text-xs">
-              {new Date(post.createdAt).toLocaleDateString()}
+          )}
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">
+              {post.sharedBy.name ?? "Anonymous"}
             </p>
+            {post.isPublic ? (
+              <Globe className="h-5 w-5 text-blue-500" />
+            ) : (
+              <Lock className="h-5 w-5 text-amber-500" />
+            )}
           </div>
+          <p className="text-muted-foreground text-xs">
+            {new Date(post.createdAt).toLocaleDateString()}
+          </p>
         </div>
       </CardHeader>
 
-      <CardContent className="pb-3">
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-lg font-semibold">{post.title}</h3>
-            {post.prompt && (
-              <p className="text-muted-foreground mt-1 text-sm">
-                {post.prompt}
-              </p>
-            )}
-          </div>
-
-          <div className="relative overflow-hidden rounded-lg">
-            <img
-              src={heroUrl}
-              alt={post.title}
-              className="h-[500px] w-full object-cover"
-            />
-          </div>
-
-          {post.sourceImage?.address && (
-            <p className="text-muted-foreground text-xs">
-              Location: {post.sourceImage.address}
-            </p>
-          )}
+      <CardContent>
+        {post.sourceImage?.address && (
+          <p className="text-muted-foreground text-xs">
+            Location: {post.sourceImage.address}
+          </p>
+        )}
+        <div className="overflow-hidden rounded-lg">
+          <img
+            src={heroUrl}
+            alt={post.title}
+            className="h-96 w-full object-fill"
+          />
         </div>
+        {post.prompt && (
+          <p className="text-muted-foreground mt-1 text-sm">{post.prompt}</p>
+        )}
       </CardContent>
 
-      <CardFooter className="flex-col items-start space-y-3 pt-0">
+      <CardFooter className="flex-col items-start">
         <div className="flex w-full items-center space-x-4">
           {!disableInteractions && (
             <>
