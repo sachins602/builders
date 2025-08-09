@@ -1,133 +1,54 @@
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
+import { Visibility, OrganizationMemberRole } from "@prisma/client";
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import type { Prisma } from "@prisma/client";
-
-// Helper function to get the full response chain for a given response
-async function getFullResponseChain(
-  db: Prisma.TransactionClient,
-  responseId: number,
-) {
-  // Get the starting response
-  const startResponse = await db.response.findUnique({
-    where: { id: responseId },
-    include: {
-      sourceImage: true,
-    },
-  });
-
-  if (!startResponse) {
-    return [];
-  }
-
-  const chain: Array<{
-    id: string | number;
-    type: "source" | "response";
-    prompt: string | null;
-    url: string;
-    previousResponseId: number | null;
-    sourceImageId: number | null;
-    sourceImage: {
-      id: number;
-      url: string;
-      address: string | null;
-    } | null;
-  }> = [];
-
-  // Build the chain backwards (from the final response to the original)
-  let currentResponse: typeof startResponse = startResponse;
-  const visitedIds = new Set<number>();
-
-  while (currentResponse && !visitedIds.has(currentResponse.id)) {
-    visitedIds.add(currentResponse.id);
-
-    // Add the current response to the chain
-    chain.unshift({
-      id: currentResponse.id,
-      type: "response",
-      prompt: currentResponse.prompt,
-      url: currentResponse.url,
-      previousResponseId: currentResponse.previousResponseId,
-      sourceImageId: currentResponse.sourceImageId,
-      sourceImage: currentResponse.sourceImage
-        ? {
-            id: currentResponse.sourceImage.id,
-            url: currentResponse.sourceImage.url,
-            address: currentResponse.sourceImage.address,
-          }
-        : null,
-    });
-
-    // Move to the previous response in the chain
-    if (currentResponse.previousResponseId) {
-      const nextResponse = await db.response.findUnique({
-        where: { id: currentResponse.previousResponseId },
-        include: {
-          sourceImage: true,
-        },
-      });
-      if (nextResponse) {
-        currentResponse = nextResponse;
-      } else {
-        break; // Reached the start of the chain
-      }
-    } else {
-      break; // Reached the start of the chain
-    }
-  }
-
-  // Add the original source image at the beginning if it exists
-  if (startResponse.sourceImage) {
-    chain.unshift({
-      id: `source-${startResponse.sourceImage.id}`,
-      type: "source",
-      prompt: null,
-      url: startResponse.sourceImage.url,
-      previousResponseId: null,
-      sourceImageId: null,
-      sourceImage: {
-        id: startResponse.sourceImage.id,
-        url: startResponse.sourceImage.url,
-        address: startResponse.sourceImage.address,
-      },
-    });
-  }
-
-  // If no source image was found, try to find the original image by looking at the first response in the chain
-  if (chain.length > 0 && chain[0] && !chain[0].type.includes("source")) {
-    const firstResponse = chain[0];
-    if (firstResponse.sourceImageId) {
-      // Try to fetch the original image
-      const originalImage = await db.images.findUnique({
-        where: { id: firstResponse.sourceImageId },
-      });
-
-      if (originalImage) {
-        chain.unshift({
-          id: `source-${originalImage.id}`,
-          type: "source",
-          prompt: null,
-          url: originalImage.url,
-          previousResponseId: null,
-          sourceImageId: null,
-          sourceImage: {
-            id: originalImage.id,
-            url: originalImage.url,
-            address: originalImage.address,
-          },
-        });
-      }
-    }
-  }
-
-  return chain;
-}
+// Local types for shaping query results (avoid implicit any)
+type UserLite = { id: string; name: string | null; image?: string | null };
+type RootImageLite = {
+  id: number;
+  url: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+type ResponseLite = {
+  id: number;
+  prompt: string;
+  url: string;
+  step: number;
+  createdAt: Date;
+  deletedAt: Date | null;
+};
+type ChainWithResponses = {
+  id: string;
+  rootImage: RootImageLite;
+  responses: ResponseLite[];
+};
+type ShareWithChain = {
+  id: string;
+  title: string;
+  description: string | null;
+  visibility: "PUBLIC" | "PRIVATE";
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  sharedById: string;
+  chain: ChainWithResponses;
+  sharedBy: UserLite;
+  recipients?: { user: { id: string; name: string | null } }[];
+  comments?: { author: UserLite }[];
+  _count?: { likes: number; comments: number };
+};
 
 export const communityRouter = createTRPCRouter({
-  // Simple feed: returns already-shaped posts without full chains
+  // Simple feed of shares using Chain-based schema
   getFeedSimple: protectedProcedure
     .input(
       z.object({
@@ -140,32 +61,28 @@ export const communityRouter = createTRPCRouter({
       const { limit, sort, cursor } = input;
       const currentUserId = ctx.session.user.id;
 
-      const whereClause = {
+      const whereClause: Prisma.ShareWhereInput = {
         deletedAt: null,
         OR: [
-          { isPublic: true },
+          { visibility: Visibility.PUBLIC },
           { sharedById: currentUserId },
           {
-            isPublic: false,
-            sharedToUsers: {
-              some: { userId: currentUserId },
-            },
+            visibility: Visibility.PRIVATE,
+            recipients: { some: { userId: currentUserId } },
           },
         ],
-      } as const;
+      };
 
-      const shared = await ctx.db.sharedChain.findMany({
-        where: {
-          ...whereClause,
-          response: { deletedAt: null },
-        },
+      const shared = await ctx.db.share.findMany({
+        where: whereClause,
         include: {
-          response: {
-            select: {
-              id: true,
-              prompt: true,
-              url: true,
-              sourceImage: { select: { id: true, url: true, address: true } },
+          chain: {
+            include: {
+              rootImage: true,
+              responses: {
+                where: { deletedAt: null },
+                orderBy: { step: "asc" },
+              },
             },
           },
           sharedBy: { select: { id: true, name: true, image: true } },
@@ -185,28 +102,32 @@ export const communityRouter = createTRPCRouter({
       }
 
       const shareIds = shared.map((s) => s.id);
-      const likes = await ctx.db.like.findMany({
-        where: { userId: currentUserId, sharedChainId: { in: shareIds } },
-        select: { sharedChainId: true },
+      const likes = await ctx.db.shareLike.findMany({
+        where: { userId: currentUserId, shareId: { in: shareIds } },
+        select: { shareId: true },
       });
-      const likedSet = new Set(likes.map((l) => l.sharedChainId));
+      const likedSet = new Set(likes.map((l) => l.shareId));
 
-      const items = shared.map((s) => ({
-        id: s.id,
-        title: s.title,
-        isPublic: s.isPublic,
-        createdAt: s.createdAt,
-        sharedBy: s.sharedBy,
-        heroImageUrl: s.response.url,
-        sourceImage: s.response.sourceImage,
-        prompt: s.response.prompt,
-        stats: {
-          views: s.viewCount,
-          likes: s.likeCount,
-          comments: s.commentCount,
-        },
-        likedByMe: likedSet.has(s.id),
-      }));
+      const items = shared.map((s) => {
+        const responses = s.chain.responses;
+        const lastResponse = responses[responses.length - 1];
+        return {
+          id: s.id,
+          title: s.title,
+          visibility: s.visibility,
+          createdAt: s.createdAt,
+          sharedBy: s.sharedBy,
+          heroImageUrl: lastResponse?.url ?? s.chain.rootImage.url,
+          rootImage: s.chain.rootImage,
+          prompt: lastResponse?.prompt ?? null,
+          stats: {
+            views: s.viewCount,
+            likes: s.likeCount,
+            comments: s.commentCount,
+          },
+          likedByMe: likedSet.has(s.id),
+        };
+      });
 
       return { items, nextCursor };
     }),
@@ -242,60 +163,67 @@ export const communityRouter = createTRPCRouter({
   shareResponse: protectedProcedure
     .input(
       z.object({
-        responseId: z.number(),
+        chainId: z.string(),
         title: z.string().min(1).max(100),
         description: z.string().optional(),
-        isPublic: z.boolean().default(true),
+        visibility: z.enum(["PUBLIC", "PRIVATE"]).default("PUBLIC"),
         selectedUserIds: z.array(z.string()).optional(), // For private sharing
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { responseId, title, description, isPublic, selectedUserIds } =
+      const { chainId, title, description, visibility, selectedUserIds } =
         input;
 
-      // Check if response exists and belongs to user
-      const response = await ctx.db.response.findFirst({
+      // Check if chain exists and belongs to user
+      const chain = await ctx.db.chain.findFirst({
         where: {
-          id: responseId,
-          createdById: ctx.session.user.id,
+          id: chainId,
           deletedAt: null,
+          createdById: ctx.session.user.id,
         },
       });
 
-      if (!response) {
-        throw new Error("Response not found or not owned by user");
+      if (!chain) {
+        throw new Error("Chain not found or not owned by user");
       }
 
       // Validate private sharing requirements
-      if (!isPublic && (!selectedUserIds || selectedUserIds.length === 0)) {
+      if (
+        visibility === "PRIVATE" &&
+        (!selectedUserIds || selectedUserIds.length === 0)
+      ) {
         throw new Error("Please select at least one user for private sharing");
       }
 
-      // Create shared chain
-      const sharedChain = await ctx.db.sharedChain.create({
+      // Create share
+      const share = await ctx.db.share.create({
         data: {
           title,
           description,
-          isPublic,
-          responseId,
+          visibility,
+          chainId,
           sharedById: ctx.session.user.id,
         },
       });
 
-      // If private sharing, create SharedChainUser records
-      if (!isPublic && selectedUserIds && selectedUserIds.length > 0) {
-        await ctx.db.sharedChainUser.createMany({
+      // If private sharing, create recipients
+      if (
+        visibility === "PRIVATE" &&
+        selectedUserIds &&
+        selectedUserIds.length > 0
+      ) {
+        await ctx.db.shareRecipient.createMany({
           data: selectedUserIds.map((userId) => ({
-            sharedChainId: sharedChain.id,
+            shareId: share.id,
             userId,
           })),
         });
       }
 
-      return sharedChain;
+      return share;
     }),
 
-  // TODO: make this endpoint simpler
+  // Simple paginated shares list
   getSharedPosts: protectedProcedure
     .input(
       z.object({
@@ -307,108 +235,62 @@ export const communityRouter = createTRPCRouter({
       const { limit, cursor } = input;
       const currentUserId = ctx.session.user.id;
 
-      const whereClause = {
+      const whereClause: Prisma.ShareWhereInput = {
         deletedAt: null,
         OR: [
-          { isPublic: true },
+          { visibility: Visibility.PUBLIC },
           ...(currentUserId
             ? [
                 {
-                  isPublic: false,
-                  sharedToUsers: {
-                    some: {
-                      userId: currentUserId,
-                    },
-                  },
+                  visibility: Visibility.PRIVATE,
+                  recipients: { some: { userId: currentUserId } },
                 },
-                {
-                  isPublic: false,
-                  sharedById: currentUserId, // Posts shared BY the current user
-                },
+                { visibility: Visibility.PRIVATE, sharedById: currentUserId },
               ]
             : []),
         ],
       };
 
-      const sharedChains = await ctx.db.sharedChain.findMany({
-        where: {
-          ...whereClause,
-          response: {
-            deletedAt: null, // Filter out shared chains with deleted responses
-          },
-        },
+      const shares = await ctx.db.share.findMany({
+        where: whereClause,
         include: {
-          response: {
+          chain: {
             include: {
-              sourceImage: true,
-            },
-          },
-          sharedBy: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          sharedToUsers: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                },
+              rootImage: true,
+              responses: {
+                where: { deletedAt: null },
+                orderBy: { step: "asc" },
               },
             },
+          },
+          sharedBy: { select: { id: true, name: true, image: true } },
+          recipients: {
+            include: { user: { select: { id: true, name: true } } },
           },
           comments: {
-            where: {
-              deletedAt: null,
-            },
+            where: { deletedAt: null },
             include: {
-              author: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true,
-                },
-              },
+              author: { select: { id: true, name: true, image: true } },
             },
-            orderBy: {
-              createdAt: "asc",
-            },
+            orderBy: { createdAt: "asc" },
           },
-          _count: {
-            select: {
-              likes: true,
-              comments: true,
-            },
-          },
+          _count: { select: { likes: true, comments: true } },
         },
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy: { createdAt: "desc" },
         take: limit + 1,
         cursor: cursor ? { id: cursor } : undefined,
       });
 
       let nextCursor: typeof cursor | undefined = undefined;
-      if (sharedChains.length > limit) {
-        const nextItem = sharedChains.pop();
+      if (shares.length > limit) {
+        const nextItem = shares.pop();
         nextCursor = nextItem?.id;
       }
 
-      const itemsWithFullChain = await Promise.all(
-        sharedChains.map(async (post) => {
-          const responseChain = await getFullResponseChain(
-            ctx.db,
-            post.responseId,
-          );
-          return {
-            ...post,
-            responseChain,
-          };
-        }),
-      );
+      const itemsWithFullChain = shares.map((post) => ({
+        ...post,
+        chain: post.chain,
+      }));
 
       return {
         items: itemsWithFullChain,
@@ -416,7 +298,6 @@ export const communityRouter = createTRPCRouter({
       };
     }),
 
-  // TODO: make this endpoint simpler
   getSharedPopularPosts: protectedProcedure
     .input(
       z.object({
@@ -428,111 +309,63 @@ export const communityRouter = createTRPCRouter({
       const { limit, cursor } = input;
       const currentUserId = ctx.session.user.id;
 
-      const whereClause = {
+      const whereClause: Prisma.ShareWhereInput = {
         deletedAt: null,
-        likeCount: {
-          gt: 0,
-        },
+        likeCount: { gt: 0 },
         OR: [
-          { isPublic: true },
+          { visibility: Visibility.PUBLIC },
           ...(currentUserId
             ? [
                 {
-                  isPublic: false,
-                  sharedToUsers: {
-                    some: {
-                      userId: currentUserId,
-                    },
-                  },
+                  visibility: Visibility.PRIVATE,
+                  recipients: { some: { userId: currentUserId } },
                 },
-                {
-                  isPublic: false,
-                  sharedById: currentUserId, // Posts shared BY the current user
-                },
+                { visibility: Visibility.PRIVATE, sharedById: currentUserId },
               ]
             : []),
         ],
       };
 
-      const sharedChains = await ctx.db.sharedChain.findMany({
-        where: {
-          ...whereClause,
-          response: {
-            deletedAt: null, // Filter out shared chains with deleted responses
-          },
-        },
+      const shares = await ctx.db.share.findMany({
+        where: whereClause,
         include: {
-          response: {
+          chain: {
             include: {
-              sourceImage: true,
-            },
-          },
-          sharedBy: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          sharedToUsers: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                },
+              rootImage: true,
+              responses: {
+                where: { deletedAt: null },
+                orderBy: { step: "asc" },
               },
             },
+          },
+          sharedBy: { select: { id: true, name: true, image: true } },
+          recipients: {
+            include: { user: { select: { id: true, name: true } } },
           },
           comments: {
-            where: {
-              deletedAt: null,
-            },
+            where: { deletedAt: null },
             include: {
-              author: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true,
-                },
-              },
+              author: { select: { id: true, name: true, image: true } },
             },
-            orderBy: {
-              createdAt: "asc",
-            },
+            orderBy: { createdAt: "asc" },
           },
-          _count: {
-            select: {
-              likes: true,
-              comments: true,
-            },
-          },
+          _count: { select: { likes: true, comments: true } },
         },
-        orderBy: {
-          likeCount: "desc",
-        },
+        orderBy: { likeCount: "desc" },
         take: limit + 1,
         cursor: cursor ? { id: cursor } : undefined,
       });
 
       let nextCursor: typeof cursor | undefined = undefined;
-      if (sharedChains.length > limit) {
-        const nextItem = sharedChains.pop();
+      if (shares.length > limit) {
+        const nextItem = shares.pop();
         nextCursor = nextItem?.id;
       }
 
-      const itemsWithFullChain = await Promise.all(
-        sharedChains.map(async (post) => {
-          const responseChain = await getFullResponseChain(
-            ctx.db,
-            post.responseId,
-          );
-          return {
-            ...post,
-            responseChain,
-          };
-        }),
-      );
+      const itemsWithFullChain = shares.map((post) => ({
+        ...post,
+        chain: post.chain,
+      }));
 
       return {
         items: itemsWithFullChain,
@@ -545,119 +378,79 @@ export const communityRouter = createTRPCRouter({
       const currentUserId = ctx.session?.user?.id;
 
       // Build where clause to check access permissions
-      const whereClause = {
+      const whereClause: Prisma.ShareWhereInput = {
         id: input.id,
         deletedAt: null,
         OR: [
-          { isPublic: true },
+          { visibility: Visibility.PUBLIC },
           ...(currentUserId
             ? [
                 {
-                  isPublic: false,
-                  sharedToUsers: {
-                    some: {
-                      userId: currentUserId,
-                    },
-                  },
+                  visibility: Visibility.PRIVATE,
+                  recipients: { some: { userId: currentUserId } },
                 },
-                {
-                  isPublic: false,
-                  sharedById: currentUserId, // Owner can always see their own private posts
-                },
+                { visibility: Visibility.PRIVATE, sharedById: currentUserId },
               ]
             : []),
         ],
       };
 
-      const sharedChain = await ctx.db.sharedChain.findFirst({
-        where: {
-          ...whereClause,
-          response: {
-            deletedAt: null, // Filter out shared chains with deleted responses
-          },
-        },
+      const share = (await ctx.db.share.findFirst({
+        where: whereClause,
         include: {
-          response: {
+          chain: {
             include: {
-              sourceImage: true,
-            },
-          },
-          sharedBy: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          comments: {
-            where: {
-              deletedAt: null,
-            },
-            include: {
-              author: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true,
-                },
+              rootImage: true,
+              responses: {
+                where: { deletedAt: null },
+                orderBy: { step: "asc" },
               },
             },
-            orderBy: {
-              createdAt: "asc",
-            },
           },
-          _count: {
-            select: {
-              likes: true,
-              comments: true,
+          sharedBy: { select: { id: true, name: true, image: true } },
+          comments: {
+            where: { deletedAt: null },
+            include: {
+              author: { select: { id: true, name: true, image: true } },
             },
+            orderBy: { createdAt: "asc" },
           },
+          _count: { select: { likes: true, comments: true } },
         },
-      });
+      })) as ShareWithChain | null;
 
-      if (!sharedChain) {
+      if (!share) {
         throw new Error("Shared post not found or access denied");
       }
 
       // Update view count
-      await ctx.db.sharedChain.update({
+      await ctx.db.share.update({
         where: { id: input.id },
         data: { viewCount: { increment: 1 } },
       });
 
-      const responseChain = await getFullResponseChain(
-        ctx.db,
-        sharedChain.responseId,
-      );
-
-      return {
-        ...sharedChain,
-        responseChain,
-      };
+      return share;
     }),
 
   toggleLike: protectedProcedure
     .input(z.object({ sharedChainId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const { sharedChainId } = input;
+      const { sharedChainId } = input; // keeping arg name for backward compat
       const userId = ctx.session.user.id;
 
       // Check if already liked
-      const existingLike = await ctx.db.like.findFirst({
-        where: {
-          sharedChainId,
-          userId,
-        },
+      const existingLike = await ctx.db.shareLike.findFirst({
+        where: { shareId: sharedChainId, userId },
       });
 
       if (existingLike) {
         // Unlike
-        await ctx.db.like.delete({
+        await ctx.db.shareLike.delete({
           where: { id: existingLike.id },
         });
 
         // Update count
-        await ctx.db.sharedChain.update({
+        await ctx.db.share.update({
           where: { id: sharedChainId },
           data: { likeCount: { decrement: 1 } },
         });
@@ -665,15 +458,12 @@ export const communityRouter = createTRPCRouter({
         return { liked: false };
       } else {
         // Like
-        await ctx.db.like.create({
-          data: {
-            sharedChainId,
-            userId,
-          },
+        await ctx.db.shareLike.create({
+          data: { shareId: sharedChainId, userId },
         });
 
         // Update count
-        await ctx.db.sharedChain.update({
+        await ctx.db.share.update({
           where: { id: sharedChainId },
           data: { likeCount: { increment: 1 } },
         });
@@ -692,10 +482,10 @@ export const communityRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { sharedChainId, content } = input;
 
-      const comment = await ctx.db.comment.create({
+      const comment = await ctx.db.shareComment.create({
         data: {
           content,
-          sharedChainId,
+          shareId: sharedChainId,
           authorId: ctx.session.user.id,
         },
         include: {
@@ -710,7 +500,7 @@ export const communityRouter = createTRPCRouter({
       });
 
       // Update comment count
-      await ctx.db.sharedChain.update({
+      await ctx.db.share.update({
         where: { id: sharedChainId },
         data: { commentCount: { increment: 1 } },
       });
@@ -721,110 +511,50 @@ export const communityRouter = createTRPCRouter({
   getUserLikes: protectedProcedure
     .input(z.object({ sharedChainIds: z.array(z.string()) }))
     .query(async ({ ctx, input }) => {
-      const likes = await ctx.db.like.findMany({
+      const likes = await ctx.db.shareLike.findMany({
         where: {
-          sharedChainId: { in: input.sharedChainIds },
+          shareId: { in: input.sharedChainIds },
           userId: ctx.session.user.id,
         },
-        select: {
-          sharedChainId: true,
-        },
+        select: { shareId: true },
       });
-
-      return likes.map((like) => like.sharedChainId);
+      return likes.map((like) => like.shareId);
     }),
 
   getUserLikedResponses: protectedProcedure.query(async ({ ctx }) => {
-    const likes = await ctx.db.like.findMany({
-      where: {
-        userId: ctx.session.user.id,
-      },
+    const likes = await ctx.db.shareLike.findMany({
+      where: { userId: ctx.session.user.id },
       include: {
-        sharedChain: {
-          where: {
-            deletedAt: null, // Filter out deleted shared chains
-            response: {
-              deletedAt: null, // Filter out shared chains with deleted responses
-            },
-          },
+        share: {
+          where: { deletedAt: null },
           include: {
-            response: {
+            chain: {
               include: {
-                sourceImage: {
-                  select: {
-                    id: true,
-                    address: true,
-                    lat: true,
-                    lng: true,
-                    url: true,
-                  },
+                rootImage: true,
+                responses: {
+                  where: { deletedAt: null },
+                  orderBy: { step: "asc" },
                 },
               },
             },
-            sharedBy: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-              },
-            },
-            sharedToUsers: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
+            sharedBy: { select: { id: true, name: true, image: true } },
+            recipients: {
+              include: { user: { select: { id: true, name: true } } },
             },
             comments: {
-              where: {
-                deletedAt: null,
-              },
+              where: { deletedAt: null },
               include: {
-                author: {
-                  select: {
-                    id: true,
-                    name: true,
-                    image: true,
-                  },
-                },
+                author: { select: { id: true, name: true, image: true } },
               },
-              orderBy: {
-                createdAt: "asc",
-              },
+              orderBy: { createdAt: "asc" },
             },
-            _count: {
-              select: {
-                likes: true,
-                comments: true,
-              },
-            },
+            _count: { select: { likes: true, comments: true } },
           },
         },
       },
     });
 
-    const sharedChains = likes
-      .map((like) => like.sharedChain)
-      .filter((chain) => chain !== null);
-
-    // Get full response chain for each shared chain
-    const itemsWithFullChain = await Promise.all(
-      sharedChains.map(async (post) => {
-        const responseChain = await getFullResponseChain(
-          ctx.db,
-          post.responseId,
-        );
-        return {
-          ...post,
-          responseChain,
-        };
-      }),
-    );
-
-    return itemsWithFullChain;
+    return likes.map((l) => l.share).filter((s) => s !== null);
   }),
 
   getNearbySharedResponses: publicProcedure
@@ -841,55 +571,40 @@ export const communityRouter = createTRPCRouter({
       const currentUserId = ctx.session?.user?.id;
 
       // Build where clause to include:
-      // 1. All public posts
-      // 2. Private posts shared TO the current user by others
-      // 3. Private posts shared BY the current user to others
-      const whereClause = {
+      // 1. All PUBLIC shares
+      // 2. PRIVATE shares where the current user is a recipient
+      // 3. PRIVATE shares created by the current user
+      const whereClause: Prisma.ShareWhereInput = {
         deletedAt: null,
         OR: [
-          { isPublic: true },
+          { visibility: Visibility.PUBLIC },
           ...(currentUserId
             ? [
                 {
-                  isPublic: false,
-                  sharedToUsers: {
-                    some: {
-                      userId: currentUserId,
-                    },
-                  },
+                  visibility: Visibility.PRIVATE,
+                  recipients: { some: { userId: currentUserId } },
                 },
-                {
-                  isPublic: false,
-                  sharedById: currentUserId, // Posts shared BY the current user
-                },
+                { visibility: Visibility.PRIVATE, sharedById: currentUserId },
               ]
             : []),
         ],
       };
 
-      const nearbySharedResponses = await ctx.db.sharedChain.findMany({
+      const nearbyShares = (await ctx.db.share.findMany({
         where: {
           ...whereClause,
-          response: {
-            deletedAt: null, // Filter out shared chains with deleted responses
-            sourceImage: {
-              // Filter by location within radius
-              lat: {
-                gte: lat - radius,
-                lte: lat + radius,
-              },
-              lng: {
-                gte: lng - radius,
-                lte: lng + radius,
-              },
+          chain: {
+            rootImage: {
+              lat: { gte: lat - radius, lte: lat + radius },
+              lng: { gte: lng - radius, lte: lng + radius },
               deletedAt: null,
             },
           },
         },
         include: {
-          response: {
+          chain: {
             include: {
-              sourceImage: {
+              rootImage: {
                 select: {
                   id: true,
                   address: true,
@@ -898,56 +613,44 @@ export const communityRouter = createTRPCRouter({
                   url: true,
                 },
               },
+              responses: {
+                where: { deletedAt: null },
+                orderBy: { step: "asc" },
+              },
             },
           },
-          sharedBy: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          _count: {
-            select: {
-              likes: true,
-              comments: true,
-            },
-          },
+          sharedBy: { select: { id: true, name: true, image: true } },
+          _count: { select: { likes: true, comments: true } },
         },
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy: { createdAt: "desc" },
         take: limit,
-      });
+      })) as ShareWithChain[];
 
       // Calculate distance for each response and sort by proximity
-      const responsesWithDistance = nearbySharedResponses.map(
-        (sharedResponse) => {
-          const sourceLat = sharedResponse.response.sourceImage?.lat;
-          const sourceLng = sharedResponse.response.sourceImage?.lng;
+      const responsesWithDistance = nearbyShares.map((share) => {
+        const sourceLat = share.chain.rootImage?.lat;
+        const sourceLng = share.chain.rootImage?.lng;
 
-          let distance = Infinity;
-          if (sourceLat && sourceLng) {
-            // Calculate distance using Haversine formula (approximate)
-            const R = 6371; // Earth's radius in km
-            const dLat = ((sourceLat - lat) * Math.PI) / 180;
-            const dLng = ((sourceLng - lng) * Math.PI) / 180;
-            const a =
-              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos((lat * Math.PI) / 180) *
-                Math.cos((sourceLat * Math.PI) / 180) *
-                Math.sin(dLng / 2) *
-                Math.sin(dLng / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            distance = R * c;
-          }
+        let distance = Infinity;
+        if (sourceLat != null && sourceLng != null) {
+          const R = 6371;
+          const dLat = ((sourceLat - lat) * Math.PI) / 180;
+          const dLng = ((sourceLng - lng) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((lat * Math.PI) / 180) *
+              Math.cos((sourceLat * Math.PI) / 180) *
+              Math.sin(dLng / 2) *
+              Math.sin(dLng / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          distance = R * c;
+        }
 
-          return {
-            ...sharedResponse,
-            distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
-          };
-        },
-      );
+        return {
+          ...share,
+          distance: Math.round(distance * 100) / 100,
+        };
+      });
 
       // Sort by distance (closest first)
       responsesWithDistance.sort((a, b) => a.distance - b.distance);

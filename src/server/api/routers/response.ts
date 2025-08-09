@@ -158,7 +158,7 @@ export const responseRouter = createTRPCRouter({
       }
 
       // Create enhanced image record with property boundary data
-      const image = await ctx.db.images.create({
+      const image = await ctx.db.image.create({
         data: {
           address: propertyBoundary.properties.address ?? formattedAddress,
           lat,
@@ -181,7 +181,7 @@ export const responseRouter = createTRPCRouter({
     }),
 
   getImages: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.images.findMany({
+    return ctx.db.image.findMany({
       select: {
         id: true,
         name: true,
@@ -197,7 +197,7 @@ export const responseRouter = createTRPCRouter({
   getImageById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const image = await ctx.db.images.findFirst({
+      const image = await ctx.db.image.findFirst({
         where: { id: input.id, deletedAt: null },
         select: {
           id: true,
@@ -216,7 +216,7 @@ export const responseRouter = createTRPCRouter({
     }),
 
   getLastImage: protectedProcedure.query(async ({ ctx }) => {
-    const image = await ctx.db.images.findFirst({
+    const image = await ctx.db.image.findFirst({
       orderBy: { createdAt: "desc" },
       where: { createdBy: { id: ctx.session.user.id }, deletedAt: null },
     });
