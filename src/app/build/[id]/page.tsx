@@ -88,6 +88,24 @@ export default async function BuildPage({ params }: BuildPageProps) {
   };
 
   const disableInteractions = componentPost.id.startsWith("unshared-");
+  const chainItemsForComponent = responses.map((r) => {
+    if (r.type === "source") {
+      return {
+        id: r.id,
+        type: "source" as const,
+        prompt: null,
+        url: r.url,
+      };
+    } else {
+      return {
+        id: r.id,
+        type: "response" as const,
+        prompt: r.prompt ?? null,
+        url: r.url,
+        step: r.step,
+      };
+    }
+  });
 
   return (
     <HydrateClient>
@@ -96,6 +114,7 @@ export default async function BuildPage({ params }: BuildPageProps) {
           <BuildChainComponent
             post={componentPost}
             disableInteractions={disableInteractions}
+            chainItems={chainItemsForComponent}
           />
         </div>
         <ShareButton />
