@@ -158,6 +158,7 @@ export default function MapComponent() {
         image.mutate({ lat, lng });
       }
 
+      // Hide search bar only after successful search and selection
       setShowSearchBar(false);
     },
     [image, parcelData.data, isPointInPolygon],
@@ -192,9 +193,18 @@ export default function MapComponent() {
   const handleSearch = useCallback(
     async (address: string) => {
       const success = await performSearch(address);
-      return success;
+      // Only hide search bar and proceed with selection if search was successful
+      if (success) {
+        // Search was successful, the handleSearchComplete callback will handle the rest
+        return true;
+      } else {
+        // Search failed, keep search bar visible and don't change selection state
+        // Also clear any existing selection to prevent state confusion
+        clearSelection();
+        return false;
+      }
     },
-    [performSearch],
+    [performSearch, clearSelection],
   );
 
   const handleZoomChange = useCallback(
