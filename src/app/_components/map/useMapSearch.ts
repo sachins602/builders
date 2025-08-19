@@ -18,6 +18,10 @@ export function useMapSearch({ mapRef, onSearchComplete }: UseMapSearchProps) {
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
         );
 
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const results = (await response.json()) as NominatimResult[];
 
         if (results && results.length > 0) {
